@@ -1,0 +1,28 @@
+import { Search, Plus, Bell, Command } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { useStore } from '@/store/useStore';
+
+export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSearch: () => void }) {
+  const name = useStore((s) => s.settings.name);
+  return (
+    <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-2 backdrop-blur-xl bg-black/10 border-b border-white/5 flex items-center gap-3">
+      <div className="lg:hidden flex items-center gap-2 font-extrabold">
+        <span className="rounded-lg bg-gradient-to-br from-emerald-500 to-blue-500 px-2 py-1 text-xs text-white">FF</span>
+      </div>
+      <button onClick={onSearch}
+        className="hidden sm:flex items-center gap-2 flex-1 max-w-md rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-sm text-white/40 hover:bg-white/[0.07] transition">
+        <Search size={16} /> Search transactions, merchants…
+        <span className="ml-auto flex items-center gap-0.5 text-[10px] text-white/40"><Command size={11} />K</span>
+      </button>
+      <button onClick={onSearch} className="sm:hidden rounded-xl bg-white/5 border border-white/10 p-2"><Search size={18} /></button>
+      <div className="flex-1 sm:hidden" />
+      <button className="rounded-xl bg-white/5 border border-white/10 p-2 text-white/60 relative">
+        <Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400" />
+      </button>
+      <Button onClick={onQuickAdd} className="!px-3"><Plus size={16} /><span className="hidden sm:inline">Add</span></Button>
+      <div className="hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-white text-sm font-bold">
+        {name.charAt(0).toUpperCase()}
+      </div>
+    </header>
+  );
+}
