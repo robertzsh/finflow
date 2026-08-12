@@ -62,7 +62,10 @@ export const useStore = create<StoreState>((set, get) => ({
   init: async () => {
     const saved = await loadData();
     if (saved) {
-      set({ ...saved, ready: true, locked: !!saved.settings.pinEnabled });
+      // Backfill any settings added in newer versions (e.g. fxRates) without
+      // overwriting the user's own choices.
+      const settings = { ...DEFAULT_SETTINGS, ...saved.settings, fxRates: { ...DEFAULT_SETTINGS.fxRates, ...saved.settings.fxRates } };
+      set({ ...saved, settings, ready: true, locked: !!settings.pinEnabled });
     } else {
       const seeded = seedData();
       await saveData(seeded);

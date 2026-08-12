@@ -46,6 +46,7 @@ export interface Goal {
   color: string;
   icon: string;
   createdAt: string;
+  currency?: CurrencyCode;   // defaults to the app base currency (RON)
 }
 
 export type InvestmentKind = 'Stock' | 'ETF' | 'Crypto' | 'Savings' | 'Pension';
@@ -58,15 +59,21 @@ export interface Investment {
   ticker?: string;
   kind: InvestmentKind;
   units: number;
-  costBasis: number;       // total invested
-  currentValue: number;    // current market value
+  costBasis: number;       // total invested (in the item's currency)
+  currentValue: number;    // current market value (in the item's currency)
   history: InvestmentPoint[];
+  currency?: CurrencyCode; // defaults to the app base currency (RON)
 }
 
-export type CurrencyCode = 'GBP' | 'USD' | 'EUR';
+export type CurrencyCode = 'RON' | 'GBP' | 'USD' | 'EUR';
+
+// How many base-currency units (lei) one unit of the given currency is worth.
+// Used only to combine multi-currency goals/investments into unified totals.
+export type FxRates = Record<CurrencyCode, number>;
 
 export interface Settings {
-  currency: CurrencyCode;
+  currency: CurrencyCode;      // base currency for the whole app (RON)
+  fxRates: FxRates;            // editable rates → base currency
   theme: 'dark' | 'light';
   pinEnabled: boolean;
   pin?: string;

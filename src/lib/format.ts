@@ -1,12 +1,15 @@
 import type { CurrencyCode } from '@/types';
 
-const SYMBOL: Record<CurrencyCode, string> = { GBP: '£', USD: '$', EUR: '€' };
+const SYMBOL: Record<CurrencyCode, string> = { RON: 'lei', GBP: '£', USD: '$', EUR: '€' };
+
+// Locale per currency so numbers read naturally (RON → "1.234,56 lei").
+const LOCALE: Record<CurrencyCode, string> = { RON: 'ro-RO', GBP: 'en-GB', USD: 'en-US', EUR: 'de-DE' };
 
 export function currencySymbol(c: CurrencyCode) { return SYMBOL[c]; }
 
-export function formatMoney(n: number, currency: CurrencyCode = 'GBP', opts?: { compact?: boolean; sign?: boolean }) {
+export function formatMoney(n: number, currency: CurrencyCode = 'RON', opts?: { compact?: boolean; sign?: boolean }) {
   const sign = opts?.sign && n > 0 ? '+' : '';
-  return sign + new Intl.NumberFormat('en-GB', {
+  return sign + new Intl.NumberFormat(LOCALE[currency] ?? 'en-GB', {
     style: 'currency', currency,
     notation: opts?.compact ? 'compact' : 'standard',
     maximumFractionDigits: opts?.compact ? 1 : 2,

@@ -9,6 +9,7 @@ import { Input, Select, Label } from '@/components/ui/Field';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Modal } from '@/components/ui/Modal';
 import { exportJSON, parseBankCSV } from '@/lib/export';
+import { currencySymbol } from '@/lib/format';
 import type { AppData, CurrencyCode } from '@/types';
 
 export default function Settings() {
@@ -50,12 +51,28 @@ export default function Settings() {
           <SectionCardHeader title="Preferences" />
           <div className="space-y-4">
             <div><Label>Your name</Label><Input value={settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></div>
-            <div><Label>Currency</Label>
+            <div><Label>Base currency</Label>
               <Select value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value as CurrencyCode })}>
-                <option value="GBP">£ GBP — British Pound</option>
-                <option value="USD">$ USD — US Dollar</option>
+                <option value="RON">lei RON — Leu românesc</option>
                 <option value="EUR">€ EUR — Euro</option>
+                <option value="USD">$ USD — US Dollar</option>
+                <option value="GBP">£ GBP — British Pound</option>
               </Select>
+              <p className="text-xs text-white/40 mt-1.5">Everyday transactions and budgets use this. Goals & investments can each use their own currency.</p>
+            </div>
+            <div>
+              <Label>Exchange rates (per 1 unit, in {currencySymbol(settings.currency)})</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => (
+                  <div key={c} className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-2.5">
+                    <span className="text-xs text-white/50 w-9">{c}</span>
+                    <input type="number" step="0.01" defaultValue={settings.fxRates[c]}
+                      onBlur={(e) => updateSettings({ fxRates: { ...settings.fxRates, [c]: Number(e.target.value) || settings.fxRates[c] } })}
+                      className="w-full bg-transparent py-2 text-sm outline-none" />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-white/40 mt-1.5">Used to combine multi-currency goals & investments into your base totals. Edit anytime.</p>
             </div>
             <div>
               <Label>Appearance</Label>

@@ -44,9 +44,10 @@ export function Onboarding() {
                 <div><Label>Your name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" /></div>
                 <div><Label>Currency</Label>
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
-                    <option value="GBP">£ GBP — British Pound</option>
-                    <option value="USD">$ USD — US Dollar</option>
+                    <option value="RON">lei RON — Leu românesc</option>
                     <option value="EUR">€ EUR — Euro</option>
+                    <option value="USD">$ USD — US Dollar</option>
+                    <option value="GBP">£ GBP — British Pound</option>
                   </Select>
                 </div>
               </div>

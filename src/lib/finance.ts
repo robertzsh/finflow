@@ -1,5 +1,13 @@
 import { format, parseISO, startOfMonth, subMonths, isSameMonth, differenceInCalendarDays } from 'date-fns';
-import type { Transaction, Category, Budget, Investment, Goal } from '@/types';
+import type { Transaction, Category, Budget, Investment, Goal, CurrencyCode, FxRates } from '@/types';
+
+const NO_FX: FxRates = { RON: 1, EUR: 5.0, USD: 4.6, GBP: 5.9 };
+
+/** Convert an amount in `currency` into the base currency (lei) using fx rates. */
+export function toBase(amount: number, currency: CurrencyCode | undefined, rates?: FxRates) {
+  const r = rates ?? NO_FX;
+  return amount * (r[currency ?? 'RON'] ?? 1);
+}
 
 export const monthKey = (d: Date | string) =>
   format(typeof d === 'string' ? parseISO(d) : d, 'yyyy-MM');
@@ -95,25 +103,25 @@ export function budgetProgress(budgets: Budget[], txs: Transaction[], cats: Cate
   }).sort((a, b) => b.pct - a.pct);
 }
 
-export function investmentTotals(inv: Investment[]) {
-  const value = inv.reduce((a, i) => a + i.currentValue, 0);
-  const cost = inv.reduce((a, i) => a + i.costBasis, 0);
+export function investmentTotals(inv: Investment[], rates?: FxRates) {
+  const value = inv.reduce((a, i) => a + toBase(i.currentValue, i.currency, rates), 0);
+  const cost = inv.reduce((a, i) => a + toBase(i.costBasis, i.currency, rates), 0);
   const gain = value - cost;
   return { value: r2(value), cost: r2(cost), gain: r2(gain), gainPct: cost > 0 ? (gain / cost) * 100 : 0 };
 }
 
-export function investmentAllocation(inv: Investment[]) {
+export function investmentAllocation(inv: Investment[], rates?: FxRates) {
   const map = new Map<string, number>();
-  for (const i of inv) map.set(i.kind, (map.get(i.kind) ?? 0) + i.currentValue);
+  for (const i of inv) map.set(i.kind, (map.get(i.kind) ?? 0) + toBase(i.currentValue, i.currency, rates));
   const palette: Record<string, string> = {
     Stock: '#eab308', ETF: '#f59e0b', Crypto: '#fbbf24', Savings: '#3b82f6', Pension: '#a855f7',
   };
   return [...map.entries()].map(([name, value]) => ({ name, value: r2(value), color: palette[name] ?? '#eab308' }));
 }
 
-export function investmentHistory(inv: Investment[]) {
+export function investmentHistory(inv: Investment[], rates?: FxRates) {
   const byMonth = new Map<string, number>();
-  for (const i of inv) for (const p of i.history) byMonth.set(p.date, (byMonth.get(p.date) ?? 0) + p.value);
+  for (const i of inv) for (const p of i.history) byMonth.set(p.date, (byMonth.get(p.date) ?? 0) + toBase(p.value, i.currency, rates));
   return [...byMonth.entries()].sort().map(([date, value]) => ({ month: format(parseISO(date), 'MMM'), value: r2(value) }));
 }
 

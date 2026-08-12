@@ -30,12 +30,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const byCat = spendingByCategory(transactions, categories, REF);
     const bySource = incomeBySource(transactions, categories, REF);
     const sav = savingsTrend(transactions, 8);
-    const alloc = investmentAllocation(investments);
-    const invTotals = investmentTotals(investments);
+    const alloc = investmentAllocation(investments, settings.fxRates);
+    const invTotals = investmentTotals(investments, settings.fxRates);
     const score = healthScore(transactions, budgets, categories, goals, balance, REF);
     const insights = buildInsights(transactions, categories, REF, balance);
     return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, score, insights };
-  }, [transactions, categories, budgets, goals, investments]);
+  }, [transactions, categories, budgets, goals, investments, settings.fxRates]);
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;

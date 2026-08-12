@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
 import { investmentTotals, investmentAllocation, investmentHistory } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
-import type { Investment, InvestmentKind } from '@/types';
+import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
 
 const KINDS: InvestmentKind[] = ['Stock', 'ETF', 'Crypto', 'Savings', 'Pension'];
 
@@ -22,9 +22,10 @@ export default function Investments() {
   const cur = settings.currency;
   const [open, setOpen] = useState(false);
 
-  const totals = useMemo(() => investmentTotals(investments), [investments]);
-  const alloc = useMemo(() => investmentAllocation(investments), [investments]);
-  const history = useMemo(() => investmentHistory(investments), [investments]);
+  const fx = settings.fxRates;
+  const totals = useMemo(() => investmentTotals(investments, fx), [investments, fx]);
+  const alloc = useMemo(() => investmentAllocation(investments, fx), [investments, fx]);
+  const history = useMemo(() => investmentHistory(investments, fx), [investments, fx]);
   const allocTotal = alloc.reduce((a, b) => a + b.value, 0);
 
   return (
@@ -67,6 +68,7 @@ export default function Investments() {
             {investments.map((inv, i) => {
               const gain = inv.currentValue - inv.costBasis;
               const gp = inv.costBasis > 0 ? (gain / inv.costBasis) * 100 : 0;
+              const ic = inv.currency ?? cur;
               return (
                 <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
                   className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.03]">
@@ -74,12 +76,12 @@ export default function Investments() {
                     {inv.ticker ?? inv.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge color="#eab308">{inv.kind}</Badge></div>
-                    <div className="text-xs text-white/40">{inv.units} units · {formatMoney(inv.costBasis, cur)} invested</div>
+                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge color="#eab308">{inv.kind}</Badge>{ic !== cur && <Badge color="#3b82f6">{ic}</Badge>}</div>
+                    <div className="text-xs text-white/40">{inv.units} units · {formatMoney(inv.costBasis, ic)} invested</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold tabular-nums">{formatMoney(inv.currentValue, cur)}</div>
-                    <div className={`text-xs ${gain >= 0 ? 'text-income' : 'text-expense'}`}>{gain >= 0 ? '+' : ''}{formatMoney(gain, cur)} ({gp >= 0 ? '+' : ''}{gp.toFixed(1)}%)</div>
+                    <div className="font-semibold tabular-nums">{formatMoney(inv.currentValue, ic)}</div>
+                    <div className={`text-xs ${gain >= 0 ? 'text-income' : 'text-expense'}`}>{gain >= 0 ? '+' : ''}{formatMoney(gain, ic)} ({gp >= 0 ? '+' : ''}{gp.toFixed(1)}%)</div>
                   </div>
                   <button onClick={() => deleteInvestment(inv.id)} className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
                 </motion.div>
@@ -95,10 +97,13 @@ export default function Investments() {
   );
 }
 
+const CURRENCIES: CurrencyCode[] = ['RON', 'EUR', 'USD', 'GBP'];
 function AddInvestmentModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (i: Omit<Investment, 'id'>) => void }) {
+  const base = useStore((s) => s.settings.currency);
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
   const [kind, setKind] = useState<InvestmentKind>('Stock');
+  const [currency, setCurrency] = useState<CurrencyCode>(base);
   const [units, setUnits] = useState('');
   const [cost, setCost] = useState('');
   const [value, setValue] = useState('');
@@ -109,14 +114,17 @@ function AddInvestmentModal({ open, onClose, onSave }: { open: boolean; onClose:
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Apple Inc." /></div>
           <div><Label>Ticker (optional)</Label><Input value={ticker} onChange={(e) => setTicker(e.target.value)} placeholder="AAPL" /></div>
         </div>
-        <div><Label>Type</Label><Select value={kind} onChange={(e) => setKind(e.target.value as InvestmentKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Type</Label><Select value={kind} onChange={(e) => setKind(e.target.value as InvestmentKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select></div>
+          <div><Label>Currency</Label><Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div><Label>Units</Label><Input type="number" value={units} onChange={(e) => setUnits(e.target.value)} placeholder="0" /></div>
           <div><Label>Invested</Label><Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" /></div>
           <div><Label>Current value</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0.00" /></div>
         </div>
         <Button className="w-full" disabled={!name || !value} onClick={() => onSave({
-          name, ticker: ticker || undefined, kind, units: Number(units) || 1,
+          name, ticker: ticker || undefined, kind, currency, units: Number(units) || 1,
           costBasis: Number(cost) || 0, currentValue: Number(value) || 0,
           history: [{ date: '2026-07-01', value: Number(value) || 0 }],
         })}>Add holding</Button>
