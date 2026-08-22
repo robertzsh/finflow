@@ -1,7 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useState } from 'react';
-import { Receipt, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -11,7 +10,6 @@ const schema = z.object({
   type: z.enum(['income', 'expense']),
   amount: z.coerce.number().positive('Amount must be greater than 0'),
   categoryId: z.string().min(1, 'Pick a category'),
-  merchant: z.string().min(1, 'Merchant is required'),
   method: z.string(),
   date: z.string().min(1),
   notes: z.string().optional(),
@@ -24,15 +22,14 @@ const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit
 
 export function TransactionForm({ existing, onDone }: { existing?: Transaction; onDone: () => void }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction } = useStore();
-  const [receipt, setReceipt] = useState<string | undefined>(existing?.receipt);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: existing ? {
       type: existing.type, amount: existing.amount, categoryId: existing.categoryId,
-      merchant: existing.merchant, method: existing.method, date: existing.date,
+      method: existing.method, date: existing.date,
       notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly',
     } : {
-      type: 'expense', amount: undefined as unknown as number, categoryId: '', merchant: '',
+      type: 'expense', amount: undefined as unknown as number, categoryId: '',
       method: 'Card', date: new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly',
     },
   });
@@ -41,21 +38,17 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
   const recurring = watch('recurring');
   const cats = categories.filter((c) => c.kind === type);
 
-  function onReceipt(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setReceipt(reader.result as string);
-    reader.readAsDataURL(file);
-  }
-
   const submit = handleSubmit((v) => {
     const parsed = schema.safeParse(v);
     if (!parsed.success) return;
+    const cat = categories.find((c) => c.id === v.categoryId);
     const payload = {
-      type: v.type, amount: Number(v.amount), categoryId: v.categoryId, merchant: v.merchant,
+      type: v.type, amount: Number(v.amount), categoryId: v.categoryId,
+      // merchant is no longer entered by hand — default it to the category name.
+      merchant: existing?.merchant || cat?.name || '',
       method: v.method as PaymentMethod, date: v.date, notes: v.notes,
-      recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined, receipt,
+      recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
+      receipt: existing?.receipt,
     };
     if (existing) updateTransaction(existing.id, payload);
     else addTransaction(payload);
@@ -76,7 +69,7 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Amount</Label>
-          <Input type="number" step="0.01" placeholder="0.00" {...register('amount')} />
+          <Input type="number" step="0.01" placeholder="0.00" autoFocus {...register('amount')} />
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
         <div>
@@ -85,18 +78,12 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
         </div>
       </div>
 
-      <div>
-        <Label>Merchant</Label>
-        <Input placeholder="e.g. Tesco" {...register('merchant')} />
-        {errors.merchant && <p className="text-xs text-expense mt-1">{errors.merchant.message}</p>}
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Category</Label>
           <Select {...register('categoryId')}>
             <option value="">Select…</option>
-            {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
           </Select>
           {errors.categoryId && <p className="text-xs text-expense mt-1">{errors.categoryId.message}</p>}
         </div>
@@ -127,21 +114,6 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
           </Select>
         </div>
       )}
-
-      <div>
-        <Label>Receipt (optional)</Label>
-        {receipt ? (
-          <div className="flex items-center gap-3">
-            <img src={receipt} alt="receipt" className="h-16 w-16 rounded-lg object-cover border border-white/10" />
-            <Button type="button" variant="danger" onClick={() => setReceipt(undefined)}><Trash2 size={14} /> Remove</Button>
-          </div>
-        ) : (
-          <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 px-3.5 py-3 text-sm text-white/50 cursor-pointer hover:bg-white/5">
-            <Receipt size={16} /> Upload image
-            <input type="file" accept="image/*" className="hidden" onChange={onReceipt} />
-          </label>
-        )}
-      </div>
 
       <div className="flex gap-2 pt-1">
         <Button type="submit" className="flex-1">{existing ? 'Save changes' : 'Add transaction'}</Button>

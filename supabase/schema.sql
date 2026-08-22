@@ -130,3 +130,12 @@ begin
   return hid;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- 6. Grants — RLS decides WHICH rows; these grant table access to logged-in users.
+--    Without these you get "permission denied for table ...".
+-- ---------------------------------------------------------------------------
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant execute on all functions in schema public to anon, authenticated;
+alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;

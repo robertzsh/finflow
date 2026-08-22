@@ -22,7 +22,7 @@ function seedData(): AppData {
 }
 
 function emptyData(): AppData {
-  return { transactions: [], categories: DEFAULT_CATEGORIES, budgets: [], goals: [], investments: [], settings: { ...DEFAULT_SETTINGS, onboarded: true } };
+  return { transactions: [], categories: DEFAULT_CATEGORIES, budgets: [], goals: [], investments: [], settings: { ...DEFAULT_SETTINGS, openingBalance: 0, onboarded: true } };
 }
 
 interface StoreState extends AppData {
@@ -147,6 +147,18 @@ export const useStore = create<StoreState>((set, get) => {
       await cloud.seedIfEmpty(profile.householdId, userId, DEFAULT_CATEGORIES);
       const data = await cloud.fetchAll(profile.householdId);
       const members = await cloud.getMembers(profile.householdId);
+
+      // Reconcile categories: add any new default categories (e.g. Lidl, Mani + Pedi)
+      // and backfill emojis onto existing ones, then push the additions to the cloud.
+      const byId = new Map(data.categories.map((c) => [c.id, c] as const));
+      const toUpsert: Category[] = [];
+      for (const d of DEFAULT_CATEGORIES) {
+        const ex = byId.get(d.id);
+        if (!ex) { byId.set(d.id, d); toUpsert.push(d); }
+        else if (!ex.emoji && d.emoji) { const merged = { ...ex, emoji: d.emoji }; byId.set(d.id, merged); toUpsert.push(merged); }
+      }
+      const categories = data.categories.length ? [...byId.values()] : DEFAULT_CATEGORIES;
+      if (toUpsert.length) cloud.upsertMany('categories', toUpsert, profile.householdId, userId);
       // device-local preferences (theme, currency, fx, pin) stay in IndexedDB
       const local = await loadData();
       const settings: Settings = {
@@ -158,7 +170,7 @@ export const useStore = create<StoreState>((set, get) => {
       };
       set({
         transactions: data.transactions,
-        categories: data.categories.length ? data.categories : DEFAULT_CATEGORIES,
+        categories,
         budgets: data.budgets,
         goals: data.goals,
         investments: data.investments,
@@ -171,7 +183,7 @@ export const useStore = create<StoreState>((set, get) => {
         authed: true,
         authReady: true,
         ready: true,
-        locked: false,
+        locked: !!settings.pinEnabled,
         authError: '',
       });
       applyTheme(settings.theme);

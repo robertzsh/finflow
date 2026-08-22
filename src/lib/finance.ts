@@ -37,15 +37,15 @@ export function monthStats(txs: Transaction[], ref: Date): MonthStats {
   return { income, expense, net, savingsRate: income > 0 ? (net / income) * 100 : 0 };
 }
 
-/** Running account balance = starting balance + all net flows to date. */
-export function accountBalance(txs: Transaction[], starting = 2500) {
+/** Running account balance = opening balance + all net flows (income − expenses). */
+export function accountBalance(txs: Transaction[], starting = 0) {
   return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);
 }
 
-export function cashFlowSeries(txs: Transaction[], months = 8) {
+export function cashFlowSeries(txs: Transaction[], months = 8, opening = 0) {
   const now = new Date('2026-07-28');
   const out: { month: string; income: number; expense: number; net: number; balance: number }[] = [];
-  let running = 2500;
+  let running = opening;
   // establish running balance up to the first shown month
   for (let m = months - 1; m >= 0; m--) {
     const ref = startOfMonth(subMonths(now, m));

@@ -74,7 +74,7 @@ export default function Budgets() {
               <motion.div key={p.budget.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
                 <Card hover className="p-4">
                   <div className="flex items-center gap-3">
-                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={20} />
+                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={20} emoji={c?.emoji} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{c?.name ?? p.budget.categoryId}</span>

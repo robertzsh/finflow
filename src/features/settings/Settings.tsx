@@ -53,6 +53,12 @@ export default function Settings() {
           <SectionCardHeader title="Preferences" />
           <div className="space-y-4">
             <div><Label>Your name</Label><Input value={settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></div>
+            <div>
+              <Label>Opening / current balance ({currencySymbol(settings.currency)})</Label>
+              <Input type="number" step="0.01" defaultValue={settings.openingBalance}
+                onBlur={(e) => updateSettings({ openingBalance: Number(e.target.value) || 0 })} />
+              <p className="text-xs text-white/40 mt-1.5">Your starting balance. Income adds to it and expenses subtract, so the dashboard balance stays in sync with what you actually have.</p>
+            </div>
             <div><Label>Base currency</Label>
               <Select value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value as CurrencyCode })}>
                 <option value="RON">lei RON — Leu românesc</option>
@@ -124,7 +130,7 @@ export default function Settings() {
           <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar">
             {categories.map((c) => (
               <span key={c.id} className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs">
-                <CategoryIcon icon={c.icon} color={c.color} size={13} bg={false} />{c.name}
+                <CategoryIcon icon={c.icon} color={c.color} size={13} bg={false} emoji={c.emoji} />{c.name}
                 {c.custom && <button onClick={() => deleteCategory(c.id)} className="text-white/30 hover:text-expense ml-1">×</button>}
               </span>
             ))}
@@ -222,17 +228,24 @@ function ToggleRow({ icon, title, desc, checked, onChange }: { icon: React.React
 
 const ICONS = ['ShoppingBag', 'Coffee', 'Car', 'Home', 'Heart', 'Gamepad2', 'Book', 'Plane', 'Gift', 'Zap'];
 const COLORS = ['#10b981', '#3b82f6', '#eab308', '#a855f7', '#ef4444', '#f97316', '#06b6d4', '#ec4899'];
+const EMOJIS = ['🛍️', '☕', '🚗', '🏠', '❤️', '🎮', '📚', '✈️', '🎁', '⚡', '💅', '🏬', '🍽️', '🐾', '🎬', '🏋️', '💊', '🍺'];
 function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (c: any) => void }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<'income' | 'expense'>('expense');
   const [icon, setIcon] = useState(ICONS[0]);
   const [color, setColor] = useState(COLORS[0]);
+  const [emoji, setEmoji] = useState('🛍️');
   return (
     <Modal open={open} onClose={onClose} title="New category">
       <div className="space-y-4">
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hobbies" /></div>
         <div><Label>Type</Label>
           <Select value={kind} onChange={(e) => setKind(e.target.value as any)}><option value="expense">Expense</option><option value="income">Income</option></Select>
+        </div>
+        <div><Label>Emoji</Label>
+          <div className="flex flex-wrap gap-2">{EMOJIS.map((e) => (
+            <button key={e} type="button" onClick={() => setEmoji(e)} className={`rounded-lg px-2 py-1.5 text-lg border ${emoji === e ? 'border-blue-400 bg-blue-500/20' : 'border-white/10 bg-white/5'}`}>{e}</button>
+          ))}</div>
         </div>
         <div><Label>Icon</Label>
           <div className="flex flex-wrap gap-2">{ICONS.map((ic) => (
@@ -243,7 +256,7 @@ function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () =
         <div><Label>Colour</Label>
           <div className="flex gap-2">{COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}</div>
         </div>
-        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color })}>Create category</Button>
+        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color, emoji })}>Create category</Button>
       </div>
     </Modal>
   );

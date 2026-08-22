@@ -25,8 +25,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const data = useMemo(() => {
     const stats = monthStats(transactions, REF);
     const prev = monthStats(transactions, startOfMonth(subMonths(REF, 1)));
-    const balance = accountBalance(transactions);
-    const cf = cashFlowSeries(transactions, 8);
+    const balance = accountBalance(transactions, settings.openingBalance);
+    const cf = cashFlowSeries(transactions, 8, settings.openingBalance);
     const byCat = spendingByCategory(transactions, categories, REF);
     const bySource = incomeBySource(transactions, categories, REF);
     const sav = savingsTrend(transactions, 8);
@@ -35,7 +35,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const score = healthScore(transactions, budgets, categories, goals, balance, REF);
     const insights = buildInsights(transactions, categories, REF, balance);
     return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, score, insights };
-  }, [transactions, categories, budgets, goals, investments, settings.fxRates]);
+  }, [transactions, categories, budgets, goals, investments, settings.fxRates, settings.openingBalance]);
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;

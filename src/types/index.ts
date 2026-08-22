@@ -7,6 +7,7 @@ export interface Category {
   kind: CategoryKind;
   icon: string;      // lucide icon name
   color: string;     // hex
+  emoji?: string;    // shown next to the category in menus & lists
   custom?: boolean;
 }
 
@@ -75,6 +76,7 @@ export type FxRates = Record<CurrencyCode, number>;
 export interface Settings {
   currency: CurrencyCode;      // base currency for the whole app (RON)
   fxRates: FxRates;            // editable rates → base currency
+  openingBalance: number;      // starting bank balance; income/expenses adjust it
   theme: 'dark' | 'light';
   pinEnabled: boolean;
   pin?: string;

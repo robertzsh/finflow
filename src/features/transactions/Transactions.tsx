@@ -180,10 +180,10 @@ export default function Transactions() {
                       <button onClick={() => toggle(t.id)} className="text-white/40 hover:text-white shrink-0">
                         {sel ? <CheckSquare size={16} className="text-blue-400" /> : <Square size={16} />}
                       </button>
-                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} />
+                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} emoji={c?.emoji} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{t.merchant}</span>
+                          <span className="font-medium truncate">{t.merchant || c?.name || '—'}</span>
                           {t.recurring && <Badge color="#a855f7">↻ {t.frequency}</Badge>}
                         </div>
                         <div className="text-xs text-white/40 flex items-center gap-1.5">

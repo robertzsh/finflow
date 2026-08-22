@@ -102,7 +102,7 @@ export default function Calendar() {
               return (
                 <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
                   className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-                  <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} />
+                  <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{u.base.merchant}</div>
                     <div className="text-xs text-white/40">{format(parseISO(u.date), 'EEE d MMM')} · {u.base.frequency}</div>

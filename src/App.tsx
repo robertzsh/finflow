@@ -10,6 +10,7 @@ import { LockScreen } from '@/components/LockScreen';
 import { Onboarding } from '@/components/Onboarding';
 import { Auth } from '@/components/Auth';
 import { useHotkey } from '@/hooks/useHotkeys';
+import { useIdleLock } from '@/hooks/useIdleLock';
 import { setInsightCurrency } from '@/lib/insights';
 import { currencySymbol } from '@/lib/format';
 
@@ -32,6 +33,7 @@ export default function App() {
 
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
+  useIdleLock();
 
   // Cloud mode: show a login screen until signed in.
   if (cloud) {
@@ -49,9 +51,9 @@ export default function App() {
     );
   }
 
-  // Onboarding & PIN lock only apply to local (non-cloud) mode.
+  // Onboarding only applies to local mode; PIN lock applies in both modes.
   if (!cloud && !settings.onboarded) return <div className="app-bg min-h-screen"><Onboarding /></div>;
-  if (!cloud && locked) return <div className="app-bg min-h-screen"><LockScreen /></div>;
+  if (locked && settings.pinEnabled) return <div className="app-bg min-h-screen"><LockScreen /></div>;
 
   return (
     <div className="app-bg min-h-screen flex">

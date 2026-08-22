@@ -164,6 +164,7 @@ export function defaultGoals(): Goal[] {
 export const DEFAULT_SETTINGS: Settings = {
   currency: 'RON',
   fxRates: { RON: 1, EUR: 5.0, USD: 4.6, GBP: 5.9 }, // lei per 1 unit — editable in Settings
+  openingBalance: 5000,
   theme: 'dark', pinEnabled: false, biometric: false,
   sessionTimeoutMin: 15, name: 'Robert', onboarded: false,
 };

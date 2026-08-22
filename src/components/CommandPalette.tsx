@@ -60,8 +60,8 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
                 return (
                   <button key={t.id} onClick={() => { nav('/transactions'); onClose(); }}
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-white/10 text-left">
-                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={15} />
-                    <span className="flex-1 truncate">{t.merchant}</span>
+                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={15} emoji={c?.emoji} />
+                    <span className="flex-1 truncate">{t.merchant || c?.name || '—'}</span>
                     <span className="text-white/40 text-xs">{t.date}</span>
                     <span className={t.type === 'income' ? 'text-income font-medium' : 'text-white/70'}>
                       {t.type === 'income' ? '+' : '-'}{formatMoney(t.amount, settings.currency)}
