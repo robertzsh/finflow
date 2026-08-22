@@ -69,7 +69,8 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Amount</Label>
-          <Input type="number" step="0.01" placeholder="0.00" autoFocus {...register('amount')} />
+          <Input type="number" step="0.01" placeholder="0.00" autoFocus
+            {...register('amount', { required: 'Enter an amount', valueAsNumber: true, validate: (v) => (Number(v) > 0) || 'Amount must be greater than 0' })} />
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
         <div>
@@ -81,7 +82,7 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Category</Label>
-          <Select {...register('categoryId')}>
+          <Select {...register('categoryId', { required: 'Pick a category' })}>
             <option value="">Select…</option>
             {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
           </Select>

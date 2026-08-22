@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 import { cx } from '@/lib/format';
 
@@ -7,19 +8,27 @@ export function Label({ children }: { children: ReactNode }) {
   return <label className="block text-xs font-medium text-white/60 mb-1.5">{children}</label>;
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={cx(base, className)} />;
-}
+// forwardRef is required so React Hook Form's register() ref attaches to the
+// real DOM node — otherwise field values are never captured on submit.
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...rest }, ref) {
+    return <input ref={ref} {...rest} className={cx(base, className)} />;
+  },
+);
 
-export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...rest} className={cx(base, 'resize-none', className)} />;
-}
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function Textarea({ className, ...rest }, ref) {
+    return <textarea ref={ref} {...rest} className={cx(base, 'resize-none', className)} />;
+  },
+);
 
-export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
-  return (
-    <select {...rest} className={cx(base, 'appearance-none bg-no-repeat', className)}
-      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundPosition: 'right 12px center' }}>
-      {children}
-    </select>
-  );
-}
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }>(
+  function Select({ className, children, ...rest }, ref) {
+    return (
+      <select ref={ref} {...rest} className={cx(base, 'appearance-none bg-no-repeat', className)}
+        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundPosition: 'right 12px center' }}>
+        {children}
+      </select>
+    );
+  },
+);
