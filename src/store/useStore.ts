@@ -73,6 +73,7 @@ interface StoreState extends AppData {
   addInvestment: (i: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, patch: Partial<Investment>) => void;
   deleteInvestment: (id: string) => void;
+  importInvestments: (list: { name: string; ticker?: string; kind: string; units: number; costBasis: number; currency: string }[]) => number;
 
   updateSettings: (patch: Partial<Settings>) => void;
   lock: () => void;
@@ -344,6 +345,20 @@ export const useStore = create<StoreState>((set, get) => {
     deleteInvestment: (id) => {
       set((s) => ({ investments: s.investments.filter((i) => i.id !== id) }));
       get().persist(); del('investments', [id]);
+    },
+    importInvestments: (list) => {
+      const valid = new Set(['RON', 'EUR', 'USD', 'GBP']);
+      const base = get().settings.currency;
+      const today = new Date().toISOString().slice(0, 10);
+      const mapped: Investment[] = list.map((h) => ({
+        id: uid('iv'), name: h.name, ticker: h.ticker, kind: (h.kind as any) ?? 'Stock',
+        currency: (valid.has(h.currency) ? h.currency : base) as any,
+        units: h.units, costBasis: h.costBasis, currentValue: h.costBasis,
+        history: [{ date: today, value: h.costBasis }],
+      }));
+      set((s) => ({ investments: [...s.investments, ...mapped] }));
+      get().persist(); pushMany('investments', mapped);
+      return mapped.length;
     },
 
     updateSettings: (patch) => {

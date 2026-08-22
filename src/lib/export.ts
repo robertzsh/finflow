@@ -154,6 +154,67 @@ export function parseBankCSV(text: string, cats: Category[]): Partial<Transactio
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Investment CSV import — tolerant to Trading 212 exports and simple sheets.
+// Aggregates buy/sell rows per ticker into a holding (units + cost basis).
+// ---------------------------------------------------------------------------
+function splitCsvLine(line: string): string[] {
+  const out: string[] = []; let cur = ''; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { q = !q; continue; }
+    if (ch === ',' && !q) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+export interface ParsedHolding {
+  name: string; ticker?: string; kind: 'Stock' | 'ETF' | 'Crypto';
+  units: number; costBasis: number; currency: string;
+}
+
+export function parseInvestmentsCSV(text: string): ParsedHolding[] {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const find = (...keys: string[]) => header.findIndex((h) => keys.some((k) => h.includes(k)));
+
+  const iAction = find('action');
+  const iTicker = find('ticker', 'symbol');
+  const iName = find('name', 'instrument');
+  const iShares = find('no. of shares', 'shares', 'quantity', 'units');
+  const iTotal = find('total');
+  const iCurrency = header.findIndex((h) => h.includes('currency') && h.includes('total'));
+  const iCurAny = find('currency');
+
+  const acc = new Map<string, ParsedHolding>();
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCsvLine(lines[i]);
+    if (cols.length < 2) continue;
+    const action = (iAction >= 0 ? cols[iAction] : 'buy').toLowerCase();
+    const isBuy = action.includes('buy') || action === '';
+    const isSell = action.includes('sell');
+    if (!isBuy && !isSell) continue; // skip deposits, dividends, fees, etc.
+
+    const ticker = iTicker >= 0 ? cols[iTicker] : '';
+    const name = (iName >= 0 ? cols[iName] : ticker) || ticker || 'Holding';
+    const key = (ticker || name).toUpperCase();
+    const units = Math.abs(parseFloat((cols[iShares] ?? '0').replace(/[^0-9.-]/g, ''))) || 0;
+    const total = Math.abs(parseFloat((cols[iTotal] ?? '0').replace(/[^0-9.-]/g, ''))) || 0;
+    const currency = (iCurrency >= 0 ? cols[iCurrency] : iCurAny >= 0 ? cols[iCurAny] : 'RON') || 'RON';
+    const kind: ParsedHolding['kind'] = /etf|index|s&p|ftse|msci/i.test(name) ? 'ETF' : /btc|eth|coin|crypto/i.test(name + ticker) ? 'Crypto' : 'Stock';
+
+    const h = acc.get(key) ?? { name, ticker: ticker || undefined, kind, units: 0, costBasis: 0, currency: currency.toUpperCase() };
+    h.units += isBuy ? units : -units;
+    h.costBasis += isBuy ? total : -total;
+    acc.set(key, h);
+  }
+  return [...acc.values()].filter((h) => h.units > 0.0000001 && h.costBasis > 0)
+    .map((h) => ({ ...h, units: Math.round(h.units * 1e6) / 1e6, costBasis: Math.round(h.costBasis * 100) / 100 }));
+}
+
 function normalizeDate(s: string) {
   const t = (s ?? '').trim();
   const dmy = t.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})$/);

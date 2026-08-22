@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, format, isSameMonth,
   isSameDay, addMonths, parseISO,
@@ -15,12 +15,28 @@ import { formatMoney } from '@/lib/format';
 
 const TODAY = new Date();
 
+interface DayItem {
+  key: string;                 // date yyyy-MM-dd
+  merchant: string;
+  amount: number;
+  type: 'income' | 'expense';
+  categoryId: string;
+  createdBy?: string;
+  projected?: boolean;         // future recurring, not yet a real transaction
+  recurring?: boolean;
+  frequency?: string;
+}
+
 export default function Calendar() {
-  const { transactions, categories, settings } = useStore();
+  const { transactions, categories, settings, cloud, authed, members } = useStore();
   const cur = settings.currency;
   const [month, setMonth] = useState(startOfMonth(TODAY));
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const upcoming = useMemo(() => upcomingOccurrences(transactions, 60, TODAY), [transactions]);
+  const showPayer = cloud && authed && members.length > 1;
+  const payerName = (id?: string) => members.find((m) => m.id === id)?.name;
+
+  const upcoming = useMemo(() => upcomingOccurrences(transactions, 90, TODAY), [transactions]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
@@ -28,29 +44,30 @@ export default function Calendar() {
     return eachDayOfInterval({ start, end });
   }, [month]);
 
-  // map upcoming + actual recurring transactions to date -> events
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, { merchant: string; amount: number; type: string; categoryId: string }[]>();
-    for (const u of upcoming) {
-      const arr = map.get(u.date) ?? [];
-      arr.push({ merchant: u.base.merchant, amount: u.amount, type: u.base.type, categoryId: u.base.categoryId });
-      map.set(u.date, arr);
+  // Every actual transaction on its day, plus projected future recurring bills.
+  const itemsByDate = useMemo(() => {
+    const map = new Map<string, DayItem[]>();
+    const add = (d: DayItem) => { const a = map.get(d.key) ?? []; a.push(d); map.set(d.key, a); };
+    for (const t of transactions) {
+      add({ key: t.date, merchant: t.merchant, amount: t.amount, type: t.type, categoryId: t.categoryId, createdBy: t.createdBy, recurring: t.recurring, frequency: t.frequency });
     }
-    // include historical recurring in current month
-    for (const t of transactions.filter((x) => x.recurring)) {
-      if (!isSameMonth(parseISO(t.date), month)) continue;
-      const arr = map.get(t.date) ?? [];
-      if (!arr.some((e) => e.merchant === t.merchant)) {
-        arr.push({ merchant: t.merchant, amount: t.amount, type: t.type, categoryId: t.categoryId });
-        map.set(t.date, arr);
+    for (const u of upcoming) {
+      // only add a projected occurrence if there isn't already a real one that day for the same merchant
+      const existing = map.get(u.date) ?? [];
+      if (!existing.some((e) => e.merchant === u.base.merchant)) {
+        add({ key: u.date, merchant: u.base.merchant, amount: u.amount, type: u.base.type, categoryId: u.base.categoryId, projected: true, recurring: true, frequency: u.base.frequency });
       }
     }
     return map;
-  }, [upcoming, transactions, month]);
+  }, [transactions, upcoming]);
+
+  const selectedItems = selected ? (itemsByDate.get(selected) ?? []) : [];
+  const dayIncome = selectedItems.filter((i) => i.type === 'income').reduce((a, i) => a + i.amount, 0);
+  const dayExpense = selectedItems.filter((i) => i.type === 'expense').reduce((a, i) => a + i.amount, 0);
 
   return (
     <Page>
-      <PageHeader title="Calendar" subtitle="Bills, subscriptions, salary and recurring expenses" />
+      <PageHeader title="Calendar" subtitle="Tap a day to see its transactions · bills & subscriptions projected ahead" />
 
       <div className="grid lg:grid-cols-3 gap-4">
         <Card className="p-4 lg:col-span-2">
@@ -68,52 +85,116 @@ export default function Calendar() {
           <div className="grid grid-cols-7 gap-1">
             {days.map((d) => {
               const key = format(d, 'yyyy-MM-dd');
-              const events = eventsByDate.get(key) ?? [];
+              const items = itemsByDate.get(key) ?? [];
               const inMonth = isSameMonth(d, month);
               const today = isSameDay(d, TODAY);
+              const isSel = selected === key;
+              const dayNet = items.reduce((a, i) => a + (i.type === 'income' ? i.amount : -i.amount), 0);
               return (
-                <div key={key} className={`min-h-[70px] rounded-lg p-1.5 border text-left ${today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02]' : 'opacity-30'}`}>
+                <button key={key} onClick={() => setSelected(key)}
+                  className={`min-h-[74px] rounded-lg p-1.5 border text-left transition ${isSel ? 'border-blue-400 bg-blue-500/15' : today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'opacity-30'}`}>
                   <div className={`text-xs mb-1 ${today ? 'text-blue-400 font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
                   <div className="space-y-0.5">
-                    {events.slice(0, 3).map((e, i) => {
+                    {items.slice(0, 2).map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);
                       return (
                         <div key={i} className="flex items-center gap-1 rounded px-1 py-0.5 text-[9px] truncate"
-                          style={{ background: `${c?.color ?? '#888'}22`, color: c?.color ?? '#aaa' }}>
-                          <span className="w-1 h-1 rounded-full shrink-0" style={{ background: c?.color }} />
-                          <span className="truncate">{e.merchant}</span>
+                          style={{ background: `${c?.color ?? '#888'}22`, color: c?.color ?? '#aaa', opacity: e.projected ? 0.7 : 1 }}>
+                          <span className="truncate">{c?.emoji ? c.emoji + ' ' : ''}{e.merchant}</span>
                         </div>
                       );
                     })}
-                    {events.length > 3 && <div className="text-[9px] text-white/40 px-1">+{events.length - 3} more</div>}
+                    {items.length > 2 && <div className="text-[9px] text-white/40 px-1">+{items.length - 2} more</div>}
                   </div>
-                </div>
+                  {items.length > 0 && (
+                    <div className={`mt-0.5 text-[9px] font-semibold ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
+                      {dayNet >= 0 ? '+' : '−'}{formatMoney(Math.abs(dayNet), cur, { compact: Math.abs(dayNet) > 9999 })}
+                    </div>
+                  )}
+                </button>
               );
             })}
           </div>
         </Card>
 
+        {/* Right panel: selected day detail, or upcoming list */}
         <Card className="p-5">
-          <h3 className="font-semibold mb-4">Upcoming (next 60 days)</h3>
-          <div className="space-y-2 max-h-[520px] overflow-y-auto no-scrollbar">
-            {upcoming.length === 0 && <p className="text-sm text-white/40">No recurring transactions scheduled.</p>}
-            {upcoming.map((u, i) => {
-              const c = categories.find((x) => x.id === u.base.categoryId);
-              return (
-                <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
-                  className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-                  <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{u.base.merchant}</div>
-                    <div className="text-xs text-white/40">{format(parseISO(u.date), 'EEE d MMM')} · {u.base.frequency}</div>
+          {selected ? (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <button onClick={() => setSelected(null)} className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white">
+                  <ArrowLeft size={15} /> {format(parseISO(selected), 'EEE d MMM yyyy')}
+                </button>
+              </div>
+              {selectedItems.length === 0 ? (
+                <p className="text-sm text-white/40">No transactions this day.</p>
+              ) : (
+                <>
+                  <div className="flex gap-2 mb-3">
+                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                      <div className="text-[10px] text-white/40 uppercase">In</div>
+                      <div className="text-income font-semibold text-sm">{formatMoney(dayIncome, cur)}</div>
+                    </div>
+                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                      <div className="text-[10px] text-white/40 uppercase">Out</div>
+                      <div className="text-expense font-semibold text-sm">{formatMoney(dayExpense, cur)}</div>
+                    </div>
+                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                      <div className="text-[10px] text-white/40 uppercase">Net</div>
+                      <div className="font-semibold text-sm">{formatMoney(dayIncome - dayExpense, cur, { sign: true })}</div>
+                    </div>
                   </div>
-                  <div className={`text-sm font-semibold ${u.base.type === 'income' ? 'text-income' : ''}`}>
-                    {u.base.type === 'income' ? '+' : '−'}{formatMoney(u.amount, cur)}
+                  <div className="space-y-2 max-h-[420px] overflow-y-auto no-scrollbar">
+                    {selectedItems.map((e, i) => {
+                      const c = categories.find((x) => x.id === e.categoryId);
+                      return (
+                        <div key={i} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
+                          <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                              {e.merchant || c?.name}
+                              {e.projected && <span className="text-[9px] text-invest border border-invest/30 rounded px-1">projected</span>}
+                              {e.recurring && !e.projected && <span className="text-[9px] text-goal">↻</span>}
+                            </div>
+                            <div className="text-xs text-white/40">
+                              {c?.name}{showPayer && payerName(e.createdBy) ? ` · 👤 ${payerName(e.createdBy)}` : ''}
+                            </div>
+                          </div>
+                          <div className={`text-sm font-semibold ${e.type === 'income' ? 'text-income' : ''}`}>
+                            {e.type === 'income' ? '+' : '−'}{formatMoney(e.amount, cur)}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold mb-4">Upcoming (next 90 days)</h3>
+              <div className="space-y-2 max-h-[520px] overflow-y-auto no-scrollbar">
+                {upcoming.length === 0 && <p className="text-sm text-white/40">No recurring transactions scheduled. Add a bill or subscription and tick "Recurring" to see it here.</p>}
+                {upcoming.map((u, i) => {
+                  const c = categories.find((x) => x.id === u.base.categoryId);
+                  return (
+                    <motion.button key={i} onClick={() => { setMonth(startOfMonth(parseISO(u.date))); setSelected(u.date); }}
+                      initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
+                      className="w-full flex items-center gap-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] px-3 py-2.5 text-left">
+                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{u.base.merchant}</div>
+                        <div className="text-xs text-white/40">{format(parseISO(u.date), 'EEE d MMM')} · {u.base.frequency}</div>
+                      </div>
+                      <div className={`text-sm font-semibold ${u.base.type === 'income' ? 'text-income' : ''}`}>
+                        {u.base.type === 'income' ? '+' : '−'}{formatMoney(u.amount, cur)}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </Card>
       </div>
     </Page>

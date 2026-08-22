@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Upload } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
@@ -13,14 +13,30 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
 import { investmentTotals, investmentAllocation, investmentHistory } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
+import { parseInvestmentsCSV } from '@/lib/export';
 import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
 
 const KINDS: InvestmentKind[] = ['Stock', 'ETF', 'Crypto', 'Savings', 'Pension'];
 
 export default function Investments() {
-  const { investments, settings, addInvestment, deleteInvestment } = useStore();
+  const { investments, settings, addInvestment, deleteInvestment, importInvestments } = useStore();
   const cur = settings.currency;
   const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const csvRef = useRef<HTMLInputElement>(null);
+
+  function onCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const holdings = parseInvestmentsCSV(r.result as string);
+      if (!holdings.length) { setMsg('No holdings found in that CSV. Make sure it’s a Trading 212 (or similar) export.'); }
+      else { const n = importInvestments(holdings); setMsg(`Imported ${n} holdings. Update each "current value" to reflect today’s price.`); }
+      setTimeout(() => setMsg(''), 6000);
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  }
 
   const fx = settings.fxRates;
   const totals = useMemo(() => investmentTotals(investments, fx), [investments, fx]);
@@ -31,7 +47,13 @@ export default function Investments() {
   return (
     <Page>
       <PageHeader title="Investments" subtitle="Portfolio value, allocation and performance"
-        action={<Button onClick={() => setOpen(true)}><Plus size={16} /> Add holding</Button>} />
+        action={<div className="flex gap-2">
+          <Button variant="ghost" onClick={() => csvRef.current?.click()}><Upload size={16} /> Import CSV</Button>
+          <Button onClick={() => setOpen(true)}><Plus size={16} /> Add holding</Button>
+          <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={onCSV} />
+        </div>} />
+
+      {msg && <div className="mb-4 rounded-xl bg-invest/15 border border-invest/30 text-invest px-4 py-2.5 text-sm">{msg}</div>}
 
       <div className="grid sm:grid-cols-3 gap-4 mb-4">
         <Card className="p-5"><p className="text-xs uppercase tracking-wider text-white/50">Portfolio value</p><p className="text-2xl font-bold mt-2">{formatMoney(totals.value, cur)}</p></Card>

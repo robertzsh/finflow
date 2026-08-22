@@ -15,8 +15,24 @@ import { formatMoney, currencySymbol } from '@/lib/format';
 import { goalETA, toBase } from '@/lib/finance';
 import type { Goal, CurrencyCode } from '@/types';
 
-const ICONS = ['ShieldCheck', 'Car', 'Plane', 'Home', 'Monitor', 'Gift', 'GraduationCap', 'Heart', 'PiggyBank', 'Gem'];
-const COLORS = ['#a855f7', '#c084fc', '#8b5cf6', '#7c3aed', '#d8b4fe', '#6366f1'];
+const ICONS = ['ShieldCheck', 'Car', 'Plane', 'Home', 'Monitor', 'Gift', 'GraduationCap', 'Heart', 'PiggyBank', 'Gem', 'Baby', 'Briefcase', 'Bike', 'Sofa', 'Dog'];
+const COLORS = [
+  '#a855f7', '#c084fc', '#8b5cf6', '#7c3aed', '#6366f1', '#3b82f6',
+  '#06b6d4', '#10b981', '#22c55e', '#eab308', '#f59e0b', '#f97316',
+  '#ef4444', '#ec4899', '#f472b6', '#14b8a6',
+];
+
+// Preset goal templates — one tap to prefill name, icon and colour.
+const GOAL_PRESETS: { name: string; icon: string; color: string }[] = [
+  { name: 'Fond de urgență', icon: 'ShieldCheck', color: '#a855f7' },
+  { name: 'Cumpărare casă', icon: 'Home', color: '#7c3aed' },
+  { name: 'Cumpărare mașină', icon: 'Car', color: '#3b82f6' },
+  { name: 'Vacanță', icon: 'Plane', color: '#06b6d4' },
+  { name: 'Nuntă', icon: 'Heart', color: '#ec4899' },
+  { name: 'PC nou', icon: 'Monitor', color: '#10b981' },
+  { name: 'Educație', icon: 'GraduationCap', color: '#f59e0b' },
+  { name: 'Pensie', icon: 'PiggyBank', color: '#14b8a6' },
+];
 
 export default function Goals() {
   const { goals, settings, addGoal, deleteGoal, contributeGoal } = useStore();
@@ -87,6 +103,18 @@ function NewGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () =>
   return (
     <Modal open={open} onClose={onClose} title="New savings goal">
       <div className="space-y-4">
+        <div>
+          <Label>Quick start</Label>
+          <div className="flex flex-wrap gap-2">
+            {GOAL_PRESETS.map((p) => (
+              <button key={p.name} type="button"
+                onClick={() => { setName(p.name); setIcon(p.icon); setColor(p.color); }}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${name === p.name ? 'border-goal bg-goal/20' : 'border-white/10 bg-white/5'}`}>
+                <CategoryIcon icon={p.icon} color={p.color} size={13} bg={false} /> {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2"><Label>Goal name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Emergency Fund" /></div>
           <div><Label>Currency</Label><Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{GOAL_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
