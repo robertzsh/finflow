@@ -37,6 +37,19 @@ export function monthStats(txs: Transaction[], ref: Date): MonthStats {
   return { income, expense, net, savingsRate: income > 0 ? (net / income) * 100 : 0 };
 }
 
+/** Per-member income & expense for a given month, keyed by the member id that logged it. */
+export function memberSpending(txs: Transaction[], ref: Date) {
+  const m = txInMonth(txs, ref);
+  const map = new Map<string, { income: number; expense: number }>();
+  for (const t of m) {
+    const k = t.createdBy ?? 'unknown';
+    const e = map.get(k) ?? { income: 0, expense: 0 };
+    if (t.type === 'income') e.income += t.amount; else e.expense += t.amount;
+    map.set(k, e);
+  }
+  return map;
+}
+
 /** Running account balance = opening balance + all net flows (income − expenses). */
 export function accountBalance(txs: Transaction[], starting = 0) {
   return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);

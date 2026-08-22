@@ -50,6 +50,7 @@ interface StoreState extends AppData {
   joinHousehold: (code: string) => Promise<boolean>;
   loadFromCloud: (userId: string) => Promise<void>;
   refreshMembers: () => Promise<void>;
+  setMyOpeningBalance: (amount: number) => Promise<void>;
 
   addTransaction: (t: Omit<Transaction, 'id' | 'createdAt'>) => void;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
@@ -204,6 +205,16 @@ export const useStore = create<StoreState>((set, get) => {
       if (s.householdId) set({ members: await cloud.getMembers(s.householdId) });
     },
 
+    setMyOpeningBalance: async (amount) => {
+      const s = get();
+      if (s.cloud && s.authed && s.userId) {
+        await cloud.setOpeningBalance(s.userId, amount);
+        await get().refreshMembers();
+      } else {
+        get().updateSettings({ openingBalance: amount });
+      }
+    },
+
     signIn: async (email, password) => {
       try {
         set({ authError: '' });
@@ -242,7 +253,7 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     addTransaction: (t) => {
-      const tx: Transaction = { ...t, id: uid('tx'), createdAt: new Date().toISOString(), createdBy: get().userId ?? undefined };
+      const tx: Transaction = { ...t, id: uid('tx'), createdAt: new Date().toISOString(), createdBy: t.createdBy ?? get().userId ?? undefined };
       set((s) => ({ transactions: [tx, ...s.transactions] }));
       get().persist(); push('transactions', tx);
     },

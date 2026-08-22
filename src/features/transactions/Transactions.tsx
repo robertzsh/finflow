@@ -20,8 +20,10 @@ import { format, parseISO, isSameDay } from 'date-fns';
 type SortKey = 'date' | 'amount' | 'merchant';
 
 export default function Transactions() {
-  const { transactions, categories, settings, deleteTransactions, bulkUpdate } = useStore();
+  const { transactions, categories, settings, deleteTransactions, bulkUpdate, cloud, authed, members } = useStore();
   const cur = settings.currency;
+  const showPayer = cloud && authed && members.length > 1;
+  const payerName = (id?: string) => members.find((m) => m.id === id)?.name;
 
   const [q, setQ] = useState('');
   const [type, setType] = useState<'all' | 'income' | 'expense'>('all');
@@ -187,7 +189,7 @@ export default function Transactions() {
                           {t.recurring && <Badge color="#a855f7">↻ {t.frequency}</Badge>}
                         </div>
                         <div className="text-xs text-white/40 flex items-center gap-1.5">
-                          {c?.name} · {t.method}{t.notes ? ` · ${t.notes}` : ''}
+                          {c?.name} · {t.method}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerName(t.createdBy) ? ` · 👤 ${payerName(t.createdBy)}` : ''}
                         </div>
                       </div>
                       <div className={`text-right font-semibold tabular-nums shrink-0 ${t.type === 'income' ? 'text-income' : ''}`}>

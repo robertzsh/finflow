@@ -20,8 +20,10 @@ interface FormValues {
 const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
 
 export function TransactionForm({ existing, onDone }: { existing?: Transaction; onDone: () => void }) {
-  const { categories, addTransaction, updateTransaction, deleteTransaction } = useStore();
+  const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId } = useStore();
   const [formError, setFormError] = useState('');
+  const showPaidBy = cloud && authed && members.length > 1;
+  const [paidBy, setPaidBy] = useState<string>(existing?.createdBy ?? userId ?? '');
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: existing ? {
@@ -51,6 +53,7 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
         method: v.method as PaymentMethod, date: v.date, notes: v.notes,
         recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
         receipt: existing?.receipt,
+        createdBy: showPaidBy ? (paidBy || userId || undefined) : existing?.createdBy,
       };
       if (existing) updateTransaction(existing.id, payload);
       else addTransaction(payload);
@@ -101,6 +104,15 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
           <Select {...register('method')}>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select>
         </div>
       </div>
+
+      {showPaidBy && (
+        <div>
+          <Label>Paid by</Label>
+          <Select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+            {members.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === userId ? ' (you)' : ''}</option>)}
+          </Select>
+        </div>
+      )}
 
       <div>
         <Label>Notes (optional)</Label>

@@ -53,12 +53,10 @@ export default function Settings() {
           <SectionCardHeader title="Preferences" />
           <div className="space-y-4">
             <div><Label>Your name</Label><Input value={settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></div>
-            <div>
-              <Label>Opening / current balance ({currencySymbol(settings.currency)})</Label>
-              <Input type="number" step="0.01" defaultValue={settings.openingBalance}
-                onBlur={(e) => updateSettings({ openingBalance: Number(e.target.value) || 0 })} />
-              <p className="text-xs text-white/40 mt-1.5">Your starting balance. Income adds to it and expenses subtract, so the dashboard balance stays in sync with what you actually have.</p>
-            </div>
+            <OpeningBalanceField />
+            {store.cloud && store.authed && store.members.length > 1 && (
+              <p className="text-xs text-white/40 -mt-2">Household total: <span className="text-white/70 font-medium">{currencySymbol(settings.currency)}{store.members.reduce((a, m) => a + m.openingBalance, 0).toLocaleString('en-GB')}</span> — the sum of every member's balance.</p>
+            )}
             <div><Label>Base currency</Label>
               <Select value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value as CurrencyCode })}>
                 <option value="RON">lei RON — Leu românesc</option>
@@ -160,6 +158,24 @@ export default function Settings() {
 
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
     </Page>
+  );
+}
+
+function OpeningBalanceField() {
+  const { cloud, authed, userId, members, settings, setMyOpeningBalance } = useStore();
+  const mine = cloud && authed ? (members.find((m) => m.id === userId)?.openingBalance ?? 0) : settings.openingBalance;
+  const shared = cloud && authed;
+  return (
+    <div>
+      <Label>{shared ? 'Your starting balance' : 'Opening / current balance'} ({currencySymbol(settings.currency)})</Label>
+      <Input type="number" step="0.01" key={mine} defaultValue={mine}
+        onBlur={(e) => setMyOpeningBalance(Number(e.target.value) || 0)} />
+      <p className="text-xs text-white/40 mt-1.5">
+        {shared
+          ? 'Your part of the household balance. Both members’ balances add up, then shared income and expenses adjust the family total.'
+          : 'Your starting balance. Income adds to it and expenses subtract, so the balance stays in sync with what you have.'}
+      </p>
+    </div>
   );
 }
 
