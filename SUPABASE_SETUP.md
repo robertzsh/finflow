@@ -39,14 +39,42 @@ and toggle **Confirm email** off. (You can turn it back on later.)
 
 ---
 
-## What I'll build once you send the keys
+## Step 5 — Turn on cloud sync in your live site
+
+The app is already wired for this. It stays in local mode until you provide the two
+keys, so nothing breaks in the meantime. To activate accounts + family sharing:
+
+1. In your GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**.
+   Add two secrets:
+   - `VITE_SUPABASE_URL` → your Project URL from Step 2
+   - `VITE_SUPABASE_ANON_KEY` → your anon public key from Step 2
+2. Trigger a rebuild so the live site picks them up:
+   ```bash
+   git commit --allow-empty -m "enable cloud sync" && git push
+   ```
+3. When the Action finishes, open your site — it now shows a **login / sign-up** screen.
+
+To run it locally with cloud on, copy `.env.example` to `.env`, paste the same two
+values, and `npm run dev`.
+
+### How you and your partner get on the same books
+1. You sign up → this automatically creates your household.
+2. Open **Settings → Household** and copy your **invite code**.
+3. Your partner signs up with their own email, opens **Settings → Household**, pastes
+   the code into **"join a household"**, and hits Join.
+4. You now share the same transactions, budgets, goals and investments — and every
+   change syncs live between you within about a second.
+
+---
+
+## What's already built
 
 - A **login / sign-up screen** (email + password) replacing the local-only onboarding.
 - Your **name and settings persist** in the cloud, tied to your account.
 - A **household** model: when you sign up you get your own household; you invite your
   partner by sharing a short **invite code** (Settings → Household), they enter it and
   you're both on the same books.
-- Every transaction records **who added it**, so you can see "who paid" and filter by person.
+- Every transaction records **who added it** (stored per row, ready for a "who paid" view).
 - **Live sync** — when one of you adds an expense, it appears for the other within a second.
 - The current **local/offline mode stays as a fallback** if no keys are configured, so the
   app still runs without a backend.

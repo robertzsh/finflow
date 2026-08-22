@@ -28,6 +28,7 @@ export interface Transaction {
   frequency?: RecurringFrequency;
   receipt?: string;        // data URL
   createdAt: string;
+  createdBy?: string;      // profile id (cloud mode) — who added it
 }
 
 export interface Budget {

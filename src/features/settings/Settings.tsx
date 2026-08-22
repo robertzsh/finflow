@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock } from 'lucide-react';
+import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
@@ -44,6 +44,8 @@ export default function Settings() {
     <Page>
       <PageHeader title="Settings" subtitle="Preferences, security and data" />
       {msg && <div className="mb-4 rounded-xl bg-income/15 border border-income/30 text-income px-4 py-2.5 text-sm">{msg}</div>}
+
+      {store.cloud && store.authed && <HouseholdCard flash={flash} />}
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* Preferences */}
@@ -152,6 +154,57 @@ export default function Settings() {
 
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
     </Page>
+  );
+}
+
+function HouseholdCard({ flash }: { flash: (t: string) => void }) {
+  const { householdName, inviteCode, members, userId, joinHousehold, signOutCloud, refreshMembers } = useStore();
+  const [code, setCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  function copy() { navigator.clipboard?.writeText(inviteCode); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+  async function join() {
+    if (!code.trim()) return;
+    const ok = await joinHousehold(code.trim());
+    flash(ok ? 'Joined household' : 'Invalid invite code');
+    if (ok) { setCode(''); refreshMembers(); }
+  }
+
+  return (
+    <Card className="p-5 mb-4">
+      <SectionCardHeader title="Household" hint={householdName}
+        action={<Button variant="ghost" onClick={signOutCloud}><LogOut size={15} /> Sign out</Button>} />
+      <div className="grid md:grid-cols-2 gap-5">
+        <div>
+          <Label>Invite your partner</Label>
+          <p className="text-xs text-white/40 mb-2">Share this code. They sign up, then enter it below to join your shared books.</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 font-mono tracking-widest text-lg text-center">{inviteCode || '—'}</div>
+            <Button variant="ghost" onClick={copy}>{copied ? <Check size={16} className="text-income" /> : <Copy size={16} />}</Button>
+          </div>
+          <div className="mt-4">
+            <Label>Or join a household</Label>
+            <div className="flex items-center gap-2">
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter invite code" />
+              <Button onClick={join} disabled={!code.trim()}><UserPlus size={15} /> Join</Button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <Label>Members ({members.length})</Label>
+          <div className="space-y-2 mt-1">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2">
+                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold">{(m.name || '?').charAt(0).toUpperCase()}</span>
+                <span className="text-sm">{m.name}{m.id === userId && <span className="text-white/40"> (you)</span>}</span>
+                <Users size={14} className="ml-auto text-white/20" />
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-white/40 mt-3">Everyone here shares the same transactions, budgets, goals and investments — updates sync live.</p>
+        </div>
+      </div>
+    </Card>
   );
 }
 

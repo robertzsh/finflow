@@ -46,13 +46,13 @@ create trigger on_auth_user_created
 -- 2. Data tables (all scoped to a household)
 -- ---------------------------------------------------------------------------
 create table if not exists categories (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   name text not null, kind text not null, icon text, color text, custom boolean default true
 );
 
 create table if not exists transactions (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   created_by uuid references profiles(id),
   type text not null, amount numeric not null, category_id text,
@@ -62,20 +62,20 @@ create table if not exists transactions (
 );
 
 create table if not exists budgets (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   category_id text not null, amount numeric not null, month text default 'all'
 );
 
 create table if not exists goals (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   name text not null, target numeric, saved numeric, monthly_contribution numeric,
   color text, icon text, currency text, created_at date
 );
 
 create table if not exists investments (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   name text not null, ticker text, kind text, currency text,
   units numeric, cost_basis numeric, current_value numeric, history jsonb default '[]'

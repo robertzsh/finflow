@@ -8,6 +8,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { TransactionModal } from '@/components/TransactionModal';
 import { LockScreen } from '@/components/LockScreen';
 import { Onboarding } from '@/components/Onboarding';
+import { Auth } from '@/components/Auth';
 import { useHotkey } from '@/hooks/useHotkeys';
 import { setInsightCurrency } from '@/lib/insights';
 import { currencySymbol } from '@/lib/format';
@@ -22,7 +23,7 @@ import Reports from '@/features/reports/Reports';
 import SettingsPage from '@/features/settings/Settings';
 
 export default function App() {
-  const { ready, init, locked, settings } = useStore();
+  const { ready, init, locked, settings, cloud, authed, authReady } = useStore();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState(false);
 
@@ -32,6 +33,14 @@ export default function App() {
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
 
+  // Cloud mode: show a login screen until signed in.
+  if (cloud) {
+    if (!authReady) {
+      return <div className="app-bg min-h-screen flex items-center justify-center"><div className="animate-pulse text-white/40">Loading FinFlow…</div></div>;
+    }
+    if (!authed) return <div className="app-bg min-h-screen"><Auth /></div>;
+  }
+
   if (!ready) {
     return (
       <div className="app-bg min-h-screen flex items-center justify-center">
@@ -40,8 +49,9 @@ export default function App() {
     );
   }
 
-  if (!settings.onboarded) return <div className="app-bg min-h-screen"><Onboarding /></div>;
-  if (locked) return <div className="app-bg min-h-screen"><LockScreen /></div>;
+  // Onboarding & PIN lock only apply to local (non-cloud) mode.
+  if (!cloud && !settings.onboarded) return <div className="app-bg min-h-screen"><Onboarding /></div>;
+  if (!cloud && locked) return <div className="app-bg min-h-screen"><LockScreen /></div>;
 
   return (
     <div className="app-bg min-h-screen flex">
