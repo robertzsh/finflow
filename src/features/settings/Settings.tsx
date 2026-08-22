@@ -242,9 +242,18 @@ function ToggleRow({ icon, title, desc, checked, onChange }: { icon: React.React
   );
 }
 
-const ICONS = ['ShoppingBag', 'Coffee', 'Car', 'Home', 'Heart', 'Gamepad2', 'Book', 'Plane', 'Gift', 'Zap'];
-const COLORS = ['#10b981', '#3b82f6', '#eab308', '#a855f7', '#ef4444', '#f97316', '#06b6d4', '#ec4899'];
-const EMOJIS = ['🛍️', '☕', '🚗', '🏠', '❤️', '🎮', '📚', '✈️', '🎁', '⚡', '💅', '🏬', '🍽️', '🐾', '🎬', '🏋️', '💊', '🍺'];
+const ICONS = ['ShoppingBag', 'ShoppingCart', 'Coffee', 'Utensils', 'Car', 'Fuel', 'Home', 'Building', 'Heart', 'HeartPulse', 'Gamepad2', 'Clapperboard', 'Book', 'GraduationCap', 'Plane', 'TrainFront', 'Gift', 'Zap', 'Dumbbell', 'Smartphone', 'Shirt', 'Baby', 'Dog', 'PawPrint', 'Wine', 'Pizza', 'Bike', 'Bus', 'Wrench', 'Sparkles', 'Music', 'Film', 'Camera', 'Briefcase', 'Landmark', 'PiggyBank'];
+const COLORS = [
+  '#10b981', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f472b6', '#ef4444',
+  '#f97316', '#f59e0b', '#eab308', '#94a3b8',
+];
+const EMOJIS = [
+  '🛍️', '🛒', '☕', '🍽️', '🍕', '🍺', '🍷', '🚗', '⛽', '🚆', '🚌', '✈️',
+  '🏠', '🏦', '❤️', '💊', '🩺', '🎮', '🎬', '🎵', '📚', '🎓', '💻', '📱',
+  '🎁', '⚡', '💅', '🏬', '🐾', '🐶', '🐱', '👶', '🏋️', '⚽', '🚲', '🔧',
+  '💇', '🧾', '💡', '🌍', '🎨', '📷', '💼', '🏛️', '🐖', '💎', '🎄', '🌸',
+];
 function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (c: any) => void }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<'income' | 'expense'>('expense');

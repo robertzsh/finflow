@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { CashFlowChart, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, healthScore, scoreLabel, memberSpending,
+  investmentAllocation, investmentTotals, perMemberSpending,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { formatMoney } from '@/lib/format';
@@ -22,7 +22,7 @@ import { startOfMonth, subMonths } from 'date-fns';
 const REF = new Date();
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
-  const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members } = useStore();
+  const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId } = useStore();
   const cur = settings.currency;
   // In a shared household the opening balance is the sum of every member's balance.
   const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
@@ -37,15 +37,17 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const sav = savingsTrend(transactions, 8);
     const alloc = investmentAllocation(investments, settings.fxRates);
     const invTotals = investmentTotals(investments, settings.fxRates);
-    const score = healthScore(transactions, budgets, categories, goals, balance, REF);
     const insights = buildInsights(transactions, categories, REF, balance);
-    const byMember = memberSpending(transactions, REF);
-    return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, score, insights, byMember };
-  }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening]);
+    const memberIds = members.map((m) => m.id);
+    const byMember = perMemberSpending(transactions, REF, memberIds);
+    return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, insights, byMember };
+  }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;
-  const sl = scoreLabel(data.score);
+  const savingsRate = data.stats.savingsRate;
+  const isHousehold = cloud && authed && members.length > 1;
+  const myStats = isHousehold && userId ? (data.byMember.get(userId) ?? { income: 0, expense: 0 }) : null;
   const expenseTotal = data.byCat.reduce((a, b) => a + b.value, 0);
   const incomeTotal = data.bySource.reduce((a, b) => a + b.value, 0);
   const allocTotal = data.alloc.reduce((a, b) => a + b.value, 0);
@@ -71,7 +73,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
   return (
     <Page>
-      <PageHeader title={`Hi ${settings.name} 👋`} subtitle={`${format(REF, 'MMMM yyyy')} · monthly totals reset on the 1st`}
+      <PageHeader title={`Hi ${settings.name} 👋`} subtitle={`${format(REF, 'MMMM yyyy')} · ${isHousehold ? 'family totals (both of you)' : 'monthly totals reset on the 1st'}`}
         action={<Button onClick={onQuickAdd}><Icons.Plus size={16} /> Add transaction</Button>} />
 
       {showReportPrompt && (
@@ -94,28 +96,29 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
         <StatCard label="Savings this month" value={formatMoney(Math.max(0, data.stats.net), cur)} icon="PiggyBank" accent="savings" delay={0.15} />
         <StatCard label="Net cash flow" value={formatMoney(data.stats.net, cur, { sign: true })} icon={data.stats.net >= 0 ? 'TrendingUp' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'income' : 'expense'} delay={0.2} />
-        <HealthCard score={data.score} label={sl.label} color={sl.color} delay={0.25} />
+        <SavingsRateCard rate={savingsRate} income={data.stats.income} delay={0.25} />
       </div>
 
       {/* Per-member breakdown (shared household) */}
-      {cloud && authed && members.length > 0 && (
+      {isHousehold && (
         <Card className="p-5 mt-4" delay={0.15}>
-          <SectionCardHeader title="Who spent what" hint="This month, by member" />
+          <SectionCardHeader title="Statistics per person" hint="Your own spending vs your partner's this month · shared expenses split 50/50" />
           <div className="grid sm:grid-cols-2 gap-3">
             {members.map((m, i) => {
               const b = data.byMember.get(m.id) ?? { income: 0, expense: 0 };
               const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
+              const net = b.income - b.expense;
               const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
               const color = palette[i % palette.length];
               return (
-                <div key={m.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-4">
+                <div key={m.id} className={`rounded-xl border p-4 ${m.id === userId ? 'bg-blue-500/10 border-blue-400/30' : 'bg-white/[0.03] border-white/10'}`}>
                   <div className="flex items-center gap-2.5 mb-2">
                     <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: color }}>
                       {(m.name || '?').charAt(0).toUpperCase()}
                     </span>
                     <div className="flex-1">
-                      <div className="text-sm font-semibold">{m.name}</div>
-                      <div className="text-[11px] text-white/40">balance {formatMoney(m.openingBalance, cur, { compact: m.openingBalance > 9999 })}</div>
+                      <div className="text-sm font-semibold">{m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}</div>
+                      <div className="text-[11px] text-white/40">set aside {formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 })}</div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-expense">{formatMoney(b.expense, cur)}</div>
@@ -192,16 +195,20 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   );
 }
 
-function HealthCard({ score, label, color, delay }: { score: number; label: string; color: string; delay: number }) {
-  const r = 26, c = 2 * Math.PI * r, offset = c - (score / 100) * c;
+/** % of income kept (put aside) vs spent this month. */
+function SavingsRateCard({ rate, income, delay }: { rate: number; income: number; delay: number }) {
+  const pct = Math.max(-100, Math.min(100, rate));
+  const color = income <= 0 ? '#94a3b8' : rate >= 20 ? '#10b981' : rate >= 0 ? '#eab308' : '#ef4444';
+  const label = income <= 0 ? 'Log income to see' : rate >= 20 ? 'Great — keeping a lot' : rate >= 0 ? `Keeping ${rate.toFixed(0)}% of income` : 'Spending more than earned';
+  const r = 26, c = 2 * Math.PI * r, offset = c - (Math.max(0, pct) / 100) * c;
   return (
     <Card hover delay={delay} className="p-5 relative overflow-hidden">
       <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-30" style={{ background: color }} />
       <div className="flex items-center justify-between relative">
         <div>
-          <p className="text-xs uppercase tracking-wider text-white/50">Health score</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums">{score}<span className="text-sm text-white/40">/100</span></p>
-          <p className="mt-1 text-xs font-medium" style={{ color }}>{label}</p>
+          <p className="text-xs uppercase tracking-wider text-white/50">Savings rate</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums" style={{ color }}>{income <= 0 ? '—' : `${rate.toFixed(0)}%`}</p>
+          <p className="mt-1 text-xs font-medium text-white/50">put aside vs spent</p>
         </div>
         <svg width="64" height="64" className="-rotate-90">
           <circle cx="32" cy="32" r={r} stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
@@ -209,6 +216,7 @@ function HealthCard({ score, label, color, delay }: { score: number; label: stri
             strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: offset }} transition={{ duration: 1 }} />
         </svg>
       </div>
+      <p className="mt-1 text-[11px] relative" style={{ color }}>{label}</p>
     </Card>
   );
 }

@@ -50,6 +50,27 @@ export function memberSpending(txs: Transaction[], ref: Date) {
   return map;
 }
 
+/** Per-member totals where shared ("all"/unknown) transactions are split equally. */
+export const SHARED = 'all';
+export function perMemberSpending(txs: Transaction[], ref: Date, memberIds: string[]) {
+  const res = new Map<string, { income: number; expense: number }>(memberIds.map((id) => [id, { income: 0, expense: 0 }]));
+  const n = memberIds.length || 1;
+  for (const t of txInMonth(txs, ref)) {
+    if (t.createdBy && res.has(t.createdBy)) {
+      const e = res.get(t.createdBy)!;
+      if (t.type === 'income') e.income += t.amount; else e.expense += t.amount;
+    } else {
+      // shared or unattributed → split equally between members
+      const share = t.amount / n;
+      for (const id of memberIds) {
+        const e = res.get(id)!;
+        if (t.type === 'income') e.income += share; else e.expense += share;
+      }
+    }
+  }
+  return res;
+}
+
 /** Running account balance = opening balance + all net flows (income − expenses). */
 export function accountBalance(txs: Transaction[], starting = 0) {
   return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);

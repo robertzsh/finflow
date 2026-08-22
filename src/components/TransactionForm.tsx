@@ -19,7 +19,7 @@ interface FormValues {
 
 const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
 
-export function TransactionForm({ existing, onDone }: { existing?: Transaction; onDone: () => void }) {
+export function TransactionForm({ existing, onDone, defaultDate }: { existing?: Transaction; onDone: () => void; defaultDate?: string }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId } = useStore();
   const [formError, setFormError] = useState('');
   const showPaidBy = cloud && authed && members.length > 1;
@@ -32,7 +32,7 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
       notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly',
     } : {
       type: 'expense', amount: undefined as unknown as number, categoryId: '',
-      method: 'Card', date: new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly',
+      method: 'Card', date: defaultDate || new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly',
     },
   });
 
@@ -110,6 +110,7 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
           <Label>Paid by</Label>
           <Select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
             {members.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === userId ? ' (you)' : ''}</option>)}
+            <option value="all">👥 Everyone (split equally)</option>
           </Select>
         </div>
       )}

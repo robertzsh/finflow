@@ -9,7 +9,10 @@ import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { TransactionModal } from '@/components/TransactionModal';
+import { Plus } from 'lucide-react';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { formatMoney } from '@/lib/format';
 
@@ -32,9 +35,10 @@ export default function Calendar() {
   const cur = settings.currency;
   const [month, setMonth] = useState(startOfMonth(TODAY));
   const [selected, setSelected] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const showPayer = cloud && authed && members.length > 1;
-  const payerName = (id?: string) => members.find((m) => m.id === id)?.name;
+  const payerLabel = (id?: string) => id === 'all' ? '👥 Both' : (members.find((m) => m.id === id)?.name ? `👤 ${members.find((m) => m.id === id)!.name}` : '');
 
   const upcoming = useMemo(() => upcomingOccurrences(transactions, 90, TODAY), [transactions]);
 
@@ -125,6 +129,7 @@ export default function Calendar() {
                 <button onClick={() => setSelected(null)} className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white">
                   <ArrowLeft size={15} /> {format(parseISO(selected), 'EEE d MMM yyyy')}
                 </button>
+                <Button onClick={() => setAdding(true)} className="!px-2.5 !py-1.5"><Plus size={14} /> Add</Button>
               </div>
               {selectedItems.length === 0 ? (
                 <p className="text-sm text-white/40">No transactions this day.</p>
@@ -157,7 +162,7 @@ export default function Calendar() {
                               {e.recurring && !e.projected && <span className="text-[9px] text-goal">↻</span>}
                             </div>
                             <div className="text-xs text-white/40">
-                              {c?.name}{showPayer && payerName(e.createdBy) ? ` · 👤 ${payerName(e.createdBy)}` : ''}
+                              {c?.name}{showPayer && payerLabel(e.createdBy) ? ` · ${payerLabel(e.createdBy)}` : ''}
                             </div>
                           </div>
                           <div className={`text-sm font-semibold ${e.type === 'income' ? 'text-income' : ''}`}>
@@ -197,6 +202,8 @@ export default function Calendar() {
           )}
         </Card>
       </div>
+
+      <TransactionModal open={adding} onClose={() => setAdding(false)} defaultDate={selected ?? undefined} />
     </Page>
   );
 }
