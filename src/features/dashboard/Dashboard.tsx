@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import * as Icons from 'lucide-react';
+import { isSameMonth, parseISO, format } from 'date-fns';
 import { useStore } from '@/store/useStore';
+import { exportMonthlyReportPDF } from '@/lib/export';
+import { buildMonthlyReport } from '@/lib/report';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
@@ -47,10 +50,42 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const incomeTotal = data.bySource.reduce((a, b) => a + b.value, 0);
   const allocTotal = data.alloc.reduce((a, b) => a + b.value, 0);
 
+  // End-of-month prompt: once a new month begins, offer last month's full report.
+  const lastMonthRef = startOfMonth(subMonths(REF, 1));
+  const lastMonthKey = format(lastMonthRef, 'yyyy-MM');
+  const lastMonthLabel = format(lastMonthRef, 'MMMM yyyy');
+  const hadLastMonth = transactions.some((t) => isSameMonth(parseISO(t.date), lastMonthRef));
+  const [reportDone, setReportDone] = useState(() => {
+    try { return localStorage.getItem('finflow-report-month') === lastMonthKey; } catch { return false; }
+  });
+  const showReportPrompt = hadLastMonth && !reportDone;
+  function downloadLastMonth() {
+    exportMonthlyReportPDF(buildMonthlyReport(lastMonthRef, { transactions, categories, currency: cur, opening, members }));
+    try { localStorage.setItem('finflow-report-month', lastMonthKey); } catch { /* ignore */ }
+    setReportDone(true);
+  }
+  function dismissReport() {
+    try { localStorage.setItem('finflow-report-month', lastMonthKey); } catch { /* ignore */ }
+    setReportDone(true);
+  }
+
   return (
     <Page>
-      <PageHeader title={`Hi ${settings.name} 👋`} subtitle="Here's your money in motion this month"
+      <PageHeader title={`Hi ${settings.name} 👋`} subtitle={`${format(REF, 'MMMM yyyy')} · monthly totals reset on the 1st`}
         action={<Button onClick={onQuickAdd}><Icons.Plus size={16} /> Add transaction</Button>} />
+
+      {showReportPrompt && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl border border-emerald-500/30 p-4 mb-4 flex flex-wrap items-center gap-3">
+          <span className="rounded-xl bg-emerald-500/20 p-2"><Icons.FileBarChart size={18} className="text-emerald-400" /></span>
+          <div className="flex-1 min-w-[180px]">
+            <div className="font-semibold text-sm">Your {lastMonthLabel} report is ready</div>
+            <div className="text-xs text-white/50">Transactions, top categories, money set aside and all metrics.</div>
+          </div>
+          <Button onClick={downloadLastMonth}><Icons.Download size={16} /> Download PDF</Button>
+          <button onClick={dismissReport} className="text-white/40 hover:text-white text-sm px-2">Dismiss</button>
+        </motion.div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">

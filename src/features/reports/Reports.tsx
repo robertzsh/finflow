@@ -10,14 +10,17 @@ import { Select } from '@/components/ui/Field';
 import { ComparisonBars, DonutChart } from '@/components/charts/ChartKit';
 import { monthStats, spendingByCategory, cashFlowSeries } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
-import { exportCSV, exportXLSX, exportPDF } from '@/lib/export';
+import { exportCSV, exportXLSX, exportPDF, exportMonthlyReportPDF } from '@/lib/export';
+import { buildMonthlyReport } from '@/lib/report';
+import { FileBarChart } from 'lucide-react';
 
 const REF = new Date();
 type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings';
 
 export default function Reports() {
-  const { transactions, categories, settings } = useStore();
+  const { transactions, categories, settings, cloud, authed, members } = useStore();
   const cur = settings.currency;
+  const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
   const [report, setReport] = useState<ReportType>('monthly');
   const [monthSel, setMonthSel] = useState(format(REF, 'yyyy-MM'));
 
@@ -51,10 +54,13 @@ export default function Reports() {
     <Page>
       <PageHeader title="Reports" subtitle="Analyse and export your financial data"
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="ghost" onClick={() => exportCSV(scoped, categories, report)}><FileDown size={16} /> CSV</Button>
             <Button variant="ghost" onClick={() => exportXLSX(scoped, categories, report)}><FileSpreadsheet size={16} /> Excel</Button>
-            <Button onClick={() => exportPDF(scoped, categories, title, `${monthSel} · FinFlow`)}><FileText size={16} /> PDF</Button>
+            <Button variant="ghost" onClick={() => exportPDF(scoped, categories, title, `${monthSel} · FinFlow`)}><FileText size={16} /> PDF</Button>
+            <Button onClick={() => exportMonthlyReportPDF(buildMonthlyReport(refDate, { transactions, categories, currency: cur, opening, members }))}>
+              <FileBarChart size={16} /> Full month report
+            </Button>
           </div>
         } />
 

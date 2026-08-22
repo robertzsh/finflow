@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Transaction, Category } from '@/types';
+import type { Transaction, Category, CurrencyCode } from '@/types';
+import { formatMoney } from './format';
 
 function rows(txs: Transaction[], cats: Category[]) {
   return txs.map((t) => ({
@@ -43,6 +44,76 @@ export function exportPDF(txs: Transaction[], cats: Category[], title = 'Financi
     headStyles: { fillColor: [16, 185, 129] },
   });
   doc.save(`${title.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+}
+
+export interface MonthlyReport {
+  monthLabel: string;
+  currency: CurrencyCode;
+  summary: { label: string; value: string }[];
+  topCategories: { name: string; value: number }[];
+  members?: { name: string; expense: number; income: number }[];
+  transactions: Transaction[];
+  categories: Category[];
+}
+
+/** A full end-of-month PDF: headline metrics, top categories, who-spent-what, and every transaction. */
+export function exportMonthlyReportPDF(r: MonthlyReport) {
+  const doc = new jsPDF();
+  const W = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(16, 185, 129); doc.rect(0, 0, W, 4, 'F');
+  doc.setFontSize(20); doc.setTextColor(20); doc.text('FinFlow — Monthly Report', 14, 20);
+  doc.setFontSize(11); doc.setTextColor(120); doc.text(r.monthLabel, 14, 27);
+
+  // Summary metrics as a 2-column grid
+  autoTable(doc, {
+    startY: 34,
+    body: r.summary.map((s) => [s.label, s.value]),
+    theme: 'plain',
+    styles: { fontSize: 10, cellPadding: 1.5 },
+    columnStyles: { 0: { textColor: [120, 120, 120] }, 1: { fontStyle: 'bold', halign: 'right' } },
+    tableWidth: 90,
+  });
+
+  let y = (doc as any).lastAutoTable.finalY + 8;
+
+  if (r.members && r.members.length) {
+    doc.setFontSize(13); doc.setTextColor(20); doc.text('Who spent what', 14, y);
+    autoTable(doc, {
+      startY: y + 3,
+      head: [['Member', 'Spent', 'Income']],
+      body: r.members.map((m) => [m.name, formatMoney(m.expense, r.currency), formatMoney(m.income, r.currency)]),
+      styles: { fontSize: 9 }, headStyles: { fillColor: [59, 130, 246] },
+      tableWidth: 120,
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  doc.setFontSize(13); doc.setTextColor(20); doc.text('Top spending categories', 14, y);
+  autoTable(doc, {
+    startY: y + 3,
+    head: [['Category', 'Total']],
+    body: r.topCategories.map((c) => [c.name, formatMoney(c.value, r.currency)]),
+    styles: { fontSize: 9 }, headStyles: { fillColor: [168, 85, 247] },
+    tableWidth: 120,
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  doc.setFontSize(13); doc.setTextColor(20); doc.text('All transactions', 14, y);
+  autoTable(doc, {
+    startY: y + 3,
+    head: [['Date', 'Category', 'Type', 'Amount', 'Method']],
+    body: r.transactions.map((t) => [
+      t.date,
+      r.categories.find((c) => c.id === t.categoryId)?.name ?? t.categoryId,
+      t.type,
+      formatMoney(t.type === 'expense' ? -t.amount : t.amount, r.currency),
+      t.method,
+    ]),
+    styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] },
+  });
+
+  doc.save(`finflow-report-${r.monthLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`);
 }
 
 export function exportJSON(data: unknown, name = 'finflow-backup') {

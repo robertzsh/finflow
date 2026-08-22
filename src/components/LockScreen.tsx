@@ -7,11 +7,13 @@ export function LockScreen() {
   const { unlock, settings } = useStore();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  // Show exactly as many dots as the PIN the user actually set.
+  const pinLength = settings.pin?.length || 4;
 
   function press(n: string) {
-    const next = (pin + n).slice(0, 6);
+    const next = (pin + n).slice(0, pinLength);
     setPin(next); setError(false);
-    if (next.length >= 4 && settings.pin && next === settings.pin) unlock(next);
+    if (next.length === pinLength && settings.pin && next === settings.pin) unlock(next);
   }
   function submit() { if (!unlock(pin)) { setError(true); setPin(''); } }
 
@@ -23,7 +25,7 @@ export function LockScreen() {
         <h1 className="font-bold text-lg">Welcome back, {settings.name}</h1>
         <p className="text-xs text-white/50 mb-5">Enter your PIN to unlock</p>
         <div className="flex justify-center gap-2 mb-5">
-          {[0, 1, 2, 3, 4, 5].slice(0, Math.max(4, pin.length || 4)).map((i) => (
+          {Array.from({ length: pinLength }).map((_, i) => (
             <span key={i} className={`w-3 h-3 rounded-full border ${i < pin.length ? 'bg-blue-400 border-blue-400' : 'border-white/30'} ${error ? 'border-expense' : ''}`} />
           ))}
         </div>
