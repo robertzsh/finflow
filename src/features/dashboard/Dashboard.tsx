@@ -16,7 +16,7 @@ import { buildInsights } from '@/lib/insights';
 import { formatMoney } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
-const REF = new Date('2026-07-28');
+const REF = new Date();
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const { transactions, categories, budgets, goals, investments, settings } = useStore();

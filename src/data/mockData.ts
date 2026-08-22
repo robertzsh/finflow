@@ -52,7 +52,7 @@ function iso(d: Date) { return d.toISOString().slice(0, 10); }
 
 export function generateTransactions(months = 8): Transaction[] {
   const txs: Transaction[] = [];
-  const now = new Date('2026-07-28T00:00:00Z');
+  const now = new Date();
   const expenseCats = DEFAULT_CATEGORIES.filter((c) => c.kind === 'expense' && MERCHANTS[c.id]);
 
   for (let m = months - 1; m >= 0; m--) {
@@ -129,7 +129,7 @@ export function defaultBudgets(): Budget[] {
 
 function investHistory(start: number, end: number, months = 12): InvestmentPoint[] {
   const pts: InvestmentPoint[] = [];
-  const now = new Date('2026-07-28');
+  const now = new Date();
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const t = (months - 1 - i) / (months - 1);

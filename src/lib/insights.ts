@@ -82,7 +82,7 @@ function detectUnusual(txs: Transaction[], ref: Date) {
 }
 
 function averageMonthlyExpense(txs: Transaction[], months: number) {
-  const now = new Date('2026-07-28');
+  const now = new Date();
   let total = 0;
   for (let i = 1; i <= months; i++) total += monthStats(txs, startOfMonth(subMonths(now, i))).expense;
   return r2(total / months);

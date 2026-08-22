@@ -17,7 +17,7 @@ export interface Upcoming {
 }
 
 /** Project the next N occurrences of every recurring transaction after `today`. */
-export function upcomingOccurrences(txs: Transaction[], horizonDays = 45, today = new Date('2026-07-28')): Upcoming[] {
+export function upcomingOccurrences(txs: Transaction[], horizonDays = 45, today = new Date()): Upcoming[] {
   const out: Upcoming[] = [];
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + horizonDays);

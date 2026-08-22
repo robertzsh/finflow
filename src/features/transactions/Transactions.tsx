@@ -170,7 +170,7 @@ export default function Transactions() {
             {grouped.map(([date, items]) => (
               <div key={date}>
                 <div className="px-4 py-2 text-xs font-medium text-white/40 bg-white/[0.02] sticky top-0">
-                  {isSameDay(parseISO(date), new Date('2026-07-28')) ? 'Today' : format(parseISO(date), 'EEEE, d MMM yyyy')}
+                  {isSameDay(parseISO(date), new Date()) ? 'Today' : format(parseISO(date), 'EEEE, d MMM yyyy')}
                 </div>
                 {items.map((t) => {
                   const c = categories.find((x) => x.id === t.categoryId);

@@ -43,7 +43,7 @@ export function accountBalance(txs: Transaction[], starting = 0) {
 }
 
 export function cashFlowSeries(txs: Transaction[], months = 8, opening = 0) {
-  const now = new Date('2026-07-28');
+  const now = new Date();
   const out: { month: string; income: number; expense: number; net: number; balance: number }[] = [];
   let running = opening;
   // establish running balance up to the first shown month
@@ -130,7 +130,7 @@ export function goalETA(g: Goal): string {
   if (remaining <= 0) return 'Completed';
   if (g.monthlyContribution <= 0) return '—';
   const months = Math.ceil(remaining / g.monthlyContribution);
-  const d = new Date('2026-07-28');
+  const d = new Date();
   d.setMonth(d.getMonth() + months);
   return format(d, 'MMM yyyy');
 }

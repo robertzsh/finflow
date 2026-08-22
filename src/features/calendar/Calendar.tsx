@@ -13,7 +13,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { formatMoney } from '@/lib/format';
 
-const TODAY = new Date('2026-07-28');
+const TODAY = new Date();
 
 export default function Calendar() {
   const { transactions, categories, settings } = useStore();

@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { budgetProgress } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
 
-const REF = new Date('2026-07-28');
+const REF = new Date();
 
 export default function Budgets() {
   const { budgets, transactions, categories, settings, setBudget, removeBudget } = useStore();

@@ -12,7 +12,7 @@ import { monthStats, spendingByCategory, cashFlowSeries } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
 import { exportCSV, exportXLSX, exportPDF } from '@/lib/export';
 
-const REF = new Date('2026-07-28');
+const REF = new Date();
 type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings';
 
 export default function Reports() {
