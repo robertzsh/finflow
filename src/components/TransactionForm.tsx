@@ -1,27 +1,27 @@
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency } from '@/types';
 
-const schema = z.object({
-  type: z.enum(['income', 'expense']),
-  amount: z.coerce.number().positive('Amount must be greater than 0'),
-  categoryId: z.string().min(1, 'Pick a category'),
-  method: z.string(),
-  date: z.string().min(1),
-  notes: z.string().optional(),
-  recurring: z.boolean(),
-  frequency: z.string().optional(),
-});
-type FormValues = z.infer<typeof schema>;
+interface FormValues {
+  type: TxType;
+  amount: number;
+  categoryId: string;
+  method: string;
+  date: string;
+  notes?: string;
+  recurring: boolean;
+  frequency?: string;
+}
 
 const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
 
 export function TransactionForm({ existing, onDone }: { existing?: Transaction; onDone: () => void }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction } = useStore();
+  const [formError, setFormError] = useState('');
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: existing ? {
@@ -38,22 +38,30 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
   const recurring = watch('recurring');
   const cats = categories.filter((c) => c.kind === type);
 
-  const submit = handleSubmit((v) => {
-    const parsed = schema.safeParse(v);
-    if (!parsed.success) return;
-    const cat = categories.find((c) => c.id === v.categoryId);
-    const payload = {
-      type: v.type, amount: Number(v.amount), categoryId: v.categoryId,
-      // merchant is no longer entered by hand — default it to the category name.
-      merchant: existing?.merchant || cat?.name || '',
-      method: v.method as PaymentMethod, date: v.date, notes: v.notes,
-      recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
-      receipt: existing?.receipt,
-    };
-    if (existing) updateTransaction(existing.id, payload);
-    else addTransaction(payload);
-    onDone();
-  });
+  const onValid = (v: FormValues) => {
+    setFormError('');
+    try {
+      const amount = Number(v.amount);
+      if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); return; }
+      if (!v.categoryId) { setFormError('Pick a category.'); return; }
+      const cat = categories.find((c) => c.id === v.categoryId);
+      const payload = {
+        type: v.type, amount, categoryId: v.categoryId,
+        merchant: existing?.merchant || cat?.name || '', // no manual merchant — default to category name
+        method: v.method as PaymentMethod, date: v.date, notes: v.notes,
+        recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
+        receipt: existing?.receipt,
+      };
+      if (existing) updateTransaction(existing.id, payload);
+      else addTransaction(payload);
+      onDone();
+    } catch (e: any) {
+      setFormError(e?.message ?? 'Could not save. Please try again.');
+    }
+  };
+
+  const onInvalid = () => setFormError('Please fill in the amount and category.');
+  const submit = handleSubmit(onValid, onInvalid);
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -113,6 +121,12 @@ export function TransactionForm({ existing, onDone }: { existing?: Transaction; 
             <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
             <option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
           </Select>
+        </div>
+      )}
+
+      {formError && (
+        <div className="flex items-center gap-2 rounded-xl bg-expense/15 border border-expense/30 text-expense px-3.5 py-2.5 text-sm">
+          <AlertCircle size={16} /> {formError}
         </div>
       )}
 
