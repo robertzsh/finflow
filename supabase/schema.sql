@@ -139,3 +139,8 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant execute on all functions in schema public to anon, authenticated;
 alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
+
+-- Hardening: users may only edit their own display name, never re-point their
+-- household_id directly (joining goes through the secure join_household() function).
+revoke update on profiles from authenticated;
+grant update (name) on profiles to authenticated;
