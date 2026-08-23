@@ -71,6 +71,30 @@ export function perMemberSpending(txs: Transaction[], ref: Date, memberIds: stri
   return res;
 }
 
+/** A member's expense breakdown by category this month (their own + split of shared), rolled up to parents. */
+export function memberCategoryBreakdown(txs: Transaction[], ref: Date, memberId: string, memberIds: string[], cats: Category[]) {
+  const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
+  const n = memberIds.length || 1;
+  const map = new Map<string, number>();
+  for (const t of m) {
+    let amt = 0;
+    if (t.createdBy === memberId) amt = t.amount;
+    else if (!t.createdBy || !memberIds.includes(t.createdBy)) amt = t.amount / n; // shared/unattributed → split
+    else continue; // belongs to the other member
+    const c = cats.find((x) => x.id === t.categoryId);
+    const key = c?.parent ?? t.categoryId;
+    map.set(key, (map.get(key) ?? 0) + amt);
+  }
+  const total = [...map.values()].reduce((a, b) => a + b, 0);
+  return {
+    total: r2(total),
+    items: [...map.entries()].map(([id, value]) => {
+      const c = cats.find((x) => x.id === id);
+      return { id, name: c?.name ?? id, color: c?.color ?? '#94a3b8', emoji: c?.emoji, value: r2(value), pct: total > 0 ? (value / total) * 100 : 0 };
+    }).sort((a, b) => b.value - a.value),
+  };
+}
+
 /** Running account balance = opening balance + all net flows (income − expenses). */
 export function accountBalance(txs: Transaction[], starting = 0) {
   return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);
@@ -93,13 +117,33 @@ export function cashFlowSeries(txs: Transaction[], months = 8, opening = 0) {
 export function spendingByCategory(txs: Transaction[], cats: Category[], ref: Date) {
   const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
   const map = new Map<string, number>();
-  for (const t of m) map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
+  for (const t of m) {
+    const c = cats.find((x) => x.id === t.categoryId);
+    const key = c?.parent ?? t.categoryId; // sub-categories roll up into their parent
+    map.set(key, (map.get(key) ?? 0) + t.amount);
+  }
   return [...map.entries()]
     .map(([id, value]) => {
       const c = cats.find((x) => x.id === id);
       return { id, name: c?.name ?? id, value: r2(value), color: c?.color ?? '#94a3b8' };
     })
     .sort((a, b) => b.value - a.value);
+}
+
+/** Breakdown of a parent category into the sub-categories (stores) actually used this month. */
+export function subCategoryBreakdown(txs: Transaction[], cats: Category[], ref: Date, parentId: string) {
+  const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
+  const childIds = new Set(cats.filter((c) => c.parent === parentId).map((c) => c.id));
+  const map = new Map<string, number>();
+  for (const t of m) if (childIds.has(t.categoryId)) map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
+  const total = [...map.values()].reduce((a, b) => a + b, 0);
+  return {
+    total: r2(total),
+    items: [...map.entries()].map(([id, value]) => {
+      const c = cats.find((x) => x.id === id);
+      return { id, name: c?.name ?? id, value: r2(value), color: c?.color ?? '#94a3b8', emoji: c?.emoji, pct: total > 0 ? (value / total) * 100 : 0 };
+    }).sort((a, b) => b.value - a.value),
+  };
 }
 
 export function incomeBySource(txs: Transaction[], cats: Category[], ref: Date) {
@@ -126,7 +170,8 @@ export function budgetProgress(budgets: Budget[], txs: Transaction[], cats: Cate
   const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
   const elapsed = Math.max(dayOfMonth, 1);
   return budgets.map((b) => {
-    const spent = m.filter((t) => t.categoryId === b.categoryId).reduce((a, t) => a + t.amount, 0);
+    const childIds = new Set(cats.filter((c) => c.parent === b.categoryId).map((c) => c.id));
+    const spent = m.filter((t) => t.categoryId === b.categoryId || childIds.has(t.categoryId)).reduce((a, t) => a + t.amount, 0);
     const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
     const projected = (spent / elapsed) * daysInMonth;
     return {

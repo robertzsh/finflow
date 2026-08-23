@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { CashFlowChart, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { formatMoney } from '@/lib/format';
@@ -40,8 +40,11 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const insights = buildInsights(transactions, categories, REF, balance);
     const memberIds = members.map((m) => m.id);
     const byMember = perMemberSpending(transactions, REF, memberIds);
-    return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, insights, byMember };
+    const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
+    return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
+  const memberIds = members.map((m) => m.id);
+  const avgDaily = data.stats.expense / Math.max(1, new Date().getDate());
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;
@@ -94,8 +97,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         <StatCard label="Account balance" value={formatMoney(data.balance, cur)} icon="Wallet" accent="savings" delay={0} />
         <StatCard label="Monthly income" value={formatMoney(data.stats.income, cur)} icon="ArrowDownToLine" accent="income" delta={`${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
         <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
-        <StatCard label="Savings this month" value={formatMoney(Math.max(0, data.stats.net), cur)} icon="PiggyBank" accent="savings" delay={0.15} />
-        <StatCard label="Net cash flow" value={formatMoney(data.stats.net, cur, { sign: true })} icon={data.stats.net >= 0 ? 'TrendingUp' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'income' : 'expense'} delay={0.2} />
+        <StatCard label="Savings this month" value={formatMoney(data.stats.net, cur, { sign: true })} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
+        <StatCard label="Avg daily spend" value={formatMoney(avgDaily, cur)} icon="CalendarDays" accent="expense" delay={0.2} />
         <SavingsRateCard rate={savingsRate} income={data.stats.income} delay={0.25} />
       </div>
 
@@ -108,6 +111,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               const b = data.byMember.get(m.id) ?? { income: 0, expense: 0 };
               const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
               const net = b.income - b.expense;
+              const savePct = b.income > 0 ? (net / b.income) * 100 : null;
+              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items.slice(0, 3);
               const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
               const color = palette[i % palette.length];
               return (
@@ -125,18 +130,61 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                       <div className="text-[11px] text-white/40">spent</div>
                     </div>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 my-2 text-center">
+                    <div className="rounded-lg bg-white/[0.04] py-1.5">
+                      <div className="text-income font-semibold text-sm">{formatMoney(b.income, cur, { compact: b.income > 9999 })}</div>
+                      <div className="text-[10px] text-white/40">income</div>
+                    </div>
+                    <div className="rounded-lg bg-white/[0.04] py-1.5">
+                      <div className={`font-semibold text-sm ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 })}</div>
+                      <div className="text-[10px] text-white/40">saved</div>
+                    </div>
+                    <div className="rounded-lg bg-white/[0.04] py-1.5">
+                      <div className="font-semibold text-sm">{savePct === null ? '—' : `${savePct.toFixed(0)}%`}</div>
+                      <div className="text-[10px] text-white/40">saved rate</div>
+                    </div>
+                  </div>
                   <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${share}%`, background: color }} />
                   </div>
-                  <div className="flex justify-between mt-1.5 text-[11px] text-white/40">
-                    <span>{share.toFixed(0)}% of family spend</span>
-                    {b.income > 0 && <span className="text-income">+{formatMoney(b.income, cur)} in</span>}
-                  </div>
+                  <div className="text-[11px] text-white/40 mt-1.5">{share.toFixed(0)}% of family spend</div>
+                  {topCats.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {topCats.map((c) => (
+                        <div key={c.id} className="flex items-center gap-2 text-[11px]">
+                          <span className="truncate flex-1 text-white/60">{c.emoji ? `${c.emoji} ` : ''}{c.name}</span>
+                          <span className="text-white/40">{c.pct.toFixed(0)}%</span>
+                          <span className="tabular-nums text-white/70 w-20 text-right">{formatMoney(c.value, cur)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
           <p className="text-xs text-white/40 mt-3">Family remaining balance: <span className="text-white/70 font-medium">{formatMoney(data.balance, cur)}</span> · combined spend this month {formatMoney(data.stats.expense, cur)}</p>
+        </Card>
+      )}
+
+      {/* Groceries by store */}
+      {data.groceriesByStore.items.length > 0 && (
+        <Card className="p-5 mt-4" delay={0.15}>
+          <SectionCardHeader title="Groceries by store" hint={`This month · ${formatMoney(data.groceriesByStore.total, cur)} total`} />
+          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {data.groceriesByStore.items.map((s) => (
+              <div key={s.id}>
+                <div className="flex items-center gap-2 text-sm mb-1">
+                  <span className="truncate flex-1">{s.emoji ? `${s.emoji} ` : ''}{s.name}</span>
+                  <span className="text-white/40 text-xs">{s.pct.toFixed(0)}%</span>
+                  <span className="tabular-nums font-medium w-24 text-right">{formatMoney(s.value, cur)}</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
@@ -154,6 +202,20 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               <span className="text-xs text-white/40">Total</span>
               <span className="font-bold">{formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })}</span>
             </div>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {data.byCat.slice(0, 6).map((c) => {
+              const cat = categories.find((x) => x.id === c.id);
+              const pct = expenseTotal > 0 ? (c.value / expenseTotal) * 100 : 0;
+              return (
+                <div key={c.id} className="flex items-center gap-2 text-sm">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                  <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
+                  <span className="tabular-nums text-white/50 text-xs">{pct.toFixed(0)}%</span>
+                  <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>

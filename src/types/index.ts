@@ -8,6 +8,7 @@ export interface Category {
   icon: string;      // lucide icon name
   color: string;     // hex
   emoji?: string;    // shown next to the category in menus & lists
+  parent?: string;   // if set, this is a sub-category (e.g. a store under Groceries)
   custom?: boolean;
 }
 
