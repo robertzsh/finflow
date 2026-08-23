@@ -222,10 +222,11 @@ export const useStore = create<StoreState>((set, get) => {
       const toUpsert: Category[] = [];
       for (const d of DEFAULT_CATEGORIES) {
         const ex = byId.get(d.id);
-        if (!ex) { byId.set(d.id, d); toUpsert.push(d); }
-        // keep built-in (non-custom) default categories in sync with the code (name/emoji/icon/color)
-        else if (!ex.custom && (ex.name !== d.name || ex.emoji !== d.emoji || ex.icon !== d.icon || ex.color !== d.color || ex.parent !== d.parent)) {
-          const merged = { ...ex, name: d.name, emoji: d.emoji, icon: d.icon, color: d.color, parent: d.parent };
+        if (!ex) { byId.set(d.id, { ...d, custom: false }); toUpsert.push({ ...d, custom: false }); }
+        // Built-in categories (matched by id) are kept in sync with the code — including
+        // fixing any wrongly-set custom flag and stamping the parent link.
+        else if (ex.name !== d.name || ex.emoji !== d.emoji || ex.icon !== d.icon || ex.color !== d.color || ex.parent !== d.parent || ex.custom) {
+          const merged = { ...ex, name: d.name, emoji: d.emoji, icon: d.icon, color: d.color, parent: d.parent, custom: false };
           byId.set(d.id, merged); toUpsert.push(merged);
         }
       }
