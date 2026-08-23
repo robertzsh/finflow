@@ -19,3 +19,6 @@ alter table profiles add column if not exists vouchers numeric not null default 
 
 -- Column-level update grant (users can edit only these fields on their own profile)
 grant update (name, opening_balance, salary, vouchers) on profiles to authenticated;
+
+-- Sub-categories (e.g. grocery stores roll up under Groceries)
+alter table categories add column if not exists parent text;

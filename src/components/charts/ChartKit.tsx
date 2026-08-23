@@ -14,13 +14,13 @@ const grid = 'rgba(148,163,184,0.18)';
 function TT({ active, payload, label, currency }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass rounded-xl px-3 py-2 text-xs shadow-glass">
-      {label && <div className="font-semibold mb-1">{label}</div>}
+    <div style={{ background: '#0d1220', border: '1px solid rgba(255,255,255,0.14)' }} className="rounded-xl px-3 py-2 text-xs shadow-lg">
+      {label && <div className="font-semibold mb-1 text-white">{label}</div>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
-          <span className="text-white/60 capitalize">{p.name}:</span>
-          <span className="font-semibold">{formatMoney(p.value, currency, { compact: p.value > 9999 })}</span>
+          <span className="text-white/70 capitalize">{p.name}:</span>
+          <span className="font-semibold text-white">{formatMoney(p.value, currency, { compact: p.value > 9999 })}</span>
         </div>
       ))}
     </div>
@@ -59,6 +59,23 @@ export function BalanceLine({ data }: { data: { month: string; balance: number }
         <Tooltip content={<TT currency={currency} />} />
         <Area type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2.5} fill="url(#gBal)" />
       </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function SpendSaveBars({ data }: { data: { month: string; spending: number; savings: number }[] }) {
+  const currency = useCur();
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }} barGap={3}>
+        <CartesianGrid stroke={grid} vertical={false} />
+        <XAxis dataKey="month" tick={axisStyle} axisLine={false} tickLine={false} />
+        <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Bar dataKey="spending" name="Spending" fill="#ef4444" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="savings" name="Savings" fill="#10b981" radius={[4, 4, 0, 0]} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }

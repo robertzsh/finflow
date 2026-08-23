@@ -224,8 +224,8 @@ export const useStore = create<StoreState>((set, get) => {
         const ex = byId.get(d.id);
         if (!ex) { byId.set(d.id, d); toUpsert.push(d); }
         // keep built-in (non-custom) default categories in sync with the code (name/emoji/icon/color)
-        else if (!ex.custom && (ex.name !== d.name || ex.emoji !== d.emoji || ex.icon !== d.icon || ex.color !== d.color)) {
-          const merged = { ...ex, name: d.name, emoji: d.emoji, icon: d.icon, color: d.color };
+        else if (!ex.custom && (ex.name !== d.name || ex.emoji !== d.emoji || ex.icon !== d.icon || ex.color !== d.color || ex.parent !== d.parent)) {
+          const merged = { ...ex, name: d.name, emoji: d.emoji, icon: d.icon, color: d.color, parent: d.parent };
           byId.set(d.id, merged); toUpsert.push(merged);
         }
       }

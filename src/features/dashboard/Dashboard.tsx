@@ -10,7 +10,7 @@ import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { CashFlowChart, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
+import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
   investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown,
@@ -31,7 +31,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const stats = monthStats(transactions, REF);
     const prev = monthStats(transactions, startOfMonth(subMonths(REF, 1)));
     const balance = accountBalance(transactions, opening);
-    const cf = cashFlowSeries(transactions, 8, opening);
+    const cf = cashFlowSeries(transactions, 12, opening);
+    const spendSave = cf.map((r) => ({ month: r.month, spending: r.expense, savings: r.net }));
     const byCat = spendingByCategory(transactions, categories, REF);
     const bySource = incomeBySource(transactions, categories, REF);
     const sav = savingsTrend(transactions, 8);
@@ -41,10 +42,9 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const memberIds = members.map((m) => m.id);
     const byMember = perMemberSpending(transactions, REF, memberIds);
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
-    return { stats, prev, balance, cf, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore };
+    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
-  const avgDaily = data.stats.expense / Math.max(1, new Date().getDate());
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;
@@ -98,8 +98,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         <StatCard label="Monthly income" value={formatMoney(data.stats.income, cur)} icon="ArrowDownToLine" accent="income" delta={`${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
         <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
         <StatCard label="Savings this month" value={formatMoney(data.stats.net, cur, { sign: true })} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
-        <StatCard label="Avg daily spend" value={formatMoney(avgDaily, cur)} icon="CalendarDays" accent="expense" delay={0.2} />
-        <SavingsRateCard rate={savingsRate} income={data.stats.income} delay={0.25} />
+        <StatCard label="Savings rate" value={data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—'} icon="Percent" accent="savings" delta="put aside vs income" deltaUp={savingsRate >= 0} delay={0.2} />
       </div>
 
       {/* Per-member breakdown (shared household) */}
@@ -191,8 +190,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       {/* Charts row 1 */}
       <div className="grid lg:grid-cols-3 gap-4 mt-4">
         <Card className="p-5 lg:col-span-2" delay={0.1}>
-          <SectionCardHeader title="Cash flow over time" hint="Income vs spending, last 8 months" />
-          <CashFlowChart data={data.cf} />
+          <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
+          <SpendSaveBars data={data.spendSave} />
         </Card>
         <Card className="p-5" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="This month" />
@@ -257,31 +256,6 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   );
 }
 
-/** % of income kept (put aside) vs spent this month. */
-function SavingsRateCard({ rate, income, delay }: { rate: number; income: number; delay: number }) {
-  const pct = Math.max(-100, Math.min(100, rate));
-  const color = income <= 0 ? '#94a3b8' : rate >= 20 ? '#10b981' : rate >= 0 ? '#eab308' : '#ef4444';
-  const label = income <= 0 ? 'Log income to see' : rate >= 20 ? 'Great — keeping a lot' : rate >= 0 ? `Keeping ${rate.toFixed(0)}% of income` : 'Spending more than earned';
-  const r = 26, c = 2 * Math.PI * r, offset = c - (Math.max(0, pct) / 100) * c;
-  return (
-    <Card hover delay={delay} className="p-5 relative overflow-hidden">
-      <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-30" style={{ background: color }} />
-      <div className="flex items-center justify-between relative">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-white/50">Savings rate</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums" style={{ color }}>{income <= 0 ? '—' : `${rate.toFixed(0)}%`}</p>
-          <p className="mt-1 text-xs font-medium text-white/50">put aside vs spent</p>
-        </div>
-        <svg width="64" height="64" className="-rotate-90">
-          <circle cx="32" cy="32" r={r} stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
-          <motion.circle cx="32" cy="32" r={r} stroke={color} strokeWidth="6" fill="none" strokeLinecap="round"
-            strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: offset }} transition={{ duration: 1 }} />
-        </svg>
-      </div>
-      <p className="mt-1 text-[11px] relative" style={{ color }}>{label}</p>
-    </Card>
-  );
-}
 
 const TONE: Record<string, string> = { income: '#10b981', expense: '#ef4444', savings: '#3b82f6', invest: '#eab308', goal: '#a855f7', neutral: '#94a3b8' };
 function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]; i: number }) {

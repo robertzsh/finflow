@@ -38,7 +38,13 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
 
   const type = watch('type') as TxType;
   const recurring = watch('recurring');
+  const catId = watch('categoryId') as string;
   const cats = categories.filter((c) => c.kind === type);
+  const currentCat = categories.find((c) => c.id === catId);
+  const topId = currentCat?.parent ?? catId ?? '';       // the top-level category currently chosen
+  const topCat = categories.find((c) => c.id === topId);
+  const topCats = cats.filter((c) => !c.parent);          // only top-level categories in the main menu
+  const subCats = categories.filter((c) => c.parent === topId && c.kind === type);
 
   const onValid = (v: FormValues) => {
     setFormError('');
@@ -90,12 +96,13 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
         </div>
       </div>
 
+      <input type="hidden" {...register('categoryId', { required: 'Pick a category' })} />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Category</Label>
-          <Select {...register('categoryId', { required: 'Pick a category' })}>
+          <Select value={topId} onChange={(e) => setValue('categoryId', e.target.value, { shouldValidate: true })}>
             <option value="">Select…</option>
-            {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
+            {topCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
           </Select>
           {errors.categoryId && <p className="text-xs text-expense mt-1">{errors.categoryId.message}</p>}
         </div>
@@ -104,6 +111,16 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
           <Select {...register('method')}>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select>
         </div>
       </div>
+
+      {subCats.length > 0 && (
+        <div>
+          <Label>Subcategory ({topCat?.name})</Label>
+          <Select value={currentCat?.parent ? catId : ''} onChange={(e) => setValue('categoryId', e.target.value || topId, { shouldValidate: true })}>
+            <option value="">General — {topCat?.name}</option>
+            {subCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
+          </Select>
+        </div>
+      )}
 
       {showPaidBy && (
         <div>

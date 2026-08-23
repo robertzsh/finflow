@@ -53,7 +53,7 @@ create trigger on_auth_user_created
 create table if not exists categories (
   id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
-  name text not null, kind text not null, icon text, color text, emoji text, custom boolean default true
+  name text not null, kind text not null, icon text, color text, emoji text, parent text, custom boolean default true
 );
 
 create table if not exists transactions (
