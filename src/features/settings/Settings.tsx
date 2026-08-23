@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
@@ -57,6 +57,7 @@ export default function Settings() {
             {store.cloud && store.authed && store.members.length > 1 && (
               <p className="text-xs text-white/40 -mt-2">Household total: <span className="text-white/70 font-medium">{currencySymbol(settings.currency)}{store.members.reduce((a, m) => a + m.openingBalance, 0).toLocaleString('en-GB')}</span> — the sum of every member's balance.</p>
             )}
+            <MonthlyIncomeField />
             <div><Label>Base currency</Label>
               <Select value={settings.currency} onChange={(e) => updateSettings({ currency: e.target.value as CurrencyCode })}>
                 <option value="RON">lei RON — Leu românesc</option>
@@ -172,6 +173,41 @@ export default function Settings() {
 
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
     </Page>
+  );
+}
+
+function MonthlyIncomeField() {
+  const { cloud, authed, userId, members, settings, setMyIncome } = useStore();
+  const me = cloud && authed ? members.find((m) => m.id === userId) : null;
+  const curSalary = me ? me.salary : settings.salary;
+  const curVouchers = me ? me.vouchers : settings.vouchers;
+  const [salary, setSalary] = useState(String(curSalary || ''));
+  const [vouchers, setVouchers] = useState(String(curVouchers || ''));
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { setSalary(String(curSalary || '')); setVouchers(String(curVouchers || '')); }, [curSalary, curVouchers]);
+
+  const dirty = Number(salary || 0) !== curSalary || Number(vouchers || 0) !== curVouchers;
+  return (
+    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3.5">
+      <Label>Monthly income (auto-added each month)</Label>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <span className="text-[11px] text-white/40">Salary (fixed)</span>
+          <Input type="number" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
+        </div>
+        <div>
+          <span className="text-[11px] text-white/40">Vouchers (default)</span>
+          <Input type="number" step="0.01" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <Button variant={dirty ? 'primary' : 'ghost'} disabled={!dirty}
+          onClick={async () => { await setMyIncome(Number(salary) || 0, Number(vouchers) || 0); setSaved(true); setTimeout(() => setSaved(false), 2000); }}>
+          {saved ? <><Check size={14} /> Saved</> : 'Save income'}
+        </Button>
+        <span className="text-xs text-white/40">Salary + vouchers post automatically on the 1st. Vouchers vary by month — edit that month's Vouchers entry in Transactions.</span>
+      </div>
+    </div>
   );
 }
 

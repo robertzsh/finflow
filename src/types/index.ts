@@ -77,6 +77,8 @@ export interface Settings {
   currency: CurrencyCode;      // base currency for the whole app (RON)
   fxRates: FxRates;            // editable rates → base currency
   openingBalance: number;      // starting bank balance; income/expenses adjust it
+  salary: number;              // fixed monthly salary, auto-added each month
+  vouchers: number;            // default monthly vouchers (meal tickets), editable per month
   theme: 'dark' | 'light';
   pinEnabled: boolean;
   pin?: string;

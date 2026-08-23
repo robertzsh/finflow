@@ -52,6 +52,8 @@ interface StoreState extends AppData {
   loadFromCloud: (userId: string) => Promise<void>;
   refreshMembers: () => Promise<void>;
   setMyOpeningBalance: (amount: number) => Promise<void>;
+  setMyIncome: (salary: number, vouchers: number) => Promise<void>;
+  ensureStandingIncome: () => void;
 
   addTransaction: (t: Omit<Transaction, 'id' | 'createdAt'>) => void;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
@@ -102,6 +104,67 @@ export const useStore = create<StoreState>((set, get) => {
   };
   const findTx = (id: string) => get().transactions.find((t) => t.id === id);
 
+  const monthKeyNow = () => new Date().toISOString().slice(0, 7);
+  const incomeOwner = () => (get().cloud && get().authed ? get().userId : 'local');
+  const siId = (kind: string, owner: string, mk: string) => `si-${kind}-${owner}-${mk}`;
+
+  // Create this month's salary/vouchers income if they don't exist yet (never overwrites edits).
+  const ensureStandingIncome = () => {
+    const s = get();
+    const owner = incomeOwner();
+    if (!owner) return;
+    const mk = monthKeyNow();
+    const date = `${mk}-01`;
+    const defs = [
+      { kind: 'salary', categoryId: 'salary', name: 'Salary', amount: s.settings.salary },
+      { kind: 'vouchers', categoryId: 'vouchers', name: 'Vouchers', amount: s.settings.vouchers },
+    ];
+    const existing = new Set(s.transactions.map((t) => t.id));
+    const toCreate: Transaction[] = defs
+      .filter((d) => d.amount > 0 && !existing.has(siId(d.kind, owner, mk)))
+      .map((d) => ({
+        id: siId(d.kind, owner, mk), type: 'income', amount: d.amount, categoryId: d.categoryId,
+        merchant: d.name, method: 'Bank Transfer', date, recurring: true, frequency: 'monthly',
+        notes: '', createdAt: new Date().toISOString(), createdBy: s.cloud && s.authed ? (s.userId ?? undefined) : undefined,
+      }));
+    if (toCreate.length) {
+      set((st) => ({ transactions: [...toCreate, ...st.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
+      get().persist();
+      pushMany('transactions', toCreate);
+    }
+  };
+
+  // Apply new salary/vouchers amounts to the CURRENT month immediately (create/update/remove).
+  const applyIncomeToCurrentMonth = (salary: number, vouchers: number) => {
+    const s = get();
+    const owner = incomeOwner();
+    if (!owner) return;
+    const mk = monthKeyNow();
+    const date = `${mk}-01`;
+    const items = [
+      { kind: 'salary', categoryId: 'salary', name: 'Salary', amount: salary },
+      { kind: 'vouchers', categoryId: 'vouchers', name: 'Vouchers', amount: vouchers },
+    ];
+    for (const it of items) {
+      const id = siId(it.kind, owner, mk);
+      const present = get().transactions.some((t) => t.id === id);
+      if (it.amount > 0) {
+        if (present) {
+          set((st) => ({ transactions: st.transactions.map((t) => (t.id === id ? { ...t, amount: it.amount } : t)) }));
+        } else {
+          const tx: Transaction = { id, type: 'income', amount: it.amount, categoryId: it.categoryId, merchant: it.name, method: 'Bank Transfer', date, recurring: true, frequency: 'monthly', notes: '', createdAt: new Date().toISOString(), createdBy: s.cloud && s.authed ? (s.userId ?? undefined) : undefined };
+          set((st) => ({ transactions: [tx, ...st.transactions] }));
+        }
+        const row = get().transactions.find((t) => t.id === id);
+        if (row) push('transactions', row);
+      } else if (present) {
+        set((st) => ({ transactions: st.transactions.filter((t) => t.id !== id) }));
+        del('transactions', [id]);
+      }
+    }
+    get().persist();
+  };
+
   return {
     ...seedData(),
     ready: false,
@@ -128,6 +191,7 @@ export const useStore = create<StoreState>((set, get) => {
           set({ ...seeded, ready: true, authReady: true });
         }
         applyTheme(get().settings.theme);
+        ensureStandingIncome();
         return;
       }
       // cloud mode
@@ -165,12 +229,16 @@ export const useStore = create<StoreState>((set, get) => {
       if (toUpsert.length) cloud.upsertMany('categories', toUpsert, profile.householdId, userId);
       // device-local preferences (theme, currency, fx, pin) stay in IndexedDB
       const local = await loadData();
+      const me = members.find((m) => m.id === userId);
       const settings: Settings = {
         ...DEFAULT_SETTINGS,
         ...(local?.settings ?? {}),
         // currency + fx rates are shared at household level (so every device matches)
         currency: (household.currency as Settings['currency']) || DEFAULT_SETTINGS.currency,
         fxRates: { ...DEFAULT_SETTINGS.fxRates, ...(household.fxRates ?? {}) },
+        // per-person figures come from the profile
+        salary: me?.salary ?? 0,
+        vouchers: me?.vouchers ?? 0,
         name: profile.name || DEFAULT_SETTINGS.name,
         onboarded: true,
       };
@@ -193,6 +261,7 @@ export const useStore = create<StoreState>((set, get) => {
         authError: '',
       });
       applyTheme(settings.theme);
+      ensureStandingIncome(); // auto-add this month's salary + vouchers if missing
 
       if (unsubRealtime) unsubRealtime();
       unsubRealtime = cloud.subscribe(profile.householdId, async (table) => {
@@ -219,6 +288,15 @@ export const useStore = create<StoreState>((set, get) => {
         get().updateSettings({ openingBalance: amount });
       }
     },
+
+    setMyIncome: async (salary, vouchers) => {
+      set((st) => ({ settings: { ...st.settings, salary, vouchers } }));
+      get().persist();
+      const s = get();
+      if (s.cloud && s.authed && s.userId) { await cloud.setIncome(s.userId, { salary, vouchers }); await get().refreshMembers(); }
+      applyIncomeToCurrentMonth(salary, vouchers);
+    },
+    ensureStandingIncome,
 
     signIn: async (email, password) => {
       try {

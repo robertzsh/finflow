@@ -68,7 +68,7 @@ export function onAuthChange(cb: (userId: string | null) => void) {
 // ---------------------------------------------------------------------------
 // Profile / household
 // ---------------------------------------------------------------------------
-export interface Member { id: string; name: string; openingBalance: number }
+export interface Member { id: string; name: string; openingBalance: number; salary: number; vouchers: number }
 export async function getProfile(uid: string) {
   const { data, error } = await supabase!.from('profiles').select('name, household_id').eq('id', uid).single();
   if (error) throw error;
@@ -76,6 +76,12 @@ export async function getProfile(uid: string) {
 }
 export async function setOpeningBalance(uid: string, amount: number) {
   await supabase!.from('profiles').update({ opening_balance: amount }).eq('id', uid);
+}
+export async function setIncome(uid: string, patch: { salary?: number; vouchers?: number }) {
+  const row: any = {};
+  if (patch.salary !== undefined) row.salary = patch.salary;
+  if (patch.vouchers !== undefined) row.vouchers = patch.vouchers;
+  if (Object.keys(row).length) await supabase!.from('profiles').update(row).eq('id', uid);
 }
 export async function getHousehold(householdId: string) {
   const { data, error } = await supabase!.from('households').select('name, invite_code, currency, fx_rates').eq('id', householdId).single();
@@ -94,9 +100,9 @@ export async function setHouseholdSettings(householdId: string, patch: { currenc
   if (Object.keys(row).length) await supabase!.from('households').update(row).eq('id', householdId);
 }
 export async function getMembers(householdId: string): Promise<Member[]> {
-  const { data, error } = await supabase!.from('profiles').select('id, name, opening_balance').eq('household_id', householdId);
+  const { data, error } = await supabase!.from('profiles').select('id, name, opening_balance, salary, vouchers').eq('household_id', householdId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({ id: r.id, name: r.name ?? 'Member', openingBalance: Number(r.opening_balance ?? 0) }));
+  return (data ?? []).map((r: any) => ({ id: r.id, name: r.name ?? 'Member', openingBalance: Number(r.opening_balance ?? 0), salary: Number(r.salary ?? 0), vouchers: Number(r.vouchers ?? 0) }));
 }
 export async function joinHousehold(code: string) {
   const { data, error } = await supabase!.rpc('join_household', { code: code.trim() });

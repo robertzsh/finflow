@@ -19,6 +19,8 @@ create table if not exists profiles (
   name            text,
   household_id    uuid references households(id) on delete set null,
   opening_balance numeric not null default 0,
+  salary          numeric not null default 0,
+  vouchers        numeric not null default 0,
   created_at      timestamptz not null default now()
 );
 
@@ -146,4 +148,4 @@ alter default privileges in schema public grant select, insert, update, delete o
 -- Hardening: users may only edit their own display name, never re-point their
 -- household_id directly (joining goes through the secure join_household() function).
 revoke update on profiles from authenticated;
-grant update (name, opening_balance) on profiles to authenticated;
+grant update (name, opening_balance, salary, vouchers) on profiles to authenticated;
