@@ -28,8 +28,8 @@ const goalToRow = (g: Goal, h: string) => ({ id: g.id, household_id: h, name: g.
 const rowToInv = (r: any): Investment => ({ id: r.id, name: r.name, ticker: r.ticker ?? undefined, kind: r.kind, currency: r.currency ?? undefined, units: Number(r.units), costBasis: Number(r.cost_basis), currentValue: Number(r.current_value), history: (r.history ?? []) as InvestmentPoint[] });
 const invToRow = (i: Investment, h: string) => ({ id: i.id, household_id: h, name: i.name, ticker: i.ticker ?? null, kind: i.kind, currency: i.currency ?? null, units: i.units, cost_basis: i.costBasis, current_value: i.currentValue, history: i.history });
 
-const rowToCat = (r: any): Category => ({ id: r.id, name: r.name, kind: r.kind, icon: r.icon, color: r.color, custom: r.custom ?? true });
-const catToRow = (c: Category, h: string) => ({ id: c.id, household_id: h, name: c.name, kind: c.kind, icon: c.icon, color: c.color, custom: c.custom ?? true });
+const rowToCat = (r: any): Category => ({ id: r.id, name: r.name, kind: r.kind, icon: r.icon, color: r.color, emoji: r.emoji ?? undefined, custom: r.custom ?? true });
+const catToRow = (c: Category, h: string) => ({ id: c.id, household_id: h, name: c.name, kind: c.kind, icon: c.icon, color: c.color, emoji: c.emoji ?? null, custom: c.custom ?? true });
 
 export type Table = 'transactions' | 'budgets' | 'goals' | 'investments' | 'categories';
 const TO_ROW: Record<Table, (o: any, h: string, uid: string) => any> = {
@@ -78,9 +78,20 @@ export async function setOpeningBalance(uid: string, amount: number) {
   await supabase!.from('profiles').update({ opening_balance: amount }).eq('id', uid);
 }
 export async function getHousehold(householdId: string) {
-  const { data, error } = await supabase!.from('households').select('name, invite_code').eq('id', householdId).single();
+  const { data, error } = await supabase!.from('households').select('name, invite_code, currency, fx_rates').eq('id', householdId).single();
   if (error) throw error;
-  return { name: data.name as string, inviteCode: data.invite_code as string };
+  return {
+    name: data.name as string,
+    inviteCode: data.invite_code as string,
+    currency: (data.currency ?? 'RON') as string,
+    fxRates: (data.fx_rates ?? null) as Record<string, number> | null,
+  };
+}
+export async function setHouseholdSettings(householdId: string, patch: { currency?: string; fxRates?: Record<string, number> }) {
+  const row: any = {};
+  if (patch.currency) row.currency = patch.currency;
+  if (patch.fxRates) row.fx_rates = patch.fxRates;
+  if (Object.keys(row).length) await supabase!.from('households').update(row).eq('id', householdId);
 }
 export async function getMembers(householdId: string): Promise<Member[]> {
   const { data, error } = await supabase!.from('profiles').select('id, name, opening_balance').eq('household_id', householdId);

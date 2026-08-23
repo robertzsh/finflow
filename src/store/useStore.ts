@@ -166,7 +166,9 @@ export const useStore = create<StoreState>((set, get) => {
       const settings: Settings = {
         ...DEFAULT_SETTINGS,
         ...(local?.settings ?? {}),
-        fxRates: { ...DEFAULT_SETTINGS.fxRates, ...(local?.settings?.fxRates ?? {}) },
+        // currency + fx rates are shared at household level (so every device matches)
+        currency: (household.currency as Settings['currency']) || DEFAULT_SETTINGS.currency,
+        fxRates: { ...DEFAULT_SETTINGS.fxRates, ...(household.fxRates ?? {}) },
         name: profile.name || DEFAULT_SETTINGS.name,
         onboarded: true,
       };
@@ -367,6 +369,13 @@ export const useStore = create<StoreState>((set, get) => {
       get().persist();
       const s = get();
       if (patch.name && s.cloud && s.authed && s.userId) cloud.setProfileName(s.userId, patch.name);
+      // currency + fx rates are household-wide → persist to the cloud for both members
+      if ((patch.currency || patch.fxRates) && s.cloud && s.authed && s.householdId) {
+        cloud.setHouseholdSettings(s.householdId, {
+          currency: patch.currency,
+          fxRates: patch.fxRates ? s.settings.fxRates : undefined,
+        });
+      }
     },
     lock: () => set({ locked: true }),
     unlock: (pin) => {

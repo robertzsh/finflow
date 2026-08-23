@@ -9,6 +9,8 @@ create table if not exists households (
   id          uuid primary key default gen_random_uuid(),
   name        text not null default 'Our household',
   invite_code text not null unique default substr(md5(random()::text), 1, 8),
+  currency    text not null default 'RON',
+  fx_rates    jsonb not null default '{"RON":1,"EUR":5.0,"USD":4.6,"GBP":5.9}',
   created_at  timestamptz not null default now()
 );
 
@@ -49,7 +51,7 @@ create trigger on_auth_user_created
 create table if not exists categories (
   id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
-  name text not null, kind text not null, icon text, color text, custom boolean default true
+  name text not null, kind text not null, icon text, color text, emoji text, custom boolean default true
 );
 
 create table if not exists transactions (
