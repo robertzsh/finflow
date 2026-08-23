@@ -150,8 +150,17 @@ export default function Settings() {
             <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={onRestore} />
             <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={onCSV} />
             <div className="rounded-xl bg-white/[0.03] p-3 mt-2">
-              <p className="text-xs text-white/50 mb-2">Cloud sync (optional) — off by default. Your data never leaves your device unless enabled.</p>
-              <ToggleRow icon={<Database size={16} />} title="Cloud sync" desc="Coming soon" checked={false} onChange={() => flash('Cloud sync is not enabled in this build')} />
+              {store.cloud && store.authed ? (
+                <div className="flex items-center gap-2.5">
+                  <span className="rounded-lg bg-income/20 p-1.5"><Database size={15} className="text-income" /></span>
+                  <div>
+                    <div className="text-sm font-medium">Cloud sync is on</div>
+                    <div className="text-xs text-white/40">Your data lives in your household and syncs live across all devices & browsers. Export below is just for manual snapshots.</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-white/50">Local mode — data is stored only in this browser. Use Export to keep a backup, or connect an account for cloud sync.</p>
+              )}
             </div>
             <Button variant="danger" className="w-full justify-start mt-2"
               onClick={() => { if (confirm('Reset all data to sample data? This cannot be undone.')) { resetAll(); flash('Data reset'); } }}>

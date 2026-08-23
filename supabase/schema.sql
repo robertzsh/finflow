@@ -57,7 +57,7 @@ create table if not exists categories (
 create table if not exists transactions (
   id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
-  created_by uuid references profiles(id),
+  created_by text,   -- member id, or 'all' for a shared/split expense
   type text not null, amount numeric not null, category_id text,
   merchant text, method text, date date not null, notes text,
   recurring boolean default false, frequency text, receipt text,
