@@ -117,7 +117,7 @@ export const useStore = create<StoreState>((set, get) => {
     const date = `${mk}-01`;
     const defs = [
       { kind: 'salary', categoryId: 'salary', name: 'Salary', amount: s.settings.salary },
-      { kind: 'vouchers', categoryId: 'vouchers', name: 'Vouchers', amount: s.settings.vouchers },
+      { kind: 'vouchers', categoryId: 'vouchers', name: 'Bonuri', amount: s.settings.vouchers },
     ];
     const existing = new Set(s.transactions.map((t) => t.id));
     const toCreate: Transaction[] = defs
@@ -143,7 +143,7 @@ export const useStore = create<StoreState>((set, get) => {
     const date = `${mk}-01`;
     const items = [
       { kind: 'salary', categoryId: 'salary', name: 'Salary', amount: salary },
-      { kind: 'vouchers', categoryId: 'vouchers', name: 'Vouchers', amount: vouchers },
+      { kind: 'vouchers', categoryId: 'vouchers', name: 'Bonuri', amount: vouchers },
     ];
     for (const it of items) {
       const id = siId(it.kind, owner, mk);
@@ -223,7 +223,11 @@ export const useStore = create<StoreState>((set, get) => {
       for (const d of DEFAULT_CATEGORIES) {
         const ex = byId.get(d.id);
         if (!ex) { byId.set(d.id, d); toUpsert.push(d); }
-        else if (!ex.emoji && d.emoji) { const merged = { ...ex, emoji: d.emoji }; byId.set(d.id, merged); toUpsert.push(merged); }
+        // keep built-in (non-custom) default categories in sync with the code (name/emoji/icon/color)
+        else if (!ex.custom && (ex.name !== d.name || ex.emoji !== d.emoji || ex.icon !== d.icon || ex.color !== d.color)) {
+          const merged = { ...ex, name: d.name, emoji: d.emoji, icon: d.icon, color: d.color };
+          byId.set(d.id, merged); toUpsert.push(merged);
+        }
       }
       const categories = data.categories.length ? [...byId.values()] : DEFAULT_CATEGORIES;
       if (toUpsert.length) cloud.upsertMany('categories', toUpsert, profile.householdId, userId);

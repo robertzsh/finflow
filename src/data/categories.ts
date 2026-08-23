@@ -5,7 +5,7 @@ const inc = '#10b981';
 export const DEFAULT_CATEGORIES: Category[] = [
   // Income
   { id: 'salary', name: 'Salary', kind: 'income', icon: 'Wallet', color: inc, emoji: '💰' },
-  { id: 'vouchers', name: 'Vouchers', kind: 'income', icon: 'Ticket', color: '#34d399', emoji: '🎟️' },
+  { id: 'vouchers', name: 'Bonuri', kind: 'income', icon: 'Ticket', color: '#34d399', emoji: '🎟️' },
   { id: 'freelance', name: 'Freelance', kind: 'income', icon: 'Laptop', color: '#34d399', emoji: '💻' },
   { id: 'investments-inc', name: 'Investments', kind: 'income', icon: 'TrendingUp', color: '#6ee7b7', emoji: '📈' },
   { id: 'gifts', name: 'Gifts', kind: 'income', icon: 'Gift', color: '#a7f3d0', emoji: '🎁' },

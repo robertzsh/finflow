@@ -196,7 +196,7 @@ function MonthlyIncomeField() {
           <Input type="number" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
         </div>
         <div>
-          <span className="text-[11px] text-white/40">Vouchers (default)</span>
+          <span className="text-[11px] text-white/40">Bonuri (default)</span>
           <Input type="number" step="0.01" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
         </div>
       </div>
@@ -205,7 +205,7 @@ function MonthlyIncomeField() {
           onClick={async () => { await setMyIncome(Number(salary) || 0, Number(vouchers) || 0); setSaved(true); setTimeout(() => setSaved(false), 2000); }}>
           {saved ? <><Check size={14} /> Saved</> : 'Save income'}
         </Button>
-        <span className="text-xs text-white/40">Salary + vouchers post automatically on the 1st. Vouchers vary by month — edit that month's Vouchers entry in Transactions.</span>
+        <span className="text-xs text-white/40">Salary + Bonuri post automatically on the 1st. Bonuri vary by month — edit that month's Bonuri entry in Transactions.</span>
       </div>
     </div>
   );
