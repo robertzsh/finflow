@@ -7,8 +7,9 @@ import { formatMoney } from '@/lib/format';
 
 function useCur() { return useStore((s) => s.settings.currency); }
 
-const axisStyle = { fontSize: 11, fill: 'rgba(255,255,255,0.45)' };
-const grid = 'rgba(255,255,255,0.06)';
+// neutral slate — legible on both dark and light backgrounds
+const axisStyle = { fontSize: 11, fill: '#94a3b8' };
+const grid = 'rgba(148,163,184,0.18)';
 
 function TT({ active, payload, label, currency }: any) {
   if (!active || !payload?.length) return null;

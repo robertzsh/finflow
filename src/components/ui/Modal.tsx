@@ -1,8 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
+  // Lock background scroll while the sheet is open (stops the page "dragging" behind it on mobile).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -15,13 +23,13 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
             role="dialog" aria-modal="true" aria-label={title}
             initial={{ y: 40, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className={`glass relative z-10 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto`}
+            className={`glass relative z-10 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-t-3xl sm:rounded-2xl max-h-[88vh] overflow-y-auto overscroll-contain`}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5 backdrop-blur-xl rounded-t-3xl sm:rounded-t-2xl">
               <h2 className="text-lg font-bold">{title}</h2>
               <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-white/10" aria-label="Close"><X size={18} /></button>
             </div>
-            <div className="p-6">{children}</div>
+            <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
           </motion.div>
         </motion.div>
       )}

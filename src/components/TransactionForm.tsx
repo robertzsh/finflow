@@ -80,7 +80,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Amount</Label>
-          <Input type="number" step="0.01" placeholder="0.00" autoFocus
+          <Input type="number" inputMode="decimal" step="0.01" placeholder="0.00"
             {...register('amount', { required: 'Enter an amount', valueAsNumber: true, validate: (v) => (Number(v) > 0) || 'Amount must be greater than 0' })} />
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>

@@ -7,6 +7,7 @@ import {
 import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
+import { fetchFxRates } from '@/lib/rates';
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -76,6 +77,7 @@ interface StoreState extends AppData {
   importInvestments: (list: { name: string; ticker?: string; kind: string; units: number; costBasis: number; currency: string }[]) => number;
 
   updateSettings: (patch: Partial<Settings>) => void;
+  refreshRates: () => Promise<boolean>;
   lock: () => void;
   unlock: (pin?: string) => boolean;
   restore: (data: AppData) => void;
@@ -376,6 +378,12 @@ export const useStore = create<StoreState>((set, get) => {
           fxRates: patch.fxRates ? s.settings.fxRates : undefined,
         });
       }
+    },
+    refreshRates: async () => {
+      const rates = await fetchFxRates();
+      if (!rates) return false;
+      get().updateSettings({ fxRates: { ...get().settings.fxRates, ...rates, RON: 1 } });
+      return true;
     },
     lock: () => set({ locked: true }),
     unlock: (pin) => {

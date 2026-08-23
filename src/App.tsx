@@ -31,6 +31,18 @@ export default function App() {
   useEffect(() => { init(); }, [init]);
   useEffect(() => { setInsightCurrency(currencySymbol(settings.currency)); }, [settings.currency]);
 
+  // Refresh exchange rates at most once every 12h.
+  const refreshRates = useStore((s) => s.refreshRates);
+  useEffect(() => {
+    if (!ready) return;
+    try {
+      const last = Number(localStorage.getItem('finflow-rates-ts') || 0);
+      if (Date.now() - last > 12 * 60 * 60 * 1000) {
+        refreshRates().then((ok) => { if (ok) localStorage.setItem('finflow-rates-ts', String(Date.now())); });
+      }
+    } catch { /* ignore */ }
+  }, [ready, refreshRates]);
+
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
   useIdleLock();

@@ -67,3 +67,46 @@ html.light .glass {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Light theme — the UI is built with white-on-dark utility classes, so we
+   remap the common ones to dark-on-light when html.light is active.
+--------------------------------------------------------------------------- */
+html.light .text-white { color: #0f172a !important; }
+html.light .text-white\/90 { color: rgba(15,23,42,0.92) !important; }
+html.light .text-white\/80 { color: rgba(15,23,42,0.82) !important; }
+html.light .text-white\/70 { color: rgba(15,23,42,0.72) !important; }
+html.light .text-white\/60 { color: rgba(15,23,42,0.62) !important; }
+html.light .text-white\/55 { color: rgba(15,23,42,0.6) !important; }
+html.light .text-white\/50 { color: rgba(15,23,42,0.55) !important; }
+html.light .text-white\/40 { color: rgba(15,23,42,0.45) !important; }
+html.light .text-white\/30 { color: rgba(15,23,42,0.4) !important; }
+html.light .text-white\/25 { color: rgba(15,23,42,0.35) !important; }
+html.light .placeholder\:text-white\/30::placeholder { color: rgba(15,23,42,0.4) !important; }
+
+html.light .bg-white\/5,
+html.light .bg-white\/\[0\.045\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.02\] { background-color: rgba(15,23,42,0.04) !important; }
+html.light .bg-white\/10,
+html.light .bg-white\/\[0\.07\] { background-color: rgba(15,23,42,0.07) !important; }
+html.light .hover\:bg-white\/10:hover,
+html.light .hover\:bg-white\/\[0\.05\]:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover,
+html.light .hover\:bg-white\/\[0\.03\]:hover { background-color: rgba(15,23,42,0.06) !important; }
+
+html.light .border-white\/5 { border-color: rgba(15,23,42,0.06) !important; }
+html.light .border-white\/10 { border-color: rgba(15,23,42,0.1) !important; }
+html.light .border-white\/16,
+html.light .border-white\/20 { border-color: rgba(15,23,42,0.16) !important; }
+
+html.light .glass-hover:hover { border-color: rgba(15,23,42,0.16); background: rgba(255,255,255,0.9); }
+html.light ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+
+/* ---------------------------------------------------------------------------
+   Mobile: 16px form controls stop iOS Safari from auto-zooming (and the
+   layout jump/lag) when an input is focused.
+--------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px !important; }
+}

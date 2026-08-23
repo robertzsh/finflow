@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus } from 'lucide-react';
+import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
@@ -72,13 +72,18 @@ export default function Settings() {
                 {(['EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => (
                   <div key={c} className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-2.5">
                     <span className="text-xs text-white/50 w-9">{c}</span>
-                    <input type="number" step="0.01" defaultValue={settings.fxRates[c]}
+                    <input type="number" step="0.01" key={settings.fxRates[c]} defaultValue={settings.fxRates[c]}
                       onBlur={(e) => updateSettings({ fxRates: { ...settings.fxRates, [c]: Number(e.target.value) || settings.fxRates[c] } })}
                       className="w-full bg-transparent py-2 text-sm outline-none" />
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-white/40 mt-1.5">Used to combine multi-currency goals & investments into your base totals. Edit anytime.</p>
+              <div className="flex items-center gap-2 mt-2">
+                <Button variant="ghost" onClick={async () => { const ok = await store.refreshRates(); flash(ok ? 'Rates updated from today’s market' : 'Couldn’t reach the rates service'); }}>
+                  <RefreshCw size={14} /> Update rates now
+                </Button>
+                <span className="text-xs text-white/40">Auto-updates daily · lei per 1 unit</span>
+              </div>
             </div>
             <div>
               <Label>Appearance</Label>
@@ -242,7 +247,7 @@ function ToggleRow({ icon, title, desc, checked, onChange }: { icon: React.React
   );
 }
 
-const ICONS = ['ShoppingBag', 'ShoppingCart', 'Coffee', 'Utensils', 'Car', 'Fuel', 'Home', 'Building', 'Heart', 'HeartPulse', 'Gamepad2', 'Clapperboard', 'Book', 'GraduationCap', 'Plane', 'TrainFront', 'Gift', 'Zap', 'Dumbbell', 'Smartphone', 'Shirt', 'Baby', 'Dog', 'PawPrint', 'Wine', 'Pizza', 'Bike', 'Bus', 'Wrench', 'Sparkles', 'Music', 'Film', 'Camera', 'Briefcase', 'Landmark', 'PiggyBank'];
+const ICONS = ['ShoppingBag', 'ShoppingCart', 'Coffee', 'Utensils', 'Car', 'Fuel', 'Home', 'Building', 'Heart', 'HeartPulse', 'Gamepad2', 'Clapperboard', 'Book', 'GraduationCap', 'Plane', 'TrainFront', 'Gift', 'Zap', 'Dumbbell', 'Smartphone', 'Shirt', 'Baby', 'Dog', 'PawPrint', 'Wine', 'Pizza', 'Bike', 'Bus', 'Wrench', 'Sparkles', 'Music', 'Film', 'Camera', 'Briefcase', 'Landmark', 'PiggyBank', 'Waves'];
 const COLORS = [
   '#10b981', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1',
   '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f472b6', '#ef4444',
@@ -253,6 +258,7 @@ const EMOJIS = [
   '🏠', '🏦', '❤️', '💊', '🩺', '🎮', '🎬', '🎵', '📚', '🎓', '💻', '📱',
   '🎁', '⚡', '💅', '🏬', '🐾', '🐶', '🐱', '👶', '🏋️', '⚽', '🚲', '🔧',
   '💇', '🧾', '💡', '🌍', '🎨', '📷', '💼', '🏛️', '🐖', '💎', '🎄', '🌸',
+  '🏊', '🏖️', '⛱️', '🎾', '⛷️', '🏀', '🧘', '🍦',
 ];
 function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (c: any) => void }) {
   const [name, setName] = useState('');
