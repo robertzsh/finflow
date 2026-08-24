@@ -18,7 +18,7 @@ export function LockScreen() {
   function submit() { if (!unlock(pin)) { setError(true); setPin(''); } }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6">
       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
         className="glass rounded-3xl p-8 w-full max-w-xs text-center">
         <div className="mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-500 p-3 w-fit"><Lock size={22} className="text-white" /></div>

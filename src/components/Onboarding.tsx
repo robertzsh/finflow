@@ -21,7 +21,7 @@ export function Onboarding() {
   const last = step === SLIDES.length;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-[100dvh] flex items-center justify-center p-6">
       <div className="glass rounded-3xl p-8 w-full max-w-md overflow-hidden">
         <AnimatePresence mode="wait">
           {!last ? (

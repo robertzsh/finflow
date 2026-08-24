@@ -26,7 +26,7 @@ export function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-[100dvh] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
         className="glass rounded-3xl p-8 w-full max-w-md">
         <div className="flex items-center gap-2.5 mb-6">

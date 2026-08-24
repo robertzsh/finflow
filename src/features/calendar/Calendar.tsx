@@ -96,9 +96,16 @@ export default function Calendar() {
               const dayNet = items.reduce((a, i) => a + (i.type === 'income' ? i.amount : -i.amount), 0);
               return (
                 <button key={key} onClick={() => setSelected(key)}
-                  className={`min-h-[74px] rounded-lg p-1.5 border text-left transition ${isSel ? 'border-blue-400 bg-blue-500/15' : today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'opacity-30'}`}>
-                  <div className={`text-xs mb-1 ${today ? 'text-blue-400 font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
-                  <div className="space-y-0.5">
+                  className={`min-h-[52px] sm:min-h-[74px] rounded-lg p-1 sm:p-1.5 border text-left transition ${isSel ? 'border-blue-400 bg-blue-500/15' : today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'opacity-30'}`}>
+                  <div className={`text-[11px] sm:text-xs mb-1 ${today ? 'text-blue-400 font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
+                  {/* Mobile: compact dots. sm+: labelled chips */}
+                  <div className="flex flex-wrap gap-0.5 sm:hidden">
+                    {items.slice(0, 4).map((e, i) => {
+                      const c = categories.find((x) => x.id === e.categoryId);
+                      return <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: c?.color ?? '#888', opacity: e.projected ? 0.6 : 1 }} />;
+                    })}
+                  </div>
+                  <div className="space-y-0.5 hidden sm:block">
                     {items.slice(0, 2).map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);
                       return (
@@ -111,8 +118,8 @@ export default function Calendar() {
                     {items.length > 2 && <div className="text-[9px] text-white/40 px-1">+{items.length - 2} more</div>}
                   </div>
                   {items.length > 0 && (
-                    <div className={`mt-0.5 text-[9px] font-semibold ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
-                      {dayNet >= 0 ? '+' : '−'}{formatMoney(Math.abs(dayNet), cur, { compact: Math.abs(dayNet) > 9999 })}
+                    <div className={`mt-0.5 text-[9px] font-semibold truncate ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
+                      {dayNet >= 0 ? '+' : '−'}{formatMoney(Math.abs(dayNet), cur, { compact: true })}
                     </div>
                   )}
                 </button>

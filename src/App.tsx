@@ -50,25 +50,25 @@ export default function App() {
   // Cloud mode: show a login screen until signed in.
   if (cloud) {
     if (!authReady) {
-      return <div className="app-bg min-h-screen flex items-center justify-center"><div className="animate-pulse text-white/40">Loading FinFlow…</div></div>;
+      return <div className="app-bg min-h-[100dvh] flex items-center justify-center"><div className="animate-pulse text-white/40">Loading FinFlow…</div></div>;
     }
-    if (!authed) return <div className="app-bg min-h-screen"><Auth /></div>;
+    if (!authed) return <div className="app-bg min-h-[100dvh]"><Auth /></div>;
   }
 
   if (!ready) {
     return (
-      <div className="app-bg min-h-screen flex items-center justify-center">
+      <div className="app-bg min-h-[100dvh] flex items-center justify-center">
         <div className="animate-pulse text-white/40">Loading FinFlow…</div>
       </div>
     );
   }
 
   // Onboarding only applies to local mode; PIN lock applies in both modes.
-  if (!cloud && !settings.onboarded) return <div className="app-bg min-h-screen"><Onboarding /></div>;
-  if (locked && settings.pinEnabled) return <div className="app-bg min-h-screen"><LockScreen /></div>;
+  if (!cloud && !settings.onboarded) return <div className="app-bg min-h-[100dvh]"><Onboarding /></div>;
+  if (locked && settings.pinEnabled) return <div className="app-bg min-h-[100dvh]"><LockScreen /></div>;
 
   return (
-    <div className="app-bg min-h-screen flex">
+    <div className="app-bg min-h-[100dvh] flex">
       <Sidebar />
       <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-8">
         <Topbar onQuickAdd={() => setQuickAdd(true)} onSearch={() => setPaletteOpen(true)} />

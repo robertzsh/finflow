@@ -9,12 +9,18 @@
 
 html, body, #root { height: 100%; }
 
+/* Never allow the page itself to scroll sideways (tables/charts scroll inside their own box). */
+html, body { overflow-x: hidden; max-width: 100%; }
+#root { width: 100%; }
+* { min-width: 0; } /* let flex/grid children shrink instead of overflowing */
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
   color: #e5e9f0;
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 
 .light body, html.light body { color: #1e293b; background: #f1f5f9; }
