@@ -120,18 +120,28 @@ export const useStore = create<StoreState>((set, get) => {
       { kind: 'salary', categoryId: 'salary', name: 'Salary', amount: s.settings.salary },
       { kind: 'vouchers', categoryId: 'vouchers', name: 'Bonuri', amount: s.settings.vouchers },
     ];
-    const existing = new Set(s.transactions.map((t) => t.id));
-    const toCreate: Transaction[] = defs
-      .filter((d) => d.amount > 0 && !existing.has(siId(d.kind, owner, mk)))
-      .map((d) => ({
-        id: siId(d.kind, owner, mk), type: 'income', amount: d.amount, categoryId: d.categoryId,
-        merchant: d.name, method: 'Bank Transfer', date, recurring: true, frequency: 'monthly',
-        notes: '', createdAt: new Date().toISOString(), createdBy: s.cloud && s.authed ? (s.userId ?? undefined) : undefined,
-      }));
-    if (toCreate.length) {
-      set((st) => ({ transactions: [...toCreate, ...st.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
+    const byId = new Map(s.transactions.map((t) => [t.id, t] as const));
+    const toCreate: Transaction[] = [];
+    const toFix: Transaction[] = [];
+    for (const d of defs) {
+      const id = siId(d.kind, owner, mk);
+      const ex = byId.get(id);
+      if (!ex && d.amount > 0) {
+        toCreate.push({
+          id, type: 'income', amount: d.amount, categoryId: d.categoryId,
+          merchant: d.name, method: 'Bank Transfer', date, recurring: true, frequency: 'monthly',
+          notes: '', createdAt: new Date().toISOString(), createdBy: s.cloud && s.authed ? (s.userId ?? undefined) : undefined,
+        });
+      } else if (ex && ex.merchant !== d.name) {
+        // fix a stale name (e.g. old "Vouchers" → "Bonuri"); amount is left untouched
+        toFix.push({ ...ex, merchant: d.name });
+      }
+    }
+    if (toCreate.length || toFix.length) {
+      const fixMap = new Map(toFix.map((t) => [t.id, t] as const));
+      set((st) => ({ transactions: [...toCreate, ...st.transactions.map((t) => fixMap.get(t.id) ?? t)].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
       get().persist();
-      pushMany('transactions', toCreate);
+      pushMany('transactions', [...toCreate, ...toFix]);
     }
   };
 

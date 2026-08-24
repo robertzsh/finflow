@@ -131,12 +131,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 my-2 text-center">
-                    <div className="rounded-lg bg-white/[0.04] py-1.5">
-                      <div className="text-income font-semibold text-sm">{formatMoney(b.income, cur, { compact: b.income > 9999 })}</div>
+                    <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
+                      <div className="text-income font-semibold text-sm truncate">{formatMoney(b.income, cur, { compact: true })}</div>
                       <div className="text-[10px] text-white/40">income</div>
                     </div>
-                    <div className="rounded-lg bg-white/[0.04] py-1.5">
-                      <div className={`font-semibold text-sm ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 })}</div>
+                    <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
+                      <div className={`font-semibold text-sm truncate ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{formatMoney(net, cur, { sign: true, compact: true })}</div>
                       <div className="text-[10px] text-white/40">saved</div>
                     </div>
                     <div className="rounded-lg bg-white/[0.04] py-1.5">

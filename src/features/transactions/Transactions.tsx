@@ -184,12 +184,12 @@ export default function Transactions() {
                       </button>
                       <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} emoji={c?.emoji} />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="font-medium truncate">{t.merchant || c?.name || '—'}</span>
-                          {t.recurring && <Badge color="#a855f7">↻ {t.frequency}</Badge>}
+                          {t.recurring && <span className="shrink-0 text-goal text-[11px]" title={`Recurring · ${t.frequency}`}>↻</span>}
                         </div>
-                        <div className="text-xs text-white/40 flex items-center gap-1.5">
-                          {c?.name} · {t.method}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerLabel(t.createdBy) ? ` · ${payerLabel(t.createdBy)}` : ''}
+                        <div className="text-xs text-white/40 truncate">
+                          {c?.name} · {t.method}{t.recurring ? ` · ${t.frequency}` : ''}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerLabel(t.createdBy) ? ` · ${payerLabel(t.createdBy)}` : ''}
                         </div>
                       </div>
                       <div className={`text-right font-semibold tabular-nums shrink-0 ${t.type === 'income' ? 'text-income' : ''}`}>

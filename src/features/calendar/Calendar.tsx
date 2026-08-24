@@ -118,7 +118,7 @@ export default function Calendar() {
                     {items.length > 2 && <div className="text-[9px] text-white/40 px-1">+{items.length - 2} more</div>}
                   </div>
                   {items.length > 0 && (
-                    <div className={`mt-0.5 text-[9px] font-semibold truncate ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
+                    <div className={`mt-0.5 text-[9px] font-semibold truncate hidden sm:block ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
                       {dayNet >= 0 ? '+' : '−'}{formatMoney(Math.abs(dayNet), cur, { compact: true })}
                     </div>
                   )}
