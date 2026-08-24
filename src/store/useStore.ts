@@ -63,6 +63,7 @@ interface StoreState extends AppData {
   importTransactions: (list: Partial<Transaction>[]) => void;
 
   addCategory: (c: Omit<Category, 'id'>) => void;
+  updateCategory: (id: string, patch: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 
   setBudget: (categoryId: string, amount: number) => void;
@@ -269,13 +270,18 @@ export const useStore = create<StoreState>((set, get) => {
       ensureStandingIncome(); // auto-add this month's salary + vouchers if missing
 
       if (unsubRealtime) unsubRealtime();
-      unsubRealtime = cloud.subscribe(profile.householdId, async (table) => {
-        const rows = await cloud.fetchTable(table, profile.householdId);
-        if (table === 'transactions') set({ transactions: (rows as Transaction[]).sort((a, b) => (a.date < b.date ? 1 : -1)) });
-        else if (table === 'budgets') set({ budgets: rows as Budget[] });
-        else if (table === 'goals') set({ goals: rows as Goal[] });
-        else if (table === 'investments') set({ investments: rows as Investment[] });
-        else if (table === 'categories') set({ categories: rows as Category[] });
+      unsubRealtime = cloud.subscribe(profile.householdId, ({ table, type, obj }) => {
+        set((st: any) => {
+          const list = (st[table] as any[]) ?? [];
+          let next: any[];
+          if (type === 'DELETE') next = list.filter((x) => x.id !== obj.id);
+          else {
+            const i = list.findIndex((x) => x.id === obj.id);
+            next = i >= 0 ? list.map((x) => (x.id === obj.id ? obj : x)) : [obj, ...list];
+          }
+          if (table === 'transactions') next = (next as Transaction[]).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+          return { [table]: next };
+        });
       });
     },
 
@@ -381,6 +387,12 @@ export const useStore = create<StoreState>((set, get) => {
       const cat: Category = { ...c, id: uid('cat'), custom: true };
       set((s) => ({ categories: [...s.categories, cat] }));
       get().persist(); push('categories', cat);
+    },
+    updateCategory: (id, patch) => {
+      set((s) => ({ categories: s.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
+      get().persist();
+      const c = get().categories.find((x) => x.id === id);
+      if (c) push('categories', c);
     },
     deleteCategory: (id) => {
       set((s) => ({ categories: s.categories.filter((c) => c.id !== id || !c.custom) }));

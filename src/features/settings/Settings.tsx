@@ -10,14 +10,15 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Modal } from '@/components/ui/Modal';
 import { exportJSON, parseBankCSV } from '@/lib/export';
 import { currencySymbol } from '@/lib/format';
-import type { AppData, CurrencyCode } from '@/types';
+import type { AppData, CurrencyCode, Category } from '@/types';
 
 export default function Settings() {
   const store = useStore();
-  const { settings, categories, updateSettings, restore, resetAll, addCategory, deleteCategory, importTransactions, transactions, budgets, goals, investments } = store;
+  const { settings, categories, updateSettings, restore, resetAll, addCategory, updateCategory, deleteCategory, importTransactions, transactions, budgets, goals, investments } = store;
   const fileRef = useRef<HTMLInputElement>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const [catOpen, setCatOpen] = useState(false);
+  const [editCat, setEditCat] = useState<Category | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -131,11 +132,12 @@ export default function Settings() {
         <Card className="p-5">
           <SectionCardHeader title="Categories" hint={`${categories.length} total`}
             action={<Button variant="ghost" onClick={() => setCatOpen(true)}><Plus size={15} /> Add</Button>} />
+          <p className="text-xs text-white/40 mb-2">Tap a category to change its name, emoji, icon or colour.</p>
           <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar">
             {categories.map((c) => (
-              <span key={c.id} className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs">
+              <span key={c.id} className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs hover:bg-white/10 cursor-pointer" onClick={() => setEditCat(c)}>
                 <CategoryIcon icon={c.icon} color={c.color} size={13} bg={false} emoji={c.emoji} />{c.name}
-                {c.custom && <button onClick={() => deleteCategory(c.id)} className="text-white/30 hover:text-expense ml-1">×</button>}
+                {c.custom && <button onClick={(e) => { e.stopPropagation(); deleteCategory(c.id); }} className="text-white/30 hover:text-expense ml-1">×</button>}
               </span>
             ))}
           </div>
@@ -172,6 +174,7 @@ export default function Settings() {
       </div>
 
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
+      <CategoryModal open={!!editCat} existing={editCat ?? undefined} onClose={() => setEditCat(null)} onSave={(c) => { if (editCat) updateCategory(editCat.id, c); setEditCat(null); }} />
     </Page>
   );
 }
@@ -300,19 +303,23 @@ const COLORS = [
 ];
 const EMOJIS = [
   '🛍️', '🛒', '☕', '🍽️', '🍕', '🍺', '🍷', '🚗', '⛽', '🚆', '🚌', '✈️',
-  '🏠', '🏦', '❤️', '💊', '🩺', '🎮', '🎬', '🎵', '📚', '🎓', '💻', '📱',
+  '🏠', '🏦', '❤️', '💊', '🩺', '🦷', '🎮', '🎬', '🎵', '📚', '🎓', '💻', '📱',
   '🎁', '⚡', '💅', '🏬', '🐾', '🐶', '🐱', '👶', '🏋️', '⚽', '🚲', '🔧',
   '💇', '🧾', '💡', '🌍', '🎨', '📷', '💼', '🏛️', '🐖', '💎', '🎄', '🌸',
-  '🏊', '🏖️', '⛱️', '🎾', '⛷️', '🏀', '🧘', '🍦',
+  '🏊', '🏖️', '⛱️', '🎾', '⛷️', '🏀', '🧘', '🍦', '👓', '💉', '🧴', '🚿',
 ];
-function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (c: any) => void }) {
+function CategoryModal({ open, onClose, onSave, existing }: { open: boolean; onClose: () => void; onSave: (c: any) => void; existing?: Category }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<'income' | 'expense'>('expense');
   const [icon, setIcon] = useState(ICONS[0]);
   const [color, setColor] = useState(COLORS[0]);
   const [emoji, setEmoji] = useState('🛍️');
+  useEffect(() => {
+    if (existing) { setName(existing.name); setKind(existing.kind); setIcon(existing.icon); setColor(existing.color); setEmoji(existing.emoji ?? '🛍️'); }
+    else { setName(''); setKind('expense'); setIcon(ICONS[0]); setColor(COLORS[0]); setEmoji('🛍️'); }
+  }, [existing, open]);
   return (
-    <Modal open={open} onClose={onClose} title="New category">
+    <Modal open={open} onClose={onClose} title={existing ? 'Edit category' : 'New category'}>
       <div className="space-y-4">
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hobbies" /></div>
         <div><Label>Type</Label>
@@ -332,7 +339,7 @@ function CategoryModal({ open, onClose, onSave }: { open: boolean; onClose: () =
         <div><Label>Colour</Label>
           <div className="flex gap-2">{COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}</div>
         </div>
-        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color, emoji })}>Create category</Button>
+        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color, emoji })}>{existing ? 'Save changes' : 'Create category'}</Button>
       </div>
     </Modal>
   );

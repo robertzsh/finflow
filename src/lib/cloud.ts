@@ -165,13 +165,24 @@ export async function seedIfEmpty(householdId: string, uid: string, categories: 
 // ---------------------------------------------------------------------------
 // Realtime: notify when any household table changes
 // ---------------------------------------------------------------------------
-export function subscribe(householdId: string, onChange: (table: Table) => void) {
+export type ChangeEvent = { table: Table; type: 'INSERT' | 'UPDATE' | 'DELETE'; obj: any };
+const MAPPERS: Record<Table, (r: any) => any> = {
+  transactions: rowToTx, budgets: rowToBudget, goals: rowToGoal, investments: rowToInv, categories: rowToCat,
+};
+
+// Apply changes incrementally (never a full-table replace), so a locally-added row
+// can't be wiped by an in-flight refresh. Each partner's change is merged by id.
+export function subscribe(householdId: string, onEvent: (e: ChangeEvent) => void) {
   const tables: Table[] = ['transactions', 'budgets', 'goals', 'investments', 'categories'];
   const channel = supabase!.channel(`hh-${householdId}`);
   for (const t of tables) {
     channel.on('postgres_changes',
       { event: '*', schema: 'public', table: t, filter: `household_id=eq.${householdId}` },
-      () => onChange(t));
+      (payload: any) => {
+        const type = payload.eventType as ChangeEvent['type'];
+        if (type === 'DELETE') onEvent({ table: t, type, obj: { id: payload.old?.id } });
+        else onEvent({ table: t, type, obj: MAPPERS[t](payload.new) });
+      });
   }
   channel.subscribe();
   return () => { supabase!.removeChannel(channel); };

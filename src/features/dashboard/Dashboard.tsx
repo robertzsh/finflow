@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { formatMoney } from '@/lib/format';
@@ -42,7 +42,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const memberIds = members.map((m) => m.id);
     const byMember = perMemberSpending(transactions, REF, memberIds);
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
-    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore };
+    const catPayers = categoryPayers(transactions, categories, REF);
+    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
 
@@ -210,6 +211,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                 <div key={c.id} className="flex items-center gap-2 text-sm">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
                   <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
+                  {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
                   <span className="tabular-nums text-white/50 text-xs">{pct.toFixed(0)}%</span>
                   <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
                 </div>
@@ -256,6 +258,24 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   );
 }
 
+
+const CHIP_PALETTE = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
+function PayerChips({ payers, members, memberIds }: { payers?: Set<string>; members: { id: string; name: string }[]; memberIds: string[] }) {
+  if (!payers) return null;
+  const ids = new Set<string>();
+  for (const v of payers) { if (v === 'all') memberIds.forEach((id) => ids.add(id)); else if (memberIds.includes(v)) ids.add(v); }
+  const list = [...ids];
+  if (!list.length) return null;
+  return (
+    <span className="flex -space-x-1 shrink-0" title={list.map((id) => members.find((m) => m.id === id)?.name).join(' + ')}>
+      {list.map((id) => {
+        const idx = memberIds.indexOf(id);
+        const m = members.find((x) => x.id === id);
+        return <span key={id} className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-1 ring-black/30" style={{ background: CHIP_PALETTE[idx % CHIP_PALETTE.length] }}>{(m?.name || '?').charAt(0).toUpperCase()}</span>;
+      })}
+    </span>
+  );
+}
 
 const TONE: Record<string, string> = { income: '#10b981', expense: '#ef4444', savings: '#3b82f6', invest: '#eab308', goal: '#a855f7', neutral: '#94a3b8' };
 function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]; i: number }) {

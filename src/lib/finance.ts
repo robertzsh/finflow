@@ -130,6 +130,19 @@ export function spendingByCategory(txs: Transaction[], cats: Category[], ref: Da
     .sort((a, b) => b.value - a.value);
 }
 
+/** Which people spent in each (rolled-up) category this month. Values are member ids or 'all'. */
+export function categoryPayers(txs: Transaction[], cats: Category[], ref: Date) {
+  const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
+  const map = new Map<string, Set<string>>();
+  for (const t of m) {
+    const c = cats.find((x) => x.id === t.categoryId);
+    const key = c?.parent ?? t.categoryId;
+    if (!map.has(key)) map.set(key, new Set());
+    map.get(key)!.add(t.createdBy ?? 'all');
+  }
+  return map;
+}
+
 /** Breakdown of a parent category into the sub-categories (stores) actually used this month. */
 export function subCategoryBreakdown(txs: Transaction[], cats: Category[], ref: Date, parentId: string) {
   const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
