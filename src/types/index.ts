@@ -50,6 +50,14 @@ export interface Goal {
   icon: string;
   createdAt: string;
   currency?: CurrencyCode;   // defaults to the app base currency (RON)
+  owner?: string;            // member id for a personal goal; undefined = shared/family goal
+  contributions?: GoalContribution[];
+}
+
+export interface GoalContribution {
+  date: string;   // yyyy-mm-dd
+  amount: number; // in the app BASE currency (lei), regardless of the goal's own currency
+  by?: string;    // member id who contributed
 }
 
 export type InvestmentKind = 'Stock' | 'ETF' | 'Crypto' | 'Savings' | 'Pension';

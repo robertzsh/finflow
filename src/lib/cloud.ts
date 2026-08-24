@@ -22,8 +22,8 @@ const txToRow = (t: Transaction, householdId: string, uid: string) => ({
 const rowToBudget = (r: any): Budget => ({ id: r.id, categoryId: r.category_id, amount: Number(r.amount), month: r.month ?? 'all' });
 const budgetToRow = (b: Budget, h: string) => ({ id: b.id, household_id: h, category_id: b.categoryId, amount: b.amount, month: b.month });
 
-const rowToGoal = (r: any): Goal => ({ id: r.id, name: r.name, target: Number(r.target), saved: Number(r.saved), monthlyContribution: Number(r.monthly_contribution), color: r.color, icon: r.icon, currency: r.currency ?? undefined, createdAt: r.created_at ?? '' });
-const goalToRow = (g: Goal, h: string) => ({ id: g.id, household_id: h, name: g.name, target: g.target, saved: g.saved, monthly_contribution: g.monthlyContribution, color: g.color, icon: g.icon, currency: g.currency ?? null, created_at: g.createdAt || null });
+const rowToGoal = (r: any): Goal => ({ id: r.id, name: r.name, target: Number(r.target), saved: Number(r.saved), monthlyContribution: Number(r.monthly_contribution), color: r.color, icon: r.icon, currency: r.currency ?? undefined, owner: r.owner ?? undefined, contributions: (r.contributions ?? []) as any, createdAt: r.created_at ?? '' });
+const goalToRow = (g: Goal, h: string) => ({ id: g.id, household_id: h, name: g.name, target: g.target, saved: g.saved, monthly_contribution: g.monthlyContribution, color: g.color, icon: g.icon, currency: g.currency ?? null, owner: g.owner ?? null, contributions: g.contributions ?? [], created_at: g.createdAt || null });
 
 const rowToInv = (r: any): Investment => ({ id: r.id, name: r.name, ticker: r.ticker ?? undefined, kind: r.kind, currency: r.currency ?? undefined, units: Number(r.units), costBasis: Number(r.cost_basis), currentValue: Number(r.current_value), history: (r.history ?? []) as InvestmentPoint[] });
 const invToRow = (i: Investment, h: string) => ({ id: i.id, household_id: h, name: i.name, ticker: i.ticker ?? null, kind: i.kind, currency: i.currency ?? null, units: i.units, cost_basis: i.costBasis, current_value: i.currentValue, history: i.history });

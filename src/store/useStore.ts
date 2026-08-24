@@ -72,7 +72,7 @@ interface StoreState extends AppData {
   addGoal: (g: Omit<Goal, 'id' | 'createdAt'>) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
-  contributeGoal: (id: string, amount: number) => void;
+  contributeGoal: (id: string, baseAmount: number, by?: string) => void;
 
   addInvestment: (i: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, patch: Partial<Investment>) => void;
@@ -437,9 +437,15 @@ export const useStore = create<StoreState>((set, get) => {
       set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
       get().persist(); del('goals', [id]);
     },
-    contributeGoal: (id, amount) => {
-      set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, saved: Math.min(g.target, g.saved + amount) } : g)) }));
-      get().persist(); const g = get().goals.find((x) => x.id === id); if (g) push('goals', g);
+    contributeGoal: (id, baseAmount, by) => {
+      const s = get();
+      const g = s.goals.find((x) => x.id === id);
+      if (!g || baseAmount <= 0) return;
+      const rate = s.settings.fxRates[(g.currency ?? s.settings.currency)] ?? 1; // lei per 1 unit of goal currency
+      const inGoalCurrency = baseAmount / rate;                                   // convert lei → goal currency
+      const contribution = { date: new Date().toISOString().slice(0, 10), amount: baseAmount, by: by ?? (s.userId ?? undefined) };
+      set((st) => ({ goals: st.goals.map((x) => (x.id === id ? { ...x, saved: Math.min(x.target, x.saved + inGoalCurrency), contributions: [...(x.contributions ?? []), contribution] } : x)) }));
+      get().persist(); const updated = get().goals.find((x) => x.id === id); if (updated) push('goals', updated);
     },
 
     addInvestment: (i) => {

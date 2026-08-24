@@ -76,7 +76,7 @@ create table if not exists goals (
   id text primary key default gen_random_uuid()::text,
   household_id uuid not null references households(id) on delete cascade,
   name text not null, target numeric, saved numeric, monthly_contribution numeric,
-  color text, icon text, currency text, created_at date
+  color text, icon text, currency text, owner text, contributions jsonb not null default '[]', created_at date
 );
 
 create table if not exists investments (

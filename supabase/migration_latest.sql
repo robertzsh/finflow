@@ -22,3 +22,7 @@ grant update (name, opening_balance, salary, vouchers) on profiles to authentica
 
 -- Sub-categories (e.g. grocery stores roll up under Groceries)
 alter table categories add column if not exists parent text;
+
+-- Goals: personal vs family scope + contribution log (amounts stored in base currency)
+alter table goals add column if not exists owner text;
+alter table goals add column if not exists contributions jsonb not null default '[]';
