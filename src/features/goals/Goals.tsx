@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Users, User } from 'lucide-react';
+import { Plus, Trash2, Users, User, History } from 'lucide-react';
 import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
@@ -63,6 +63,7 @@ export default function Goals() {
   const fx = settings.fxRates;
   const [open, setOpen] = useState(false);
   const [contribFor, setContribFor] = useState<Goal | null>(null);
+  const [historyFor, setHistoryFor] = useState<Goal | null>(null);
 
   const isHousehold = cloud && authed && members.length > 1;
   const totalTarget = goals.reduce((a, g) => a + toBase(g.target, g.currency, fx), 0);
@@ -91,7 +92,10 @@ export default function Goals() {
             <Card hover className="p-4 sm:p-5">
               <div className="flex items-start justify-between">
                 <CategoryIcon icon={g.icon} color={g.color} size={22} />
-                <button onClick={() => deleteGoal(g.id)} className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
+                <div className="flex items-center gap-0.5">
+                  {contribs.length > 0 && <button onClick={() => setHistoryFor(g)} title="History" className="text-white/25 hover:text-white p-1"><History size={15} /></button>}
+                  <button onClick={() => deleteGoal(g.id)} className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
+                </div>
               </div>
               <h3 className="font-semibold mt-3 truncate">{g.name}</h3>
               <p className="text-xs text-white/40">Target {formatMoney(g.target, gc)}</p>
@@ -152,6 +156,7 @@ export default function Goals() {
       <NewGoalModal open={open} onClose={() => setOpen(false)} isHousehold={isHousehold} onSave={(g) => { addGoal(g); setOpen(false); }} />
       <ContributeModal goal={contribFor} onClose={() => setContribFor(null)} cur={cur} fx={fx}
         onContribute={(baseAmt) => { if (contribFor) contributeGoal(contribFor.id, baseAmt, userId ?? undefined); setContribFor(null); }} />
+      <GoalHistoryModal goal={historyFor} onClose={() => setHistoryFor(null)} cur={cur} />
     </Page>
   );
 }
@@ -223,12 +228,51 @@ function NewGoalModal({ open, onClose, onSave, isHousehold }: { open: boolean; o
   );
 }
 
-function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal | null; onClose: () => void; onContribute: (baseAmount: number) => void; cur: CurrencyCode; fx: Record<string, number> }) {
+function GoalHistoryModal({ goal, onClose, cur }: { goal: Goal | null; onClose: () => void; cur: CurrencyCode }) {
   const members = useStore((s) => s.members);
+  if (!goal) return null;
+  const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
+  const all = goal.contributions ?? [];
+  const groups = new Map<string, typeof all>();
+  for (const c of all) { const k = c.date.slice(0, 7); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }
+  const months = [...groups.keys()].sort().reverse();
+  const totalAll = all.reduce((a, c) => a + c.amount, 0);
+  return (
+    <Modal open={!!goal} onClose={onClose} title={`${goal.name} — history`}>
+      {all.length === 0 ? (
+        <p className="text-sm text-white/50">No money added yet.</p>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-white/50">Total added: <span className="text-goal font-semibold">{formatMoney(totalAll, cur)}</span> · {all.length} contribution{all.length > 1 ? 's' : ''}</p>
+          {months.map((mk) => {
+            const list = [...groups.get(mk)!].sort((a, b) => (a.date < b.date ? 1 : -1));
+            const monthTotal = list.reduce((a, c) => a + c.amount, 0);
+            return (
+              <div key={mk}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-semibold">{format(parseISO(mk + '-01'), 'MMMM yyyy')}</span>
+                  <span className="text-sm text-goal font-semibold">+{formatMoney(monthTotal, cur)}</span>
+                </div>
+                <div className="space-y-1.5">
+                  {list.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/60">{format(parseISO(c.date), 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
+                      <span className="font-medium text-white/80">+{formatMoney(c.amount, cur)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal | null; onClose: () => void; onContribute: (baseAmount: number) => void; cur: CurrencyCode; fx: Record<string, number> }) {
   const [amt, setAmt] = useState('');
   if (!goal) return null;
-  const history = [...(goal.contributions ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1));
-  const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
   const gc = goal.currency ?? cur;
   const rate = fx[gc] ?? 1;                       // lei per 1 unit of goal currency
   const baseAmount = Number(amt) || 0;            // entered in base currency (lei)
@@ -248,19 +292,6 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
         <div className="flex gap-2">{presets.map((v) => <button key={v} onClick={() => setAmt(String(v))} className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-2 text-sm">{currencySymbol(cur)}{v}</button>)}</div>
         <Button className="w-full" disabled={baseAmount <= 0} onClick={() => onContribute(baseAmount)}>Add {baseAmount > 0 ? formatMoney(baseAmount, cur) : 'money'}</Button>
         <p className="text-[11px] text-white/40">This is recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact.</p>
-        {history.length > 0 && (
-          <div>
-            <Label>History</Label>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
-              {history.map((c, i) => (
-                <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/60">{format(parseISO(c.date), 'd MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
-                  <span className="font-medium text-goal">+{formatMoney(c.amount, cur)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </Modal>
   );
