@@ -56,7 +56,7 @@ export default function Settings() {
             <div><Label>Your name</Label><Input value={settings.name} onChange={(e) => updateSettings({ name: e.target.value })} /></div>
             <OpeningBalanceField />
             {store.cloud && store.authed && store.members.length > 1 && (
-              <p className="text-xs text-white/40 -mt-2">Household total: <span className="text-white/70 font-medium">{currencySymbol(settings.currency)}{store.members.reduce((a, m) => a + m.openingBalance, 0).toLocaleString('en-GB')}</span> — the sum of every member's balance.</p>
+              <p className="text-xs text-white/40 -mt-2">Household total: <span className="text-white/70 font-medium">{store.privacy ? '••••' : `${currencySymbol(settings.currency)}${store.members.reduce((a, m) => a + m.openingBalance, 0).toLocaleString('en-GB')}`}</span> — the sum of every member's balance.</p>
             )}
             <MonthlyIncomeField />
             <div><Label>Base currency</Label>
@@ -181,6 +181,7 @@ export default function Settings() {
 
 function MonthlyIncomeField() {
   const { cloud, authed, userId, members, settings, setMyIncome } = useStore();
+  const privacy = useStore((s) => s.privacy);
   const me = cloud && authed ? members.find((m) => m.id === userId) : null;
   const curSalary = me ? me.salary : settings.salary;
   const curVouchers = me ? me.vouchers : settings.vouchers;
@@ -196,11 +197,11 @@ function MonthlyIncomeField() {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <span className="text-[11px] text-white/40">Salary (fixed)</span>
-          <Input type="number" step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
+          <Input type={privacy ? 'password' : 'number'} step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
         </div>
         <div>
           <span className="text-[11px] text-white/40">Bonuri (default)</span>
-          <Input type="number" step="0.01" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
+          <Input type={privacy ? 'password' : 'number'} step="0.01" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
         </div>
       </div>
       <div className="flex items-center gap-2 mt-2">
@@ -216,12 +217,13 @@ function MonthlyIncomeField() {
 
 function OpeningBalanceField() {
   const { cloud, authed, userId, members, settings, setMyOpeningBalance } = useStore();
+  const privacy = useStore((s) => s.privacy);
   const mine = cloud && authed ? (members.find((m) => m.id === userId)?.openingBalance ?? 0) : settings.openingBalance;
   const shared = cloud && authed;
   return (
     <div>
       <Label>{shared ? 'Your starting balance' : 'Opening / current balance'} ({currencySymbol(settings.currency)})</Label>
-      <Input type="number" step="0.01" key={mine} defaultValue={mine}
+      <Input type={privacy ? 'password' : 'number'} step="0.01" key={mine} defaultValue={mine}
         onBlur={(e) => setMyOpeningBalance(Number(e.target.value) || 0)} />
       <p className="text-xs text-white/40 mt-1.5">
         {shared

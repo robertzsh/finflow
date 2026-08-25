@@ -29,6 +29,8 @@ function emptyData(): AppData {
 interface StoreState extends AppData {
   ready: boolean;
   locked: boolean;
+  privacy: boolean;
+  togglePrivacy: () => void;
 
   // cloud / multi-user
   cloud: boolean;
@@ -180,6 +182,7 @@ export const useStore = create<StoreState>((set, get) => {
     ...seedData(),
     ready: false,
     locked: false,
+    privacy: (() => { try { return localStorage.getItem('ff_privacy') === '1'; } catch { return false; } })(),
     cloud: CLOUD_ENABLED,
     authReady: false,
     authed: false,
@@ -511,6 +514,7 @@ export const useStore = create<StoreState>((set, get) => {
       get().updateSettings({ fxRates: { ...get().settings.fxRates, ...rates, RON: 1 } });
       return true;
     },
+    togglePrivacy: () => set((s) => { const v = !s.privacy; try { localStorage.setItem('ff_privacy', v ? '1' : '0'); } catch {} return { privacy: v }; }),
     lock: () => set({ locked: true }),
     unlock: (pin) => {
       const s = get();

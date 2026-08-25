@@ -23,6 +23,8 @@ const REF = new Date();
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId } = useStore();
+  const privacy = useStore((s) => s.privacy);
+  const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
   // In a shared household the opening balance is the sum of every member's balance.
   const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
@@ -96,10 +98,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       {/* Stat cards — full width on phones so long amounts never clip, 2-up tablet, 3-up desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
         <StatCard label="Account balance" value={formatMoney(data.balance, cur)} icon="Wallet" accent="savings" delay={0} />
-        <StatCard label="Monthly income" value={formatMoney(data.stats.income, cur)} icon="ArrowDownToLine" accent="income" delta={`${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
+        <StatCard label="Monthly income" value={M(formatMoney(data.stats.income, cur))} icon="ArrowDownToLine" accent="income" delta={privacy ? undefined : `${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
         <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
-        <StatCard label="Savings this month" value={formatMoney(data.stats.net, cur, { sign: true })} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
-        <StatCard label="Savings rate" value={data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—'} icon="Percent" accent="savings" delta="put aside vs income" deltaUp={savingsRate >= 0} delay={0.2} />
+        <StatCard label="Savings this month" value={M(formatMoney(data.stats.net, cur, { sign: true }))} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
+        <StatCard label="Savings rate" value={privacy ? '••••' : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—')} icon="Percent" accent="savings" delta="put aside vs income" deltaUp={savingsRate >= 0} delay={0.2} />
       </div>
 
       {/* Per-member breakdown (shared household) */}
@@ -123,7 +125,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                     </span>
                     <div className="flex-1">
                       <div className="text-sm font-semibold">{m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}</div>
-                      <div className="text-[11px] text-white/40">set aside {formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 })}</div>
+                      <div className="text-[11px] text-white/40">set aside {M(formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 }))}</div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-expense">{formatMoney(b.expense, cur)}</div>
@@ -132,15 +134,15 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   </div>
                   <div className="grid grid-cols-3 gap-2 my-2 text-center">
                     <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
-                      <div className="text-income font-semibold text-sm truncate">{formatMoney(b.income, cur, { compact: true })}</div>
+                      <div className="text-income font-semibold text-sm truncate">{M(formatMoney(b.income, cur, { compact: true }))}</div>
                       <div className="text-[10px] text-white/40">income</div>
                     </div>
                     <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
-                      <div className={`font-semibold text-sm truncate ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{formatMoney(net, cur, { sign: true, compact: true })}</div>
+                      <div className={`font-semibold text-sm truncate ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{M(formatMoney(net, cur, { sign: true, compact: true }))}</div>
                       <div className="text-[10px] text-white/40">saved</div>
                     </div>
                     <div className="rounded-lg bg-white/[0.04] py-1.5">
-                      <div className="font-semibold text-sm">{savePct === null ? '—' : `${savePct.toFixed(0)}%`}</div>
+                      <div className="font-semibold text-sm">{privacy ? '••••' : (savePct === null ? '—' : `${savePct.toFixed(0)}%`)}</div>
                       <div className="text-[10px] text-white/40">saved rate</div>
                     </div>
                   </div>
