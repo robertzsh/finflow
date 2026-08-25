@@ -9,6 +9,8 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { LockScreen } from '@/components/LockScreen';
 import { Onboarding } from '@/components/Onboarding';
 import { Auth } from '@/components/Auth';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { UpdateToast } from '@/components/UpdateToast';
 import { useHotkey } from '@/hooks/useHotkeys';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { setInsightCurrency } from '@/lib/insights';
@@ -89,6 +91,8 @@ export default function App() {
       <MobileNav />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onQuickAdd={() => { setPaletteOpen(false); setQuickAdd(true); }} />
       <TransactionModal open={quickAdd} onClose={() => setQuickAdd(false)} />
+      <InstallPrompt />
+      <UpdateToast />
     </div>
   );
 }
