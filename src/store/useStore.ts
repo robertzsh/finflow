@@ -462,7 +462,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (!g || baseAmount <= 0) return;
       const rate = s.settings.fxRates[(g.currency ?? s.settings.currency)] ?? 1; // lei per 1 unit of goal currency
       const inGoalCurrency = baseAmount / rate;                                   // convert lei → goal currency
-      const contribution = { date: new Date().toISOString().slice(0, 10), amount: baseAmount, by: by ?? (s.userId ?? undefined) };
+      const contribution = { date: new Date().toISOString(), amount: baseAmount, by: by ?? (s.userId ?? undefined) };
       set((st) => ({ goals: st.goals.map((x) => (x.id === id ? { ...x, saved: Math.min(x.target, x.saved + inGoalCurrency), contributions: [...(x.contributions ?? []), contribution] } : x)) }));
       get().persist(); const updated = get().goals.find((x) => x.id === id); if (updated) push('goals', updated);
     },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Users, User, History } from 'lucide-react';
+import { Plus, Trash2, Users, User, History, Pencil } from 'lucide-react';
 import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
@@ -58,10 +58,11 @@ function goalEta(g: Goal, rate: number): string {
 }
 
 export default function Goals() {
-  const { goals, settings, members, userId, cloud, authed, addGoal, deleteGoal, contributeGoal } = useStore();
+  const { goals, settings, members, userId, cloud, authed, addGoal, updateGoal, deleteGoal, contributeGoal } = useStore();
   const cur = settings.currency;
   const fx = settings.fxRates;
   const [open, setOpen] = useState(false);
+  const [editFor, setEditFor] = useState<Goal | null>(null);
   const [contribFor, setContribFor] = useState<Goal | null>(null);
   const [historyFor, setHistoryFor] = useState<Goal | null>(null);
 
@@ -93,8 +94,9 @@ export default function Goals() {
               <div className="flex items-start justify-between">
                 <CategoryIcon icon={g.icon} color={g.color} size={22} />
                 <div className="flex items-center gap-0.5">
-                  {contribs.length > 0 && <button onClick={() => setHistoryFor(g)} title="History" className="text-white/25 hover:text-white p-1"><History size={15} /></button>}
-                  <button onClick={() => deleteGoal(g.id)} className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
+                  <button onClick={() => setHistoryFor(g)} title="Contribution history" className="text-white/25 hover:text-white p-1"><History size={15} /></button>
+                  <button onClick={() => setEditFor(g)} title="Edit goal" className="text-white/25 hover:text-white p-1"><Pencil size={15} /></button>
+                  <button onClick={() => deleteGoal(g.id)} title="Delete goal" className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
                 </div>
               </div>
               <h3 className="font-semibold mt-3 truncate">{g.name}</h3>
@@ -153,41 +155,51 @@ export default function Goals() {
         </div>
       )}
 
-      <NewGoalModal open={open} onClose={() => setOpen(false)} isHousehold={isHousehold} onSave={(g) => { addGoal(g); setOpen(false); }} />
+      <GoalModal key={editFor?.id ?? 'new'} open={open || !!editFor} existing={editFor} isHousehold={isHousehold}
+        onClose={() => { setOpen(false); setEditFor(null); }}
+        onSubmit={(data) => {
+          if (editFor) updateGoal(editFor.id, data);
+          else addGoal({ ...data, contributions: [] });
+          setOpen(false); setEditFor(null);
+        }} />
       <ContributeModal goal={contribFor} onClose={() => setContribFor(null)} cur={cur} fx={fx}
         onContribute={(baseAmt) => { if (contribFor) contributeGoal(contribFor.id, baseAmt, userId ?? undefined); setContribFor(null); }} />
-      <GoalHistoryModal goal={historyFor} onClose={() => setHistoryFor(null)} cur={cur} />
+      <GoalHistoryModal goal={historyFor} onClose={() => setHistoryFor(null)} cur={cur} fx={fx} />
     </Page>
   );
 }
 
 const GOAL_CURRENCIES: CurrencyCode[] = ['RON', 'EUR', 'USD', 'GBP'];
-function NewGoalModal({ open, onClose, onSave, isHousehold }: { open: boolean; onClose: () => void; onSave: (g: Omit<Goal, 'id' | 'createdAt'>) => void; isHousehold: boolean }) {
+type GoalFields = Pick<Goal, 'name' | 'target' | 'saved' | 'monthlyContribution' | 'icon' | 'color' | 'currency' | 'owner'>;
+function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: boolean; onClose: () => void; onSubmit: (g: GoalFields) => void; isHousehold: boolean; existing?: Goal | null }) {
   const { settings, userId } = useStore();
   const base = settings.currency;
-  const [name, setName] = useState('');
-  const [target, setTarget] = useState('');
-  const [saved, setSaved] = useState('');
-  const [contrib, setContrib] = useState('');
-  const [currency, setCurrency] = useState<CurrencyCode>(base);
-  const [scope, setScope] = useState<'family' | 'personal'>('family');
-  const [icon, setIcon] = useState('Target');
-  const [color, setColor] = useState(COLORS[0]);
+  const [name, setName] = useState(existing?.name ?? '');
+  const [target, setTarget] = useState(existing ? String(existing.target) : '');
+  const [saved, setSaved] = useState(existing ? String(existing.saved) : '');
+  const [contrib, setContrib] = useState(existing ? String(existing.monthlyContribution) : '');
+  const [currency, setCurrency] = useState<CurrencyCode>((existing?.currency as CurrencyCode) ?? base);
+  const [scope, setScope] = useState<'family' | 'personal'>(existing?.owner ? 'personal' : 'family');
+  const [icon, setIcon] = useState(existing?.icon ?? 'Target');
+  const [color, setColor] = useState(existing?.color ?? COLORS[0]);
+  const editing = !!existing;
   return (
-    <Modal open={open} onClose={onClose} title="New savings goal">
+    <Modal open={open} onClose={onClose} title={editing ? 'Edit goal' : 'New savings goal'}>
       <div className="space-y-4">
-        <div>
-          <Label>Quick start</Label>
-          <div className="flex flex-wrap gap-2">
-            {GOAL_PRESETS.map((p) => (
-              <button key={p.name} type="button"
-                onClick={() => { setName(p.name); setIcon(p.icon); setColor(p.color); }}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${name === p.name ? 'border-goal bg-goal/20' : 'border-white/10 bg-white/5'}`}>
-                <CategoryIcon icon={p.icon} color={p.color} size={13} bg={false} /> {p.name}
-              </button>
-            ))}
+        {!editing && (
+          <div>
+            <Label>Quick start</Label>
+            <div className="flex flex-wrap gap-2">
+              {GOAL_PRESETS.map((p) => (
+                <button key={p.name} type="button"
+                  onClick={() => { setName(p.name); setIcon(p.icon); setColor(p.color); }}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${name === p.name ? 'border-goal bg-goal/20' : 'border-white/10 bg-white/5'}`}>
+                  <CategoryIcon icon={p.icon} color={p.color} size={13} bg={false} /> {p.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         {isHousehold && (
           <div>
             <Label>Who's this for?</Label>
@@ -203,7 +215,7 @@ function NewGoalModal({ open, onClose, onSave, isHousehold }: { open: boolean; o
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Target amount</Label><Input type="number" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="0.00" /></div>
-          <div><Label>Already saved</Label><Input type="number" value={saved} onChange={(e) => setSaved(e.target.value)} placeholder="0.00" /></div>
+          <div><Label>{editing ? 'Saved so far' : 'Already saved'}</Label><Input type="number" value={saved} onChange={(e) => setSaved(e.target.value)} placeholder="0.00" /></div>
         </div>
         <div><Label>Planned monthly amount (for the ETA)</Label><Input type="number" value={contrib} onChange={(e) => setContrib(e.target.value)} placeholder="0.00" /></div>
         <div><Label>Icon</Label>
@@ -220,52 +232,68 @@ function NewGoalModal({ open, onClose, onSave, isHousehold }: { open: boolean; o
             {COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}
           </div>
         </div>
-        <Button className="w-full" disabled={!name || !target} onClick={() => onSave({ name, target: Number(target), saved: Number(saved) || 0, monthlyContribution: Number(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined, contributions: [] })}>
-          Create goal
+        {editing && <p className="text-[11px] text-white/40">Editing the target or saved amount here adjusts the goal directly — it isn't logged in the contribution history. Use “Add money” to record a dated contribution.</p>}
+        <Button className="w-full" disabled={!name || !target} onClick={() => onSubmit({ name, target: Number(target), saved: Number(saved) || 0, monthlyContribution: Number(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
+          {editing ? 'Save changes' : 'Create goal'}
         </Button>
       </div>
     </Modal>
   );
 }
 
-function GoalHistoryModal({ goal, onClose, cur }: { goal: Goal | null; onClose: () => void; cur: CurrencyCode }) {
+function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClose: () => void; cur: CurrencyCode; fx: Record<string, number> }) {
   const members = useStore((s) => s.members);
   if (!goal) return null;
   const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
+  const gc = (goal.currency as CurrencyCode) ?? cur;
+  const rate = fx[gc] ?? 1;                      // lei per 1 unit of goal currency
+  const toGoal = (baseAmt: number) => baseAmt / rate; // stored contributions are in base lei
   const all = goal.contributions ?? [];
   const groups = new Map<string, typeof all>();
   for (const c of all) { const k = c.date.slice(0, 7); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }
   const months = [...groups.keys()].sort().reverse();
-  const totalAll = all.reduce((a, c) => a + c.amount, 0);
+  const trackedGoal = all.reduce((a, c) => a + toGoal(c.amount), 0);
+  const opening = goal.saved - trackedGoal;      // amount saved before/outside tracked contributions
   return (
-    <Modal open={!!goal} onClose={onClose} title={`${goal.name} — history`}>
-      {all.length === 0 ? (
-        <p className="text-sm text-white/50">No money added yet.</p>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-sm text-white/50">Total added: <span className="text-goal font-semibold">{formatMoney(totalAll, cur)}</span> · {all.length} contribution{all.length > 1 ? 's' : ''}</p>
-          {months.map((mk) => {
-            const list = [...groups.get(mk)!].sort((a, b) => (a.date < b.date ? 1 : -1));
-            const monthTotal = list.reduce((a, c) => a + c.amount, 0);
-            return (
-              <div key={mk}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-semibold">{format(parseISO(mk + '-01'), 'MMMM yyyy')}</span>
-                  <span className="text-sm text-goal font-semibold">+{formatMoney(monthTotal, cur)}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {list.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/60">{format(parseISO(c.date), 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
-                      <span className="font-medium text-white/80">+{formatMoney(c.amount, cur)}</span>
-                    </div>
-                  ))}
-                </div>
+    <Modal open={!!goal} onClose={onClose} title={`${goal.name} — contribution history`}>
+      <div className="space-y-4">
+        <p className="text-sm text-white/50">
+          Saved so far: <span className="text-goal font-semibold">{formatMoney(goal.saved, gc)}</span>
+          {all.length > 0 && <> · {all.length} logged contribution{all.length > 1 ? 's' : ''}</>}
+        </p>
+        {months.map((mk) => {
+          const list = [...groups.get(mk)!].sort((a, b) => (a.date < b.date ? 1 : -1));
+          const monthTotal = list.reduce((a, c) => a + toGoal(c.amount), 0);
+          return (
+            <div key={mk}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-semibold">{format(parseISO(mk + '-01'), 'MMMM yyyy')}</span>
+                <span className="text-sm text-goal font-semibold">+{formatMoney(monthTotal, gc)}</span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="space-y-1.5">
+                {list.map((c, i) => {
+                  const hasTime = c.date.length > 10;
+                  return (
+                    <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/60">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
+                      <span className="font-medium text-white/80">+{formatMoney(toGoal(c.amount), gc)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {opening > 0.01 && (
+          <div className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2 border border-white/5">
+            <span className="text-white/50">Starting amount (set when the goal was created)</span>
+            <span className="font-medium text-white/70">{formatMoney(opening, gc)}</span>
+          </div>
+        )}
+        {all.length === 0 && opening <= 0.01 && (
+          <p className="text-sm text-white/50">No money added yet. Use “Add money” to record your first dated contribution.</p>
+        )}
+      </div>
     </Modal>
   );
 }
