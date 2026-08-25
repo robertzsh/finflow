@@ -8,6 +8,7 @@ import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
 import { fetchFxRates } from '@/lib/rates';
+import { setMoneyPrivacy } from '@/lib/format';
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -514,7 +515,7 @@ export const useStore = create<StoreState>((set, get) => {
       get().updateSettings({ fxRates: { ...get().settings.fxRates, ...rates, RON: 1 } });
       return true;
     },
-    togglePrivacy: () => set((s) => { const v = !s.privacy; try { localStorage.setItem('ff_privacy', v ? '1' : '0'); } catch {} return { privacy: v }; }),
+    togglePrivacy: () => set((s) => { const v = !s.privacy; setMoneyPrivacy(v); try { localStorage.setItem('ff_privacy', v ? '1' : '0'); } catch {} return { privacy: v }; }),
     lock: () => set({ locked: true }),
     unlock: (pin) => {
       const s = get();

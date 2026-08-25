@@ -7,7 +7,13 @@ const LOCALE: Record<CurrencyCode, string> = { RON: 'ro-RO', GBP: 'en-GB', USD: 
 
 export function currencySymbol(c: CurrencyCode) { return SYMBOL[c]; }
 
+// Presentation / privacy mode: when on, every money value renders as a mask.
+let _privacy = (() => { try { return localStorage.getItem('ff_privacy') === '1'; } catch { return false; } })();
+export function setMoneyPrivacy(v: boolean) { _privacy = v; }
+export const MONEY_MASK = '••••';
+
 export function formatMoney(n: number, currency: CurrencyCode = 'RON', opts?: { compact?: boolean; sign?: boolean }) {
+  if (_privacy) return MONEY_MASK;
   const sign = opts?.sign && n > 0 ? '+' : '';
   return sign + new Intl.NumberFormat(LOCALE[currency] ?? 'en-GB', {
     style: 'currency', currency,

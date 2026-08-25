@@ -25,6 +25,7 @@ import SettingsPage from '@/features/settings/Settings';
 
 export default function App() {
   const { ready, init, locked, settings, cloud, authed, authReady } = useStore();
+  const privacy = useStore((s) => s.privacy);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState(false);
 
@@ -73,7 +74,7 @@ export default function App() {
       <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-8">
         <Topbar onQuickAdd={() => setQuickAdd(true)} onSearch={() => setPaletteOpen(true)} />
         <AnimatePresence mode="wait">
-          <Routes>
+          <Routes key={privacy ? 'priv' : 'norm'}>
             <Route path="/" element={<Dashboard onQuickAdd={() => setQuickAdd(true)} />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/budgets" element={<Budgets />} />
