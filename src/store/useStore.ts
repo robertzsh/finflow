@@ -243,6 +243,15 @@ export const useStore = create<StoreState>((set, get) => {
       }
       const categories = data.categories.length ? [...byId.values()] : DEFAULT_CATEGORIES;
       if (toUpsert.length) cloud.upsertMany('categories', toUpsert, profile.householdId, userId);
+
+      // Repair orphaned transactions (their category was deleted) → move to Miscellaneous.
+      const validCatIds = new Set(categories.map((c) => c.id));
+      const txOrphans: Transaction[] = [];
+      data.transactions = data.transactions.map((t) => {
+        if (t.categoryId && !validCatIds.has(t.categoryId)) { const fixed = { ...t, categoryId: 'misc' }; txOrphans.push(fixed); return fixed; }
+        return t;
+      });
+      if (txOrphans.length) cloud.upsertMany('transactions', txOrphans, profile.householdId, userId);
       // device-local preferences (theme, currency, fx, pin) stay in IndexedDB
       const local = await loadData();
       const me = members.find((m) => m.id === userId);
@@ -405,8 +414,14 @@ export const useStore = create<StoreState>((set, get) => {
       if (c) push('categories', c);
     },
     deleteCategory: (id) => {
-      set((s) => ({ categories: s.categories.filter((c) => c.id !== id || !c.custom) }));
+      // reassign any transactions in this category to Miscellaneous so none are orphaned
+      const affected = get().transactions.filter((t) => t.categoryId === id);
+      set((s) => ({
+        categories: s.categories.filter((c) => c.id !== id || !c.custom),
+        transactions: s.transactions.map((t) => (t.categoryId === id ? { ...t, categoryId: 'misc' } : t)),
+      }));
       get().persist(); del('categories', [id]);
+      if (affected.length) pushMany('transactions', get().transactions.filter((t) => affected.some((a) => a.id === t.id)));
     },
 
     setBudget: (categoryId, amount) => {

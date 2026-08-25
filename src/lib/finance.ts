@@ -90,7 +90,7 @@ export function memberCategoryBreakdown(txs: Transaction[], ref: Date, memberId:
     total: r2(total),
     items: [...map.entries()].map(([id, value]) => {
       const c = cats.find((x) => x.id === id);
-      return { id, name: c?.name ?? id, color: c?.color ?? '#94a3b8', emoji: c?.emoji, value: r2(value), pct: total > 0 ? (value / total) * 100 : 0 };
+      return { id, name: c?.name ?? 'Other', color: c?.color ?? '#94a3b8', emoji: c?.emoji, value: r2(value), pct: total > 0 ? (value / total) * 100 : 0 };
     }).sort((a, b) => b.value - a.value),
   };
 }
@@ -125,7 +125,7 @@ export function spendingByCategory(txs: Transaction[], cats: Category[], ref: Da
   return [...map.entries()]
     .map(([id, value]) => {
       const c = cats.find((x) => x.id === id);
-      return { id, name: c?.name ?? id, value: r2(value), color: c?.color ?? '#94a3b8' };
+      return { id, name: c?.name ?? 'Other', value: r2(value), color: c?.color ?? '#94a3b8' };
     })
     .sort((a, b) => b.value - a.value);
 }
@@ -154,7 +154,7 @@ export function subCategoryBreakdown(txs: Transaction[], cats: Category[], ref: 
     total: r2(total),
     items: [...map.entries()].map(([id, value]) => {
       const c = cats.find((x) => x.id === id);
-      return { id, name: c?.name ?? id, value: r2(value), color: c?.color ?? '#94a3b8', emoji: c?.emoji, pct: total > 0 ? (value / total) * 100 : 0 };
+      return { id, name: c?.name ?? 'Other', value: r2(value), color: c?.color ?? '#94a3b8', emoji: c?.emoji, pct: total > 0 ? (value / total) * 100 : 0 };
     }).sort((a, b) => b.value - a.value),
   };
 }
@@ -165,7 +165,7 @@ export function incomeBySource(txs: Transaction[], cats: Category[], ref: Date) 
   for (const t of m) map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
   return [...map.entries()].map(([id, value]) => {
     const c = cats.find((x) => x.id === id);
-    return { id, name: c?.name ?? id, value: r2(value), color: c?.color ?? '#10b981' };
+    return { id, name: c?.name ?? 'Other', value: r2(value), color: c?.color ?? '#10b981' };
   }).sort((a, b) => b.value - a.value);
 }
 

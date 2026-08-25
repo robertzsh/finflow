@@ -330,12 +330,6 @@ function CategoryModal({ open, onClose, onSave, existing }: { open: boolean; onC
             <button key={e} type="button" onClick={() => setEmoji(e)} className={`rounded-lg px-2 py-1.5 text-lg border ${emoji === e ? 'border-blue-400 bg-blue-500/20' : 'border-white/10 bg-white/5'}`}>{e}</button>
           ))}</div>
         </div>
-        <div><Label>Icon</Label>
-          <div className="flex flex-wrap gap-2">{ICONS.map((ic) => (
-            <button key={ic} onClick={() => setIcon(ic)} className={`rounded-lg p-2 border ${icon === ic ? 'border-blue-400 bg-blue-500/20' : 'border-white/10 bg-white/5'}`}>
-              <CategoryIcon icon={ic} color={color} size={16} bg={false} /></button>
-          ))}</div>
-        </div>
         <div><Label>Colour</Label>
           <div className="flex gap-2">{COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}</div>
         </div>

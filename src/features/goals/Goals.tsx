@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Users, User } from 'lucide-react';
-import { isSameMonth, parseISO, format } from 'date-fns';
+import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -34,12 +34,24 @@ const GOAL_PRESETS: { name: string; icon: string; color: string }[] = [
 ];
 const NOW = new Date();
 
-/** ETA from planned monthly contribution (in the goal's own currency). */
-function goalEta(g: Goal): string {
+/** Effective monthly funding rate (in the goal's own currency): actual pace if there are
+ *  contributions, otherwise the planned monthly amount. `rate` is lei per goal-currency unit. */
+function monthlyRate(g: Goal, rate: number): number {
+  const contribs = g.contributions ?? [];
+  if (contribs.length) {
+    const totalBase = contribs.reduce((a, c) => a + c.amount, 0);
+    const first = contribs.reduce((min, c) => (c.date < min ? c.date : min), contribs[0].date);
+    const months = Math.max(1, differenceInCalendarMonths(new Date(), parseISO(first)) + 1);
+    return (totalBase / rate) / months; // base → goal currency, per month
+  }
+  return g.monthlyContribution;
+}
+function goalEta(g: Goal, rate: number): string {
   const remaining = g.target - g.saved;
   if (remaining <= 0) return 'Completed';
-  if (!g.monthlyContribution || g.monthlyContribution <= 0) return 'set a monthly amount';
-  const months = Math.ceil(remaining / g.monthlyContribution);
+  const monthly = monthlyRate(g, rate);
+  if (!monthly || monthly <= 0) return 'add money to estimate';
+  const months = Math.ceil(remaining / monthly);
   const d = new Date();
   d.setMonth(d.getMonth() + months);
   return format(d, 'MMM yyyy');
@@ -69,7 +81,11 @@ export default function Goals() {
         const pct = g.target > 0 ? (g.saved / g.target) * 100 : 0;
         const remaining = Math.max(0, g.target - g.saved);
         const gc = g.currency ?? cur;
-        const thisMonth = (g.contributions ?? []).filter((c) => isSameMonth(parseISO(c.date), NOW)).reduce((s, c) => s + c.amount, 0);
+        const rate = fx[gc] ?? 1;
+        const monthly = monthlyRate(g, rate);
+        const contribs = g.contributions ?? [];
+        const thisMonth = contribs.filter((c) => isSameMonth(parseISO(c.date), NOW)).reduce((s, c) => s + c.amount, 0);
+        const lastContrib = contribs.length ? [...contribs].sort((a, b) => (a.date < b.date ? 1 : -1))[0] : null;
         return (
           <motion.div key={g.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
             <Card hover className="p-4 sm:p-5">
@@ -87,10 +103,11 @@ export default function Goals() {
                 <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="font-semibold truncate">{formatMoney(remaining, gc)}</div><div className="text-white/40">to go</div></div>
               </div>
               <p className="text-xs text-white/40 text-center mt-3">
-                {g.monthlyContribution > 0 && <>at {formatMoney(g.monthlyContribution, gc, { compact: g.monthlyContribution > 9999 })}/mo · </>}
-                <span className="text-white/70">{goalEta(g)}</span>
+                {monthly > 0 && <>at {formatMoney(monthly, gc, { compact: monthly > 9999 })}/mo · </>}
+                <span className="text-white/70">{goalEta(g, rate)}</span>
               </p>
               {thisMonth > 0 && <p className="text-[11px] text-goal text-center mt-1">+{formatMoney(thisMonth, cur)} added this month</p>}
+              {lastContrib && <p className="text-[10px] text-white/35 text-center">last added {format(parseISO(lastContrib.date), 'd MMM yyyy')}</p>}
               <Button variant="ghost" className="w-full mt-3" onClick={() => setContribFor(g)}>Add money</Button>
             </Card>
           </motion.div>
@@ -207,8 +224,11 @@ function NewGoalModal({ open, onClose, onSave, isHousehold }: { open: boolean; o
 }
 
 function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal | null; onClose: () => void; onContribute: (baseAmount: number) => void; cur: CurrencyCode; fx: Record<string, number> }) {
+  const members = useStore((s) => s.members);
   const [amt, setAmt] = useState('');
   if (!goal) return null;
+  const history = [...(goal.contributions ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
   const gc = goal.currency ?? cur;
   const rate = fx[gc] ?? 1;                       // lei per 1 unit of goal currency
   const baseAmount = Number(amt) || 0;            // entered in base currency (lei)
@@ -228,6 +248,19 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
         <div className="flex gap-2">{presets.map((v) => <button key={v} onClick={() => setAmt(String(v))} className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-2 text-sm">{currencySymbol(cur)}{v}</button>)}</div>
         <Button className="w-full" disabled={baseAmount <= 0} onClick={() => onContribute(baseAmount)}>Add {baseAmount > 0 ? formatMoney(baseAmount, cur) : 'money'}</Button>
         <p className="text-[11px] text-white/40">This is recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact.</p>
+        {history.length > 0 && (
+          <div>
+            <Label>History</Label>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
+              {history.map((c, i) => (
+                <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                  <span className="text-white/60">{format(parseISO(c.date), 'd MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
+                  <span className="font-medium text-goal">+{formatMoney(c.amount, cur)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

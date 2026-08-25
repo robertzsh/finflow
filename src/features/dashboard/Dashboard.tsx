@@ -112,7 +112,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
               const net = b.income - b.expense;
               const savePct = b.income > 0 ? (net / b.income) * 100 : null;
-              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items.slice(0, 3);
+              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items.slice(0, 6);
               const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
               const color = palette[i % palette.length];
               return (
