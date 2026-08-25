@@ -23,7 +23,14 @@ body {
   overscroll-behavior-y: none;
 }
 
-.light body, html.light body { color: #1e293b; background: #f1f5f9; }
+.light body, html.light body {
+  color: #334155;
+  background: #f6f8fc;
+  letter-spacing: -0.006em;
+}
+html.light h1, html.light h2, html.light h3 { color: #0f172a; letter-spacing: -0.02em; }
+::selection { background: rgba(59,130,246,0.22); }
+html.light ::selection { background: rgba(59,130,246,0.16); }
 
 /* Animated aurora background */
 .app-bg::before {
@@ -39,9 +46,10 @@ body {
 }
 html.light .app-bg::before {
   background:
-    radial-gradient(60vw 60vw at 15% 5%, rgba(16,185,129,0.12), transparent 60%),
-    radial-gradient(50vw 50vw at 85% 15%, rgba(59,130,246,0.12), transparent 60%),
-    #f1f5f9;
+    radial-gradient(46vw 46vw at 12% -4%, rgba(16,185,129,0.10), transparent 62%),
+    radial-gradient(42vw 42vw at 92% 6%, rgba(59,130,246,0.10), transparent 60%),
+    radial-gradient(48vw 48vw at 78% 96%, rgba(168,85,247,0.07), transparent 62%),
+    linear-gradient(180deg, #f8fafc 0%, #f4f7fb 100%);
 }
 
 .glass {
@@ -51,13 +59,21 @@ html.light .app-bg::before {
   -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 html.light .glass {
-  background: rgba(255,255,255,0.75);
-  border: 1px solid rgba(15,23,42,0.08);
-  box-shadow: 0 8px 30px rgba(15,23,42,0.06);
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(15,23,42,0.06);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 10px 28px -8px rgba(15,23,42,0.10);
 }
 
-.glass-hover { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
+.glass-hover { transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease; }
 .glass-hover:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.16); background: rgba(255,255,255,0.06); }
+html.light .glass-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(15,23,42,0.09);
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 2px 4px rgba(15,23,42,0.05), 0 18px 40px -12px rgba(15,23,42,0.16);
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -79,6 +95,11 @@ html.light .glass {
    remap the common ones to dark-on-light when html.light is active.
 --------------------------------------------------------------------------- */
 html.light .text-white { color: #0f172a !important; }
+/* …but keep white legible on brand/gradient surfaces (primary buttons, logo & avatar badges) */
+html.light .bg-gradient-to-r.text-white,
+html.light .bg-gradient-to-br.text-white,
+html.light .bg-gradient-to-l.text-white,
+html.light [class*="bg-gradient-to"] .text-white { color: #ffffff !important; }
 html.light .text-white\/90 { color: rgba(15,23,42,0.92) !important; }
 html.light .text-white\/80 { color: rgba(15,23,42,0.82) !important; }
 html.light .text-white\/70 { color: rgba(15,23,42,0.72) !important; }
@@ -106,8 +127,38 @@ html.light .border-white\/10 { border-color: rgba(15,23,42,0.1) !important; }
 html.light .border-white\/16,
 html.light .border-white\/20 { border-color: rgba(15,23,42,0.16) !important; }
 
-html.light .glass-hover:hover { border-color: rgba(15,23,42,0.16); background: rgba(255,255,255,0.9); }
-html.light ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+html.light ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.14); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.22); }
+
+/* --- Premium light: primitives (buttons, inputs, chips) --------------------- */
+
+/* Ghost / subtle buttons: crisp white surface with a hairline border + micro-shadow */
+html.light .bg-white\/5.border.border-white\/10,
+html.light button.border.border-white\/10 {
+  box-shadow: 0 1px 1px rgba(15,23,42,0.03);
+}
+
+/* Inputs / selects / textareas read as solid white fields on light */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  border-color: rgba(15,23,42,0.12) !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.03) inset;
+}
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: rgba(59,130,246,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.14) !important;
+}
+
+/* Primary gradient button: give it a soft branded lift on both themes */
+.bg-gradient-to-r.from-emerald-500 { box-shadow: 0 6px 16px -6px rgba(16,185,129,0.5), 0 2px 6px -2px rgba(59,130,246,0.4); }
+
+/* Sticky top bar / sidebar glass reads cleaner over the near-white page */
+html.light header.backdrop-blur-xl { background: rgba(246,248,252,0.72) !important; }
+html.light .glass.rounded-2xl { border-radius: 16px; }
 
 /* ---------------------------------------------------------------------------
    Mobile: 16px form controls stop iOS Safari from auto-zooming (and the
