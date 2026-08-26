@@ -10,7 +10,7 @@ import { Input, Select, Label } from '@/components/ui/Field';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Modal } from '@/components/ui/Modal';
 import { exportJSON, parseBankCSV } from '@/lib/export';
-import { currencySymbol } from '@/lib/format';
+import { currencySymbol, parseAmount } from '@/lib/format';
 import type { AppData, CurrencyCode, Category } from '@/types';
 
 export default function Settings() {
@@ -300,23 +300,23 @@ function MonthlyIncomeField() {
   const [saved, setSaved] = useState(false);
   useEffect(() => { setSalary(String(curSalary || '')); setVouchers(String(curVouchers || '')); }, [curSalary, curVouchers]);
 
-  const dirty = Number(salary || 0) !== curSalary || Number(vouchers || 0) !== curVouchers;
+  const dirty = (parseAmount(salary) || 0) !== curSalary || (parseAmount(vouchers) || 0) !== curVouchers;
   return (
     <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3.5">
       <Label>Monthly income (auto-added each month)</Label>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <span className="text-[11px] text-white/40">Salary (fixed)</span>
-          <Input type={privacy ? 'password' : 'number'} step="0.01" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
+          <Input type={privacy ? 'password' : 'text'} inputMode="decimal" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 9500" />
         </div>
         <div>
           <span className="text-[11px] text-white/40">Bonuri (default)</span>
-          <Input type={privacy ? 'password' : 'number'} step="0.01" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
+          <Input type={privacy ? 'password' : 'text'} inputMode="decimal" value={vouchers} onChange={(e) => setVouchers(e.target.value)} placeholder="e.g. 600" />
         </div>
       </div>
       <div className="flex items-center gap-2 mt-2">
         <Button variant={dirty ? 'primary' : 'ghost'} disabled={!dirty}
-          onClick={async () => { await setMyIncome(Number(salary) || 0, Number(vouchers) || 0); setSaved(true); setTimeout(() => setSaved(false), 2000); }}>
+          onClick={async () => { await setMyIncome(parseAmount(salary) || 0, parseAmount(vouchers) || 0); setSaved(true); setTimeout(() => setSaved(false), 2000); }}>
           {saved ? <><Check size={14} /> Saved</> : 'Save income'}
         </Button>
         <span className="text-xs text-white/40">Salary + Bonuri post automatically on the 1st. Bonuri vary by month — edit that month's Bonuri entry in Transactions.</span>
@@ -333,8 +333,8 @@ function OpeningBalanceField() {
   return (
     <div>
       <Label>{shared ? 'Your starting balance' : 'Opening / current balance'} ({currencySymbol(settings.currency)})</Label>
-      <Input type={privacy ? 'password' : 'number'} step="0.01" key={mine} defaultValue={mine}
-        onBlur={(e) => setMyOpeningBalance(Number(e.target.value) || 0)} />
+      <Input type={privacy ? 'password' : 'text'} inputMode="decimal" key={mine} defaultValue={mine}
+        onBlur={(e) => setMyOpeningBalance(parseAmount(e.target.value) || 0)} />
       <p className="text-xs text-white/40 mt-1.5">
         {shared
           ? 'Your part of the household balance. Both members’ balances add up, then shared income and expenses adjust the family total.'

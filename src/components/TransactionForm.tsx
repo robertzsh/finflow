@@ -4,6 +4,7 @@ import { Trash2, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { parseAmount } from '@/lib/format';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency } from '@/types';
 
 interface FormValues {
@@ -49,7 +50,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
   const onValid = (v: FormValues) => {
     setFormError('');
     try {
-      const amount = Number(v.amount);
+      const amount = parseAmount(v.amount as unknown as string);
       if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); return; }
       if (!v.categoryId) { setFormError('Pick a category.'); return; }
       const cat = categories.find((c) => c.id === v.categoryId);
@@ -86,8 +87,8 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Amount</Label>
-          <Input type="number" inputMode="decimal" step="0.01" placeholder="0.00"
-            {...register('amount', { required: 'Enter an amount', valueAsNumber: true, validate: (v) => (Number(v) > 0) || 'Amount must be greater than 0' })} />
+          <Input type="text" inputMode="decimal" placeholder="0,00"
+            {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
         <div>

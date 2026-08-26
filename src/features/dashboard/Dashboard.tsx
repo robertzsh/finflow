@@ -58,6 +58,16 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const incomeTotal = data.bySource.reduce((a, b) => a + b.value, 0);
   const allocTotal = data.alloc.reduce((a, b) => a + b.value, 0);
 
+  // "Spending by category" is shown as a share of your account balance (money you
+  // have), not a share of spending — so €2,200 rent against a €10k balance reads
+  // as ~22%, not 45%. An "Available" slice fills the rest so the ring is coherent.
+  const allocDenom = data.balance > 0 ? data.balance : (expenseTotal || 1);
+  const availableBal = Math.max(0, data.balance - expenseTotal);
+  const spendDonut = [
+    ...data.byCat.slice(0, 8),
+    ...(availableBal > 0 ? [{ id: 'available', name: 'Available', color: '#cbd5e1', value: availableBal }] : []),
+  ];
+
   // End-of-month prompt: once a new month begins, offer last month's full report.
   const lastMonthRef = startOfMonth(subMonths(REF, 1));
   const lastMonthKey = format(lastMonthRef, 'yyyy-MM');
@@ -197,18 +207,18 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           <SpendSaveBars data={data.spendSave} />
         </Card>
         <Card className="p-5" delay={0.15}>
-          <SectionCardHeader title="Spending by category" hint="This month" />
+          <SectionCardHeader title="Spending by category" hint="Share of your balance · this month" />
           <div className="relative">
-            <DonutChart data={data.byCat.slice(0, 8)} />
+            <DonutChart data={spendDonut} />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-white/40">Total</span>
-              <span className="font-bold">{formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })}</span>
+              <span className="text-xs text-white/40">Balance</span>
+              <span className="font-bold">{formatMoney(data.balance, cur, { compact: data.balance > 9999 })}</span>
             </div>
           </div>
           <div className="mt-3 space-y-1.5">
             {data.byCat.slice(0, 6).map((c) => {
               const cat = categories.find((x) => x.id === c.id);
-              const pct = expenseTotal > 0 ? (c.value / expenseTotal) * 100 : 0;
+              const pct = (c.value / allocDenom) * 100;
               return (
                 <div key={c.id} className="flex items-center gap-2 text-sm">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
@@ -219,6 +229,14 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                 </div>
               );
             })}
+            {availableBal > 0 && (
+              <div className="flex items-center gap-2 text-sm pt-1 border-t border-white/5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#cbd5e1' }} />
+                <span className="text-white/50 truncate flex-1">Available to spend</span>
+                <span className="tabular-nums text-white/50 text-xs">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
+                <span className="tabular-nums font-medium w-24 text-right">{formatMoney(availableBal, cur)}</span>
+              </div>
+            )}
           </div>
         </Card>
       </div>

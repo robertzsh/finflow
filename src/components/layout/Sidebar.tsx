@@ -19,7 +19,7 @@ const NAV = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 p-4">
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 p-4 chrome-glass border-r border-white/10">
       <div className="flex items-center gap-2.5 px-3 py-4">
         <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 p-2 shadow-glow">
           <Sparkles size={18} className="text-white" />

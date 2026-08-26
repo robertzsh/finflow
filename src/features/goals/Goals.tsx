@@ -12,7 +12,7 @@ import { ProgressRing } from '@/components/ui/Progress';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatMoney, currencySymbol } from '@/lib/format';
+import { formatMoney, currencySymbol, parseAmount } from '@/lib/format';
 import { toBase } from '@/lib/finance';
 import type { Goal, CurrencyCode } from '@/types';
 
@@ -214,10 +214,10 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
           <div><Label>Currency</Label><Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{GOAL_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Target amount</Label><Input type="number" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="0.00" /></div>
-          <div><Label>{editing ? 'Saved so far' : 'Already saved'}</Label><Input type="number" value={saved} onChange={(e) => setSaved(e.target.value)} placeholder="0.00" /></div>
+          <div><Label>Target amount</Label><Input type="text" inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="0,00" /></div>
+          <div><Label>{editing ? 'Saved so far' : 'Already saved'}</Label><Input type="text" inputMode="decimal" value={saved} onChange={(e) => setSaved(e.target.value)} placeholder="0,00" /></div>
         </div>
-        <div><Label>Planned monthly amount (for the ETA)</Label><Input type="number" value={contrib} onChange={(e) => setContrib(e.target.value)} placeholder="0.00" /></div>
+        <div><Label>Planned monthly amount (for the ETA)</Label><Input type="text" inputMode="decimal" value={contrib} onChange={(e) => setContrib(e.target.value)} placeholder="0,00" /></div>
         <div><Label>Icon</Label>
           <div className="flex flex-wrap gap-2">
             {ICONS.map((ic) => (
@@ -233,7 +233,7 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
           </div>
         </div>
         {editing && <p className="text-[11px] text-white/40">Editing the target or saved amount here adjusts the goal directly — it isn't logged in the contribution history. Use “Add money” to record a dated contribution.</p>}
-        <Button className="w-full" disabled={!name || !target} onClick={() => onSubmit({ name, target: Number(target), saved: Number(saved) || 0, monthlyContribution: Number(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
+        <Button className="w-full" disabled={!name || !target} onClick={() => onSubmit({ name, target: parseAmount(target) || 0, saved: parseAmount(saved) || 0, monthlyContribution: parseAmount(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
           {editing ? 'Save changes' : 'Create goal'}
         </Button>
       </div>
@@ -303,7 +303,7 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
   if (!goal) return null;
   const gc = goal.currency ?? cur;
   const rate = fx[gc] ?? 1;                       // lei per 1 unit of goal currency
-  const baseAmount = Number(amt) || 0;            // entered in base currency (lei)
+  const baseAmount = parseAmount(amt) || 0;       // entered in base currency (lei)
   const inGoal = baseAmount / rate;               // converted to the goal's currency
   const presets = [200, 500, 1000, 2500];
   return (
@@ -312,7 +312,7 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
         <p className="text-sm text-white/50">Move money from your savings into this goal. Currently {formatMoney(goal.saved, gc)} of {formatMoney(goal.target, gc)}.</p>
         <div>
           <Label>Amount from your savings ({currencySymbol(cur)})</Label>
-          <Input type="number" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0.00" autoFocus />
+          <Input type="text" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0,00" autoFocus />
           {gc !== cur && baseAmount > 0 && (
             <p className="text-xs text-white/50 mt-1.5">≈ <span className="text-goal font-medium">{formatMoney(inGoal, gc)}</span> toward the goal (at {rate} {cur}/{gc})</p>
           )}

@@ -23,6 +23,26 @@ export function formatMoney(n: number, currency: CurrencyCode = 'RON', opts?: { 
   }).format(n);
 }
 
+/** Parse a user-typed amount that may use a comma as the decimal separator
+ *  (iPhone number keypads only offer a comma in many locales). Handles
+ *  "12,50" → 12.5, "1.234,56" → 1234.56, "1,234.56" → 1234.56. */
+export function parseAmount(input: string | number | undefined | null): number {
+  if (typeof input === 'number') return input;
+  if (input == null) return NaN;
+  let s = String(input).trim().replace(/\s/g, '');
+  if (!s) return NaN;
+  if (s.includes(',') && s.includes('.')) {
+    // whichever separator comes last is the decimal point
+    s = s.lastIndexOf(',') > s.lastIndexOf('.')
+      ? s.replace(/\./g, '').replace(',', '.')
+      : s.replace(/,/g, '');
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 export function formatPct(n: number, digits = 0) {
   return `${n >= 0 ? '' : ''}${n.toFixed(digits)}%`;
 }
