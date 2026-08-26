@@ -10,4 +10,4 @@ export const CLOUD_ENABLED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 // Edge Function secrets — never here.
 export const VAPID_PUBLIC_KEY =
   (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
-  'BEN9kgA8-NiPWYttBZnCLhPmtyOqa_QBiT_Yc87d7j_tQ5_O8jmlcLFY7OWCbtLKqSg7HKkYNZ73lOOJOBNWhkI';
+   'BJcYTHNK3Mp_v5Rk1sP4KWI62yCQd7URVL9F5MPPy2L4UjfcNqJ-b6BVn-L5x01PJkMMdJj95-3uhWKf56vMueE';
