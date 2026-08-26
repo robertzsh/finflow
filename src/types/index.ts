@@ -88,7 +88,7 @@ export interface Settings {
   openingBalance: number;      // starting bank balance; income/expenses adjust it
   salary: number;              // fixed monthly salary, auto-added each month
   vouchers: number;            // default monthly vouchers (meal tickets), editable per month
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'pink';
   pinEnabled: boolean;
   pin?: string;
   biometric: boolean;

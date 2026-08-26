@@ -167,3 +167,71 @@ html.light .glass.rounded-2xl { border-radius: 16px; }
 @media (max-width: 640px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ===========================================================================
+   PINK THEME — a cute, cozy, premium skin. Layers on top of the light theme
+   (html.pink also carries html.light), so it only re-tints surfaces, accents,
+   gradients and type. Toggle in Settings → Appearance → Pink.
+   =========================================================================== */
+html.pink body { background: #fff5f9; color: #4a3a42; }
+html.pink h1, html.pink h2, html.pink h3 {
+  font-family: 'Quicksand', 'Inter', system-ui, sans-serif;
+  color: #3f2e37; letter-spacing: -0.01em; font-weight: 700;
+}
+
+/* Soft blush aurora: pink → lavender → peach blooms over an off-white blush. */
+html.pink .app-bg::before {
+  background:
+    radial-gradient(48vw 48vw at 10% -6%, rgba(244,114,182,0.18), transparent 60%),
+    radial-gradient(44vw 44vw at 95% 2%, rgba(167,139,250,0.15), transparent 60%),
+    radial-gradient(50vw 50vw at 80% 98%, rgba(253,186,158,0.16), transparent 62%),
+    linear-gradient(180deg, #fff7fb 0%, #ffeff6 100%);
+}
+
+/* Cards: white with a warm pink-tinted soft shadow and cozier corners. */
+html.pink .glass {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(219,39,119,0.08);
+  box-shadow: 0 1px 2px rgba(219,39,119,0.05), 0 12px 30px -10px rgba(236,72,153,0.20);
+}
+html.pink .glass-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(219,39,119,0.14);
+  background: rgba(255,255,255,0.97);
+  box-shadow: 0 3px 8px rgba(219,39,119,0.08), 0 22px 46px -12px rgba(236,72,153,0.30);
+}
+html.pink .rounded-2xl { border-radius: 20px; }
+html.pink .rounded-xl { border-radius: 15px; }
+
+/* Brand gradient (primary buttons, logo, toggles, toasts): emerald→blue becomes pink→berry. */
+html.pink .from-emerald-500 {
+  --tw-gradient-from: #f472b6 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: #db2777 var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+/* Avatar / accent gradients: purple→blue becomes pink→lavender. */
+html.pink .from-purple-500 {
+  --tw-gradient-from: #f472b6 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: #a78bfa var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html.pink .bg-gradient-to-r.from-emerald-500,
+html.pink .bg-gradient-to-br.from-emerald-500 { box-shadow: 0 8px 20px -6px rgba(236,72,153,0.5); }
+
+/* Retint the "savings" (blue) and "goal" (purple) accents toward pink/berry. */
+html.pink .text-savings { color: #db2777 !important; }
+html.pink .text-goal { color: #be185d !important; }
+html.pink .bg-goal\/15, html.pink .bg-goal\/10 { background-color: rgba(219,39,119,0.12) !important; }
+
+/* Pink focus, selection, scrollbar, inputs. */
+html.pink :focus-visible { outline-color: #ec4899; }
+html.pink ::selection { background: rgba(236,72,153,0.18); }
+html.pink ::-webkit-scrollbar-thumb { background: rgba(236,72,153,0.22); }
+html.pink ::-webkit-scrollbar-thumb:hover { background: rgba(236,72,153,0.34); }
+html.pink input:focus, html.pink select:focus, html.pink textarea:focus {
+  border-color: rgba(236,72,153,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(236,72,153,0.15) !important;
+}
+
+/* Active navigation item gets a pink highlight (react-router sets aria-current). */
+html.pink a[aria-current="page"] { color: #db2777 !important; }

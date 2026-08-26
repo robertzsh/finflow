@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw, Bell } from 'lucide-react';
+import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw, Bell, Heart } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { pushSupported, isIos, isStandalone, localTz, enablePush, disablePush, setReminderTime, reminderState } from '@/lib/push';
+import { pushSupported, isIos, isStandalone, localTz, enablePush, disablePush, setReminderTimes, reminderState } from '@/lib/push';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -91,7 +91,7 @@ export default function Settings() {
             </div>
             <div>
               <Label>Appearance</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button onClick={() => updateSettings({ theme: 'dark' })}
                   className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm border ${settings.theme === 'dark' ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/10 bg-white/5'}`}>
                   <Moon size={16} /> Dark
@@ -99,6 +99,10 @@ export default function Settings() {
                 <button onClick={() => updateSettings({ theme: 'light' })}
                   className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm border ${settings.theme === 'light' ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/10 bg-white/5'}`}>
                   <Sun size={16} /> Light
+                </button>
+                <button onClick={() => updateSettings({ theme: 'pink' })}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm border ${settings.theme === 'pink' ? 'border-pink-400/60 bg-pink-500/10 text-pink-500' : 'border-white/10 bg-white/5'}`}>
+                  <Heart size={16} /> Pink
                 </button>
               </div>
             </div>
@@ -192,7 +196,8 @@ function reasonText(reason: string) {
 
 function RemindersCard() {
   const [status, setStatus] = useState<'loading' | 'off' | 'on'>('loading');
-  const [hour, setHour] = useState(21);
+  const [hours, setHours] = useState<number[]>([10, 22]);
+  const [addHour, setAddHour] = useState(9);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const supported = pushSupported();
@@ -204,29 +209,38 @@ function RemindersCard() {
       if (!supported) { setStatus('off'); return; }
       const st = await reminderState();
       if (!alive) return;
-      if (st) { setHour(st.hour); setStatus(st.on ? 'on' : 'off'); } else setStatus('off');
+      if (st) { setHours(st.hours); setStatus(st.on ? 'on' : 'off'); } else setStatus('off');
     })();
     return () => { alive = false; };
   }, [supported]);
 
+  async function persist(next: number[]) {
+    if (status === 'on') { try { await setReminderTimes(next, localTz()); } catch { /* ignore */ } }
+  }
+  function addTime() {
+    if (hours.includes(addHour)) return;
+    const next = [...hours, addHour].sort((a, b) => a - b);
+    setHours(next); persist(next);
+  }
+  function removeTime(h: number) {
+    const next = hours.filter((x) => x !== h);
+    setHours(next); persist(next);
+  }
   async function toggle() {
     setErr(''); setBusy(true);
     try {
       if (status === 'on') { await disablePush(); setStatus('off'); }
       else {
-        const r = await enablePush(hour, localTz());
-        if (r.ok) setStatus('on'); else setErr(reasonText(r.reason));
+        const times = hours.length ? hours : [10, 22];
+        const r = await enablePush(times, localTz());
+        if (r.ok) { setHours(times); setStatus('on'); } else setErr(reasonText(r.reason));
       }
     } finally { setBusy(false); }
-  }
-  async function changeHour(h: number) {
-    setHour(h);
-    if (status === 'on') { try { await setReminderTime(h, localTz()); } catch { /* ignore */ } }
   }
 
   return (
     <Card className="p-5 mb-4">
-      <SectionCardHeader title="Daily reminder" hint="A phone notification so you never forget to log a transaction" />
+      <SectionCardHeader title="Daily reminders" hint="Phone notifications so you never forget to log a transaction" />
       {!supported ? (
         <p className="text-sm text-white/50">{iosNeedsInstall
           ? 'On iPhone, add FinFlow to your Home Screen first (Share → Add to Home Screen), then open it from the icon to turn on reminders.'
@@ -238,23 +252,37 @@ function RemindersCard() {
               <span className="rounded-xl bg-goal/15 p-2"><Bell size={18} className="text-goal" /></span>
               <div>
                 <div className="text-sm font-medium">Remind me every day</div>
-                <div className="text-xs text-white/40">{status === 'on' ? `On · around ${String(hour).padStart(2, '0')}:00` : status === 'loading' ? '…' : 'Off'}</div>
+                <div className="text-xs text-white/40">{status === 'on' ? `On · ${hours.map((h) => `${String(h).padStart(2, '0')}:00`).join(' & ')}` : status === 'loading' ? '…' : 'Off'}</div>
               </div>
             </div>
-            <button onClick={toggle} disabled={busy || status === 'loading'} aria-label="Toggle daily reminder"
+            <button onClick={toggle} disabled={busy || status === 'loading'} aria-label="Toggle daily reminders"
               className={`relative w-12 h-7 rounded-full transition shrink-0 ${status === 'on' ? 'bg-gradient-to-r from-emerald-500 to-blue-500' : 'bg-white/10'} disabled:opacity-50`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${status === 'on' ? 'left-6' : 'left-1'}`} />
             </button>
           </div>
+
           <div>
-            <Label>Time of day</Label>
-            <Select value={hour} onChange={(e) => changeHour(Number(e.target.value))}>
-              {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
-            </Select>
+            <Label>Reminder times</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {hours.length === 0 && <span className="text-xs text-white/40">No times set.</span>}
+              {hours.map((h) => (
+                <span key={h} className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 pl-2.5 pr-1.5 py-1.5 text-sm">
+                  {String(h).padStart(2, '0')}:00
+                  <button onClick={() => removeTime(h)} aria-label={`Remove ${h}:00`} className="text-white/30 hover:text-expense"><Trash2 size={13} /></button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Select value={addHour} onChange={(e) => setAddHour(Number(e.target.value))} className="flex-1">
+                {Array.from({ length: 24 }, (_, h) => <option key={h} value={h} disabled={hours.includes(h)}>{String(h).padStart(2, '0')}:00</option>)}
+              </Select>
+              <Button variant="ghost" onClick={addTime} disabled={hours.includes(addHour)}><Plus size={15} /> Add time</Button>
+            </div>
           </div>
+
           {iosNeedsInstall && <p className="text-[11px] text-white/40">On iPhone, open FinFlow from its Home Screen icon — notifications don’t work in the Safari tab.</p>}
           {err && <p className="text-xs text-expense">{err}</p>}
-          <p className="text-[11px] text-white/40">Enable this on each device you want reminders on; Iulia sets her own on her phone.</p>
+          <p className="text-[11px] text-white/40">Times use this device’s timezone. Morning and evening reminders use different messages. Set this on each device; Iulia sets her own on her phone.</p>
         </div>
       )}
     </Card>

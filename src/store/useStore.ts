@@ -558,8 +558,11 @@ export const useStore = create<StoreState>((set, get) => {
   };
 });
 
-function applyTheme(theme: 'dark' | 'light') {
+function applyTheme(theme: 'dark' | 'light' | 'pink') {
   const root = document.documentElement;
+  // Pink is a light-based theme, so it reuses the light utility remaps and adds a pink skin on top.
+  const isLightLike = theme === 'light' || theme === 'pink';
   root.classList.toggle('dark', theme === 'dark');
-  root.classList.toggle('light', theme === 'light');
+  root.classList.toggle('light', isLightLike);
+  root.classList.toggle('pink', theme === 'pink');
 }

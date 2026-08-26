@@ -33,8 +33,8 @@ export async function currentEndpoint(): Promise<string | null> {
   return sub?.endpoint ?? null;
 }
 
-/** Ask permission, subscribe this device, and store the subscription + preferred hour. */
-export async function enablePush(hour: number, tz: string): Promise<EnableResult> {
+/** Ask permission, subscribe this device, and store the subscription + preferred times. */
+export async function enablePush(hours: number[], tz: string): Promise<EnableResult> {
   if (!pushSupported()) return { ok: false, reason: 'unsupported' };
   if (!VAPID_PUBLIC_KEY) return { ok: false, reason: 'novapid' };
   const perm = await Notification.requestPermission();
@@ -46,17 +46,17 @@ export async function enablePush(hour: number, tz: string): Promise<EnableResult
       sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource });
     }
     const json: any = sub.toJSON();
-    await cloud.savePushSubscription({ endpoint: sub.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, hour, tz });
+    await cloud.savePushSubscription({ endpoint: sub.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, hours, tz });
     return { ok: true };
   } catch {
     return { ok: false, reason: 'error' };
   }
 }
 
-/** Update the send time (and timezone) for the existing subscription. */
-export async function setReminderTime(hour: number, tz: string): Promise<void> {
+/** Update the send times (and timezone) for the existing subscription. */
+export async function setReminderTimes(hours: number[], tz: string): Promise<void> {
   const endpoint = await currentEndpoint();
-  if (endpoint) await cloud.updatePushPref(endpoint, { hour, tz, enabled: true });
+  if (endpoint) await cloud.updatePushPref(endpoint, { hours, tz, enabled: true });
 }
 
 /** Turn reminders off for this device: unsubscribe and remove the stored row. */
@@ -70,11 +70,12 @@ export async function disablePush(): Promise<void> {
   }
 }
 
-/** Reads whether this device currently has reminders on, and at what hour. */
-export async function reminderState(): Promise<{ on: boolean; hour: number } | null> {
-  if (!pushSupported() || Notification.permission !== 'granted') return { on: false, hour: 21 };
+/** Reads whether this device currently has reminders on, and at what times. */
+export async function reminderState(): Promise<{ on: boolean; hours: number[] } | null> {
+  const fallback = { on: false, hours: [10, 22] };
+  if (!pushSupported() || Notification.permission !== 'granted') return fallback;
   const endpoint = await currentEndpoint();
-  if (!endpoint) return { on: false, hour: 21 };
+  if (!endpoint) return fallback;
   const pref = await cloud.getPushPref(endpoint);
-  return { on: !!pref?.enabled, hour: pref?.hour ?? 21 };
+  return { on: !!pref?.enabled, hours: pref?.hours?.length ? pref.hours : [10, 22] };
 }
