@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw } from 'lucide-react';
+import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw, Bell } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { pushSupported, isIos, isStandalone, localTz, enablePush, disablePush, setReminderTime, reminderState } from '@/lib/push';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -47,6 +48,7 @@ export default function Settings() {
       {msg && <div className="mb-4 rounded-xl bg-income/15 border border-income/30 text-income px-4 py-2.5 text-sm">{msg}</div>}
 
       {store.cloud && store.authed && <HouseholdCard flash={flash} />}
+      {store.cloud && store.authed && <RemindersCard />}
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* Preferences */}
@@ -176,6 +178,86 @@ export default function Settings() {
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
       <CategoryModal open={!!editCat} existing={editCat ?? undefined} onClose={() => setEditCat(null)} onSave={(c) => { if (editCat) updateCategory(editCat.id, c); setEditCat(null); }} />
     </Page>
+  );
+}
+
+function reasonText(reason: string) {
+  switch (reason) {
+    case 'denied': return 'Notifications are blocked. Enable them for this site in your phone/browser settings, then try again.';
+    case 'unsupported': return 'This device doesn’t support push notifications.';
+    case 'novapid': return 'Push isn’t configured yet — deploy the reminder function first.';
+    default: return 'Couldn’t turn on reminders. Please try again.';
+  }
+}
+
+function RemindersCard() {
+  const [status, setStatus] = useState<'loading' | 'off' | 'on'>('loading');
+  const [hour, setHour] = useState(21);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const supported = pushSupported();
+  const iosNeedsInstall = isIos() && !isStandalone();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!supported) { setStatus('off'); return; }
+      const st = await reminderState();
+      if (!alive) return;
+      if (st) { setHour(st.hour); setStatus(st.on ? 'on' : 'off'); } else setStatus('off');
+    })();
+    return () => { alive = false; };
+  }, [supported]);
+
+  async function toggle() {
+    setErr(''); setBusy(true);
+    try {
+      if (status === 'on') { await disablePush(); setStatus('off'); }
+      else {
+        const r = await enablePush(hour, localTz());
+        if (r.ok) setStatus('on'); else setErr(reasonText(r.reason));
+      }
+    } finally { setBusy(false); }
+  }
+  async function changeHour(h: number) {
+    setHour(h);
+    if (status === 'on') { try { await setReminderTime(h, localTz()); } catch { /* ignore */ } }
+  }
+
+  return (
+    <Card className="p-5 mb-4">
+      <SectionCardHeader title="Daily reminder" hint="A phone notification so you never forget to log a transaction" />
+      {!supported ? (
+        <p className="text-sm text-white/50">{iosNeedsInstall
+          ? 'On iPhone, add FinFlow to your Home Screen first (Share → Add to Home Screen), then open it from the icon to turn on reminders.'
+          : 'This browser doesn’t support push notifications.'}</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="rounded-xl bg-goal/15 p-2"><Bell size={18} className="text-goal" /></span>
+              <div>
+                <div className="text-sm font-medium">Remind me every day</div>
+                <div className="text-xs text-white/40">{status === 'on' ? `On · around ${String(hour).padStart(2, '0')}:00` : status === 'loading' ? '…' : 'Off'}</div>
+              </div>
+            </div>
+            <button onClick={toggle} disabled={busy || status === 'loading'} aria-label="Toggle daily reminder"
+              className={`relative w-12 h-7 rounded-full transition shrink-0 ${status === 'on' ? 'bg-gradient-to-r from-emerald-500 to-blue-500' : 'bg-white/10'} disabled:opacity-50`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${status === 'on' ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+          <div>
+            <Label>Time of day</Label>
+            <Select value={hour} onChange={(e) => changeHour(Number(e.target.value))}>
+              {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
+            </Select>
+          </div>
+          {iosNeedsInstall && <p className="text-[11px] text-white/40">On iPhone, open FinFlow from its Home Screen icon — notifications don’t work in the Safari tab.</p>}
+          {err && <p className="text-xs text-expense">{err}</p>}
+          <p className="text-[11px] text-white/40">Enable this on each device you want reminders on; Iulia sets her own on her phone.</p>
+        </div>
+      )}
+    </Card>
   );
 }
 

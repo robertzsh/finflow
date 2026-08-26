@@ -66,6 +66,32 @@ export function onAuthChange(cb: (userId: string | null) => void) {
 }
 
 // ---------------------------------------------------------------------------
+// Push notification subscriptions (daily reminders)
+// ---------------------------------------------------------------------------
+export interface PushPref { hour: number; tz: string; enabled: boolean }
+export async function savePushSubscription(s: { endpoint: string; p256dh: string; auth: string; hour: number; tz: string }) {
+  const uid = await getUserId();
+  if (!uid) return;
+  let householdId: string | null = null;
+  try { householdId = (await getProfile(uid)).householdId; } catch { /* ignore */ }
+  const { error } = await supabase!.from('push_subscriptions').upsert(
+    { user_id: uid, household_id: householdId, endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth, hour: s.hour, tz: s.tz, enabled: true },
+    { onConflict: 'endpoint' },
+  );
+  if (error) throw error;
+}
+export async function updatePushPref(endpoint: string, patch: Partial<PushPref>) {
+  await supabase!.from('push_subscriptions').update(patch).eq('endpoint', endpoint);
+}
+export async function removePushSubscription(endpoint: string) {
+  await supabase!.from('push_subscriptions').delete().eq('endpoint', endpoint);
+}
+export async function getPushPref(endpoint: string): Promise<PushPref | null> {
+  const { data } = await supabase!.from('push_subscriptions').select('hour, tz, enabled').eq('endpoint', endpoint).maybeSingle();
+  return data ? { hour: data.hour, tz: data.tz, enabled: data.enabled } : null;
+}
+
+// ---------------------------------------------------------------------------
 // Profile / household
 // ---------------------------------------------------------------------------
 export interface Member { id: string; name: string; openingBalance: number; salary: number; vouchers: number }
