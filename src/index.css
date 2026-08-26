@@ -156,9 +156,27 @@ html.light textarea:focus {
 /* Primary gradient button: give it a soft branded lift on both themes */
 .bg-gradient-to-r.from-emerald-500 { box-shadow: 0 6px 16px -6px rgba(16,185,129,0.5), 0 2px 6px -2px rgba(59,130,246,0.4); }
 
-/* Sticky top bar / sidebar glass reads cleaner over the near-white page */
-html.light header.backdrop-blur-xl { background: rgba(246,248,252,0.72) !important; }
 html.light .glass.rounded-2xl { border-radius: 16px; }
+
+/* ---------------------------------------------------------------------------
+   Liquid-glass chrome — the sticky top bar and the mobile bottom nav. Highly
+   translucent + blurred so page content is visible scrolling behind them.
+   Distinct from cards (which stay more opaque for readability).
+--------------------------------------------------------------------------- */
+.chrome-glass {
+  background: rgba(9,13,22,0.5);
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+html.light .chrome-glass {
+  background: rgba(248,250,252,0.58);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+html.pink .chrome-glass {
+  background: rgba(255,243,249,0.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
 
 /* ---------------------------------------------------------------------------
    Mobile: 16px form controls stop iOS Safari from auto-zooming (and the
@@ -222,6 +240,15 @@ html.pink .bg-gradient-to-br.from-emerald-500 { box-shadow: 0 8px 20px -6px rgba
 html.pink .text-savings { color: #db2777 !important; }
 html.pink .text-goal { color: #be185d !important; }
 html.pink .bg-goal\/15, html.pink .bg-goal\/10 { background-color: rgba(219,39,119,0.12) !important; }
+
+/* Increase / decrease in a girly palette — mint-teal (up) and coral (down)
+   instead of green/red, so money movements feel soft rather than alarming. */
+html.pink .text-income { color: #0d9488 !important; }   /* mint-teal — increase / money in */
+html.pink .text-expense { color: #fb7185 !important; }  /* coral — decrease / money out */
+html.pink .bg-income\/15, html.pink .bg-income\/10 { background-color: rgba(13,148,136,0.14) !important; }
+html.pink .bg-expense\/15, html.pink .bg-expense\/10 { background-color: rgba(251,113,133,0.14) !important; }
+html.pink .border-income\/30 { border-color: rgba(13,148,136,0.35) !important; }
+html.pink .border-expense\/30 { border-color: rgba(251,113,133,0.35) !important; }
 
 /* Pink focus, selection, scrollbar, inputs. */
 html.pink :focus-visible { outline-color: #ec4899; }

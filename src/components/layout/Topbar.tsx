@@ -9,7 +9,7 @@ export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSea
   const togglePrivacy = useStore((s) => s.togglePrivacy);
   const nav = useNavigate();
   return (
-    <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] mb-2 backdrop-blur-xl bg-black/10 border-b border-white/5 flex items-center gap-2.5 sm:gap-3">
+    <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] mb-2 chrome-glass border-b border-white/5 flex items-center gap-2.5 sm:gap-3">
       <div className="lg:hidden flex items-center gap-2 font-extrabold">
         <span className="rounded-lg bg-gradient-to-br from-emerald-500 to-blue-500 px-2 py-1 text-xs text-white">FF</span>
       </div>
