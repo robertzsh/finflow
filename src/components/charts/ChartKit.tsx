@@ -14,8 +14,8 @@ function useChartTheme() {
   const pink = theme === 'pink';
   const light = theme === 'light' || pink;
   return {
-    income: pink ? '#14b8a6' : '#10b981',
-    expense: pink ? '#fb7185' : '#ef4444',
+    income: pink ? '#06b6d4' : '#10b981',
+    expense: pink ? '#f43f5e' : '#ef4444',
     savings: pink ? '#db2777' : '#3b82f6',
     invest: pink ? '#f59e0b' : '#eab308',
     axis: light ? '#64748b' : '#94a3b8',
