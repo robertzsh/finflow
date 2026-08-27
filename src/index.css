@@ -86,6 +86,12 @@ html.light .glass-hover:hover {
 /* Focus ring for accessibility */
 :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 6px; }
 
+/* Charts aren't interactive controls — never draw a focus box when a slice is tapped. */
+.recharts-wrapper, .recharts-surface, .recharts-sector, .recharts-pie, .recharts-pie-sector,
+.recharts-wrapper *, .recharts-surface * { outline: none !important; }
+.recharts-wrapper:focus, .recharts-wrapper:focus-visible,
+.recharts-surface:focus, .recharts-surface:focus-visible { outline: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

@@ -24,6 +24,7 @@ const REF = new Date();
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId } = useStore();
   const privacy = useStore((s) => s.privacy);
+  const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
   // In a shared household the opening balance is the sum of every member's balance.
@@ -67,6 +68,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     ...data.byCat.slice(0, 8),
     ...(availableBal > 0 ? [{ id: 'available', name: 'Available', color: '#cbd5e1', value: availableBal }] : []),
   ];
+
+  // Income sources are green by default; in the pink theme recolour them to an aqua family.
+  const AQUA = ['#06b6d4', '#22d3ee', '#67e8f9', '#0891b2', '#a5f3fc', '#5eead4'];
+  const bySource = theme === 'pink' ? data.bySource.map((d, i) => ({ ...d, color: AQUA[i % AQUA.length] })) : data.bySource;
 
   // End-of-month prompt: once a new month begins, offer last month's full report.
   const lastMonthRef = startOfMonth(subMonths(REF, 1));
@@ -245,8 +250,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       <div className="grid lg:grid-cols-3 gap-4 mt-4">
         <Card className="p-5" delay={0.1}>
           <SectionCardHeader title="Income sources" hint="This month" />
-          <Donut data={data.bySource} height={200} />
-          <div className="mt-3"><LegendList data={data.bySource} total={incomeTotal} currency={cur} /></div>
+          <Donut data={bySource} height={200} />
+          <div className="mt-3"><LegendList data={bySource} total={incomeTotal} currency={cur} /></div>
         </Card>
         <Card className="p-5" delay={0.15}>
           <SectionCardHeader title="Monthly comparison" hint="Income vs expense" />

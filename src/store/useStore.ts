@@ -148,6 +148,37 @@ export const useStore = create<StoreState>((set, get) => {
     }
   };
 
+  // Add bank sub-categories (ING, BRD, …) under the user's "Card de credit" category,
+  // mirroring how grocery stores nest under Groceries. Idempotent + deterministic ids
+  // so both members converge on the same rows without duplicates.
+  const BANK_SUBS = [
+    { slug: 'ing', name: 'ING', color: '#ff6200' },
+    { slug: 'brd', name: 'BRD', color: '#e2001a' },
+    { slug: 'bcr', name: 'BCR', color: '#0a5ed7' },
+    { slug: 'bt', name: 'Banca Transilvania', color: '#eab308' },
+    { slug: 'raiffeisen', name: 'Raiffeisen', color: '#facc15' },
+    { slug: 'revolut', name: 'Revolut', color: '#191c1f' },
+    { slug: 'other-bank', name: 'Other bank', color: '#64748b' },
+  ];
+  const ensureBankSubcategories = () => {
+    const s = get();
+    const card = s.categories.find((c) => !c.parent && /card.*credit/i.test(c.name));
+    if (!card) return;
+    const haveNames = new Set(s.categories.filter((c) => c.parent === card.id).map((c) => c.name.toLowerCase()));
+    const haveIds = new Set(s.categories.map((c) => c.id));
+    const toAdd: Category[] = [];
+    for (const b of BANK_SUBS) {
+      const id = `sub-${card.id}-${b.slug}`;
+      if (haveIds.has(id) || haveNames.has(b.name.toLowerCase())) continue;
+      toAdd.push({ id, name: b.name, kind: card.kind, icon: 'Landmark', color: b.color, emoji: '🏦', parent: card.id, custom: true });
+    }
+    if (toAdd.length) {
+      set((st) => ({ categories: [...st.categories, ...toAdd] }));
+      get().persist();
+      pushMany('categories', toAdd);
+    }
+  };
+
   // Apply new salary/vouchers amounts to the CURRENT month immediately (create/update/remove).
   const applyIncomeToCurrentMonth = (salary: number, vouchers: number) => {
     const s = get();
@@ -207,6 +238,7 @@ export const useStore = create<StoreState>((set, get) => {
         }
         applyTheme(get().settings.theme);
         ensureStandingIncome();
+        ensureBankSubcategories();
         return;
       }
       // cloud mode
@@ -291,6 +323,7 @@ export const useStore = create<StoreState>((set, get) => {
       });
       applyTheme(settings.theme);
       ensureStandingIncome(); // auto-add this month's salary + vouchers if missing
+      ensureBankSubcategories(); // nest ING/BRD/… under "Card de credit"
 
       if (unsubRealtime) unsubRealtime();
       unsubRealtime = cloud.subscribe(profile.householdId, ({ table, type, obj }) => {
