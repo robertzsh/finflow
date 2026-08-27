@@ -103,13 +103,13 @@ export function SpendSaveBars({ data, height = 260 }: { data: { month: string; s
 }
 
 export function DonutChart({ data, height = 260, centerLabel, centerValue }:
-  { data: { name: string; value: number; color: string }[]; height?: number; centerLabel?: string; centerValue?: string }) {
+  { data: { name: string; value: number; color: string }[]; height?: number | string; centerLabel?: string; centerValue?: string }) {
   const currency = useCur();
   const [active, setActive] = useState<number | null>(null);
   const shown = active != null ? data[active] : null;
   const showCenter = shown || (centerLabel != null);
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="82%" paddingAngle={2} stroke="none"
@@ -128,11 +128,11 @@ export function DonutChart({ data, height = 260, centerLabel, centerValue }:
   );
 }
 
-export function ComparisonBars({ data }: { data: { month: string; income: number; expense: number }[] }) {
+export function ComparisonBars({ data, height = 260 }: { data: { month: string; income: number; expense: number }[]; height?: number | string }) {
   const currency = useCur();
   const c = useChartTheme();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }} barGap={4}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
@@ -145,11 +145,11 @@ export function ComparisonBars({ data }: { data: { month: string; income: number
   );
 }
 
-export function SavingsArea({ data }: { data: { month: string; savings: number }[] }) {
+export function SavingsArea({ data, height = 220 }: { data: { month: string; savings: number }[]; height?: number | string }) {
   const currency = useCur();
   const c = useChartTheme();
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
         <defs><linearGradient id="gSav" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.savings} stopOpacity={0.55} /><stop offset="100%" stopColor={c.savings} stopOpacity={0} /></linearGradient></defs>
         <CartesianGrid stroke={c.grid} vertical={false} />

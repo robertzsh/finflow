@@ -241,28 +241,28 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Charts row 2 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
-        <Card className="p-5" delay={0.1}>
+      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+        <Card className="p-5 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Income sources" hint="This month" />
-          <Donut data={bySource} height={200} centerLabel="Income" centerValue={formatMoney(incomeTotal, cur, { compact: incomeTotal > 9999 })} />
+          <div className="flex-1 min-h-[180px]"><Donut data={bySource} height="100%" centerLabel="Income" centerValue={formatMoney(incomeTotal, cur, { compact: incomeTotal > 9999 })} /></div>
           <div className="mt-3"><LegendList data={bySource} total={incomeTotal} currency={cur} /></div>
         </Card>
-        <Card className="p-5" delay={0.15}>
+        <Card className="p-5 flex flex-col" delay={0.15}>
           <SectionCardHeader title="Monthly comparison" hint="Income vs expense" />
-          <ComparisonBars data={data.cf} />
+          <div className="flex-1 min-h-[240px] mt-1"><ComparisonBars data={data.cf} height="100%" /></div>
         </Card>
-        <Card className="p-5" delay={0.2}>
+        <Card className="p-5 flex flex-col" delay={0.2}>
           <SectionCardHeader title="Savings trend" hint="Net saved per month" />
-          <SavingsArea data={data.sav} />
+          <div className="flex-1 min-h-[200px] mt-1"><SavingsArea data={data.sav} height="100%" /></div>
         </Card>
       </div>
 
       {/* Investments + insights */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
-        <Card className="p-5" delay={0.1}>
+      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+        <Card className="p-5 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Investment allocation"
             hint={`${formatMoney(data.invTotals.value, cur)} · ${data.invTotals.gain >= 0 ? '+' : ''}${data.invTotals.gainPct.toFixed(1)}%`} />
-          <Donut data={data.alloc} height={200} centerLabel="Invested" centerValue={formatMoney(data.invTotals.value, cur, { compact: data.invTotals.value > 9999 })} />
+          <div className="flex-1 min-h-[180px]"><Donut data={data.alloc} height="100%" centerLabel="Invested" centerValue={formatMoney(data.invTotals.value, cur, { compact: data.invTotals.value > 9999 })} /></div>
           <div className="mt-3"><LegendList data={data.alloc} total={allocTotal} currency={cur} /></div>
         </Card>
 

@@ -85,7 +85,7 @@ export function MobileNav() {
         )}
       </AnimatePresence>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 chrome-glass border-t border-white/10 flex justify-around px-1 py-1.5 pb-[calc(env(safe-area-inset-bottom)+6px)]">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 chrome-glass border-t border-white/10 flex justify-around px-1 pt-1.5 pb-[max(0.5rem,min(env(safe-area-inset-bottom),0.9rem))]">
         {MOBILE_MAIN.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setMoreOpen(false)}
             className={({ isActive }) => cx('flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px]', isActive ? 'text-white' : 'text-white/50')}>
