@@ -102,14 +102,14 @@ export function SpendSaveBars({ data }: { data: { month: string; spending: numbe
 }
 
 export function DonutChart({ data, height = 260 }: { data: { name: string; value: number; color: string }[]; height?: number }) {
-  const currency = useCur();
+  // No tooltip: the ring has a value label in its centre + a full legend below,
+  // and a hover tooltip would overlap the centre label on the donut.
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="82%" paddingAngle={2} stroke="none">
           {data.map((d, i) => <Cell key={i} fill={d.color} />)}
         </Pie>
-        <Tooltip content={<TT currency={currency} />} />
       </PieChart>
     </ResponsiveContainer>
   );

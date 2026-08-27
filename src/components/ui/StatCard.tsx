@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import * as Icons from 'lucide-react';
 import { Card } from './Card';
-import { cx } from '@/lib/format';
+import { cx, accentHex } from '@/lib/format';
+import { useStore } from '@/store/useStore';
 
 interface Props {
   label: string;
@@ -13,13 +14,10 @@ interface Props {
   delay?: number;
 }
 
-const ACCENT: Record<Props['accent'], string> = {
-  income: '#10b981', expense: '#ef4444', savings: '#3b82f6', invest: '#eab308', goal: '#a855f7',
-};
-
 export function StatCard({ label, value, icon, accent, delta, deltaUp, delay = 0 }: Props) {
+  const theme = useStore((s) => s.settings.theme);
   const Icon = (Icons[icon] ?? Icons.Circle) as React.ComponentType<{ size?: number; color?: string }>;
-  const color = ACCENT[accent];
+  const color = accentHex(accent, theme);
   return (
     <Card hover delay={delay} className="p-4 sm:p-5 relative overflow-hidden">
       <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-30" style={{ background: color }} />

@@ -16,7 +16,7 @@ import {
   investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, accentHex } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
 const REF = new Date();
@@ -297,10 +297,10 @@ function PayerChips({ payers, members, memberIds }: { payers?: Set<string>; memb
   );
 }
 
-const TONE: Record<string, string> = { income: '#10b981', expense: '#ef4444', savings: '#3b82f6', invest: '#eab308', goal: '#a855f7', neutral: '#94a3b8' };
 function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]; i: number }) {
+  const theme = useStore((s) => s.settings.theme);
   const Icon = (Icons as any)[ins.icon] ?? Icons.Sparkles;
-  const color = TONE[ins.tone];
+  const color = accentHex(ins.tone, theme);
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
       className="glass-hover rounded-xl border border-white/10 p-3.5 flex items-start gap-3">

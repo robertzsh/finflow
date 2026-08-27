@@ -243,12 +243,12 @@ html.pink .bg-goal\/15, html.pink .bg-goal\/10 { background-color: rgba(219,39,1
 
 /* Increase / decrease in a girly palette — mint-teal (up) and coral (down)
    instead of green/red, so money movements feel soft rather than alarming. */
-html.pink .text-income { color: #0d9488 !important; }   /* mint-teal — increase / money in */
-html.pink .text-expense { color: #fb7185 !important; }  /* coral — decrease / money out */
-html.pink .bg-income\/15, html.pink .bg-income\/10 { background-color: rgba(13,148,136,0.14) !important; }
-html.pink .bg-expense\/15, html.pink .bg-expense\/10 { background-color: rgba(251,113,133,0.14) !important; }
-html.pink .border-income\/30 { border-color: rgba(13,148,136,0.35) !important; }
-html.pink .border-expense\/30 { border-color: rgba(251,113,133,0.35) !important; }
+html.pink .text-income { color: #0891b2 !important; }   /* aqua — increase / money in */
+html.pink .text-expense { color: #f43f5e !important; }  /* rose — decrease / money out */
+html.pink .bg-income\/15, html.pink .bg-income\/10 { background-color: rgba(6,182,212,0.14) !important; }
+html.pink .bg-expense\/15, html.pink .bg-expense\/10 { background-color: rgba(244,63,94,0.14) !important; }
+html.pink .border-income\/30 { border-color: rgba(6,182,212,0.35) !important; }
+html.pink .border-expense\/30 { border-color: rgba(244,63,94,0.35) !important; }
 
 /* Pink focus, selection, scrollbar, inputs. */
 html.pink :focus-visible { outline-color: #ec4899; }

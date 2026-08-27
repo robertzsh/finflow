@@ -43,6 +43,21 @@ export function parseAmount(input: string | number | undefined | null): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Semantic accent colours as inline hex, theme-aware. In the pink theme green/red/blue
+ *  become mint-teal / coral / berry so "plus and minus" feel soft, not alarming. */
+export function accentHex(accent: string, theme: string): string {
+  const pink = theme === 'pink';
+  const map: Record<string, string> = {
+    income: pink ? '#0891b2' : '#10b981',
+    expense: pink ? '#f43f5e' : '#ef4444',
+    savings: pink ? '#db2777' : '#3b82f6',
+    invest: pink ? '#f59e0b' : '#eab308',
+    goal: pink ? '#db2777' : '#a855f7',
+    neutral: '#94a3b8',
+  };
+  return map[accent] ?? map.neutral;
+}
+
 export function formatPct(n: number, digits = 0) {
   return `${n >= 0 ? '' : ''}${n.toFixed(digits)}%`;
 }
