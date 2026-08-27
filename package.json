@@ -3,13 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "FinFlow \u2014 a premium single-user personal finance app",
+  "description": "FinFlow — a premium single-user personal finance app",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node -e \"require('fs').appendFileSync('dist/sw.js','\\n/* build '+Date.now()+' */\\n')\"",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -29,6 +32,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

@@ -133,7 +133,7 @@ export default function Settings() {
                 <option value={30}>30 minutes</option><option value={60}>1 hour</option>
               </Select>
             </div>
-            <p className="text-xs text-white/40 flex items-center gap-1.5"><Shield size={12} /> All data is stored locally & encrypted in your browser (IndexedDB).</p>
+            <p className="text-xs text-white/40 flex items-center gap-1.5"><Shield size={12} /> Stored in your browser (IndexedDB) and, when signed in, synced to your private account.</p>
           </div>
         </Card>
 
