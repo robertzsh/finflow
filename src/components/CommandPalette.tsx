@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, LayoutDashboard, ArrowLeftRight, Wallet, Target, LineChart, CalendarDays, FileBarChart, Settings } from 'lucide-react';
+import { Search, Plus, LayoutDashboard, ArrowLeftRight, Target, LineChart, CalendarDays, FileBarChart, Settings } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatMoney } from '@/lib/format';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
@@ -9,7 +9,6 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 const PAGES = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard },
   { label: 'Transactions', to: '/transactions', icon: ArrowLeftRight },
-  { label: 'Budgets', to: '/budgets', icon: Wallet },
   { label: 'Goals', to: '/goals', icon: Target },
   { label: 'Investments', to: '/investments', icon: LineChart },
   { label: 'Calendar', to: '/calendar', icon: CalendarDays },

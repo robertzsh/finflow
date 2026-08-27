@@ -18,7 +18,6 @@ import { currencySymbol } from '@/lib/format';
 
 import Dashboard from '@/features/dashboard/Dashboard';
 import Transactions from '@/features/transactions/Transactions';
-import Budgets from '@/features/budgets/Budgets';
 import Goals from '@/features/goals/Goals';
 import Investments from '@/features/investments/Investments';
 import Calendar from '@/features/calendar/Calendar';
@@ -79,7 +78,6 @@ export default function App() {
           <Routes key={privacy ? 'priv' : 'norm'}>
             <Route path="/" element={<Dashboard onQuickAdd={() => setQuickAdd(true)} />} />
             <Route path="/transactions" element={<Transactions />} />
-            <Route path="/budgets" element={<Budgets />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/investments" element={<Investments />} />
             <Route path="/calendar" element={<Calendar />} />

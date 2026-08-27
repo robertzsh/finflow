@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { Moon, Sun, Shield, Download, Upload, Database, Trash2, Plus, Fingerprint, Lock, Users, LogOut, Copy, Check, UserPlus, RefreshCw, Bell, Heart } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { pushSupported, isIos, isStandalone, localTz, enablePush, disablePush, setReminderTimes, reminderState } from '@/lib/push';
@@ -8,9 +8,11 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Label } from '@/components/ui/Field';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { ProgressBar } from '@/components/ui/Progress';
 import { Modal } from '@/components/ui/Modal';
 import { exportJSON, parseBankCSV } from '@/lib/export';
-import { currencySymbol, parseAmount } from '@/lib/format';
+import { spendingByCategory } from '@/lib/finance';
+import { currencySymbol, parseAmount, formatMoney } from '@/lib/format';
 import type { AppData, CurrencyCode, Category } from '@/types';
 
 export default function Settings() {
@@ -49,6 +51,7 @@ export default function Settings() {
 
       {store.cloud && store.authed && <HouseholdCard flash={flash} />}
       {store.cloud && store.authed && <RemindersCard />}
+      <BudgetsCard />
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* Preferences */}
@@ -182,6 +185,48 @@ export default function Settings() {
       <CategoryModal open={catOpen} onClose={() => setCatOpen(false)} onSave={(c) => { addCategory(c); setCatOpen(false); }} />
       <CategoryModal open={!!editCat} existing={editCat ?? undefined} onClose={() => setEditCat(null)} onSave={(c) => { if (editCat) updateCategory(editCat.id, c); setEditCat(null); }} />
     </Page>
+  );
+}
+
+function BudgetsCard() {
+  const { budgets, transactions, categories, settings, setBudget, removeBudget, cloud, authed, members } = useStore();
+  const cur = settings.currency;
+  const family = cloud && authed && members.length > 1;
+  const spent = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of spendingByCategory(transactions, categories, new Date())) m.set(c.id, c.value);
+    return m;
+  }, [transactions, categories]);
+  const cats = categories.filter((c) => c.kind === 'expense' && !c.parent);
+  const byCat = new Map(budgets.map((b) => [b.categoryId, b] as const));
+  return (
+    <Card className="p-5 mb-4">
+      <SectionCardHeader title="Budgets" hint={`Monthly limit per category · ${family ? 'shared with your family' : 'just for you'}`} />
+      <div className="space-y-3 max-h-[420px] overflow-y-auto no-scrollbar pr-1">
+        {cats.map((c) => {
+          const b = byCat.get(c.id);
+          const limit = b?.amount ?? 0;
+          const used = spent.get(c.id) ?? 0;
+          const pct = limit > 0 ? (used / limit) * 100 : 0;
+          const over = limit > 0 && used > limit;
+          return (
+            <div key={c.id} className="flex items-center gap-3">
+              <CategoryIcon icon={c.icon ?? 'Circle'} color={c.color} size={18} emoji={c.emoji} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm truncate">{c.name}</span>
+                  <span className={`text-[11px] ${over ? 'text-expense' : 'text-white/40'}`}>{formatMoney(used, cur)}{limit > 0 ? ` / ${formatMoney(limit, cur)}` : ''}</span>
+                </div>
+                {limit > 0 && <div className="mt-1"><ProgressBar value={pct} color={c.color} danger={over} /></div>}
+              </div>
+              <Input type="text" inputMode="decimal" key={limit} defaultValue={limit || ''} placeholder="Set" className="!w-24 !py-1.5 text-right"
+                onBlur={(e) => { const v = parseAmount(e.target.value) || 0; if (v > 0) setBudget(c.id, v); else if (b) removeBudget(b.id); }} />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-white/40 mt-3">Type a monthly limit for any category; clear it to remove. Progress tracks {family ? "the whole family's" : 'your'} spending this month.</p>
+    </Card>
   );
 }
 

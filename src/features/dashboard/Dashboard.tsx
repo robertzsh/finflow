@@ -206,20 +206,14 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       )}
 
       {/* Charts row 1 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
         <Card className="p-5 lg:col-span-2" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
           <SpendSaveBars data={data.spendSave} />
         </Card>
         <Card className="p-5" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of your balance · this month" />
-          <div className="relative">
-            <DonutChart data={spendDonut} />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-white/40">Balance</span>
-              <span className="font-bold">{formatMoney(data.balance, cur, { compact: data.balance > 9999 })}</span>
-            </div>
-          </div>
+          <DonutChart data={spendDonut} centerLabel="Balance" centerValue={formatMoney(data.balance, cur, { compact: data.balance > 9999 })} />
           <div className="mt-3 space-y-1.5">
             {data.byCat.slice(0, 6).map((c) => {
               const cat = categories.find((x) => x.id === c.id);
@@ -247,10 +241,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Charts row 2 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
         <Card className="p-5" delay={0.1}>
           <SectionCardHeader title="Income sources" hint="This month" />
-          <Donut data={bySource} height={200} />
+          <Donut data={bySource} height={200} centerLabel="Income" centerValue={formatMoney(incomeTotal, cur, { compact: incomeTotal > 9999 })} />
           <div className="mt-3"><LegendList data={bySource} total={incomeTotal} currency={cur} /></div>
         </Card>
         <Card className="p-5" delay={0.15}>
@@ -264,11 +258,11 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Investments + insights */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
         <Card className="p-5" delay={0.1}>
           <SectionCardHeader title="Investment allocation"
             hint={`${formatMoney(data.invTotals.value, cur)} · ${data.invTotals.gain >= 0 ? '+' : ''}${data.invTotals.gainPct.toFixed(1)}%`} />
-          <Donut data={data.alloc} height={200} />
+          <Donut data={data.alloc} height={200} centerLabel="Invested" centerValue={formatMoney(data.invTotals.value, cur, { compact: data.invTotals.value > 9999 })} />
           <div className="mt-3"><LegendList data={data.alloc} total={allocTotal} currency={cur} /></div>
         </Card>
 

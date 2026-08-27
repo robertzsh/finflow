@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, Legend,
@@ -101,17 +102,29 @@ export function SpendSaveBars({ data }: { data: { month: string; spending: numbe
   );
 }
 
-export function DonutChart({ data, height = 260 }: { data: { name: string; value: number; color: string }[]; height?: number }) {
-  // No tooltip: the ring has a value label in its centre + a full legend below,
-  // and a hover tooltip would overlap the centre label on the donut.
+export function DonutChart({ data, height = 260, centerLabel, centerValue }:
+  { data: { name: string; value: number; color: string }[]; height?: number; centerLabel?: string; centerValue?: string }) {
+  const currency = useCur();
+  const [active, setActive] = useState<number | null>(null);
+  const shown = active != null ? data[active] : null;
+  const showCenter = shown || (centerLabel != null);
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="82%" paddingAngle={2} stroke="none">
-          {data.map((d, i) => <Cell key={i} fill={d.color} />)}
-        </Pie>
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="relative">
+      <ResponsiveContainer width="100%" height={height}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="82%" paddingAngle={2} stroke="none"
+            onMouseEnter={(_, i) => setActive(i)} onMouseLeave={() => setActive(null)}>
+            {data.map((d, i) => <Cell key={i} fill={d.color} opacity={active == null || active === i ? 1 : 0.4} style={{ transition: 'opacity .15s' }} />)}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      {showCenter && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center">
+          <span className="text-xs text-white/50 truncate max-w-full">{shown ? shown.name : centerLabel}</span>
+          <span className="font-bold truncate max-w-full">{shown ? formatMoney(shown.value, currency, { compact: shown.value > 9999 }) : centerValue}</span>
+        </div>
+      )}
+    </div>
   );
 }
 

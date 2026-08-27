@@ -93,7 +93,7 @@ export default function Reports() {
 
       {(report === 'monthly' || report === 'category') && (
         <div className="grid lg:grid-cols-2 gap-4">
-          <Card className="p-5"><SectionCardHeader title="Spending by category" /><DonutChart data={byCat.slice(0, 8)} /></Card>
+          <Card className="p-5"><SectionCardHeader title="Spending by category" /><DonutChart data={byCat.slice(0, 8)} centerLabel="Spent" centerValue={formatMoney(byCat.reduce((a, c) => a + c.value, 0), cur, { compact: true })} /></Card>
           <Card className="p-5">
             <SectionCardHeader title="Category breakdown" />
             <div className="space-y-2 max-h-[280px] overflow-y-auto no-scrollbar">
