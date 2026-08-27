@@ -9,8 +9,10 @@
 
 html, body, #root { height: 100%; }
 
-/* Never allow the page itself to scroll sideways (tables/charts scroll inside their own box). */
-html, body { overflow-x: hidden; max-width: 100%; }
+/* Never allow the page itself to scroll sideways (tables/charts scroll inside their own box).
+   Use `clip`, not `hidden`: `overflow-x: hidden` on html/body breaks position:fixed on iOS
+   WebKit (the bottom nav gets pinned to the page instead of the screen, floating it up). */
+html, body { overflow-x: clip; max-width: 100%; }
 #root { width: 100%; }
 * { min-width: 0; } /* let flex/grid children shrink instead of overflowing */
 
