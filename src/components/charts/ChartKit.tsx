@@ -84,11 +84,11 @@ export function BalanceLine({ data }: { data: { month: string; balance: number }
   );
 }
 
-export function SpendSaveBars({ data }: { data: { month: string; spending: number; savings: number }[] }) {
+export function SpendSaveBars({ data, height = 260 }: { data: { month: string; spending: number; savings: number }[]; height?: number | string }) {
   const currency = useCur();
   const c = useChartTheme();
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }} barGap={3}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />

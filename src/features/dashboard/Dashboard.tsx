@@ -206,10 +206,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       )}
 
       {/* Charts row 1 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4 items-start">
-        <Card className="p-5 lg:col-span-2" delay={0.1}>
+      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+        <Card className="p-5 lg:col-span-2 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
-          <SpendSaveBars data={data.spendSave} />
+          <div className="flex-1 min-h-[260px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
         <Card className="p-5" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of your balance · this month" />
