@@ -11,26 +11,10 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   build: {
-    // Chunks below are intentionally vendor-sized; gzip transfer is what matters
-    // (each is well under 250 KB gzipped). Raise the advisory raw-size warning.
-    chunkSizeWarningLimit: 800,
-    rollupOptions: {
-      output: {
-        // Split big vendors into their own cacheable chunks. NOTE: xlsx/jspdf/
-        // html2canvas/dompurify are intentionally left out so they stay as the
-        // lazy async chunks (loaded only when the user exports).
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return;
-          if (/xlsx|jspdf|html2canvas|dompurify|purify/.test(id)) return; // keep lazy
-          if (/recharts|d3-|victory|internmap|delaunator|robust-predicates/.test(id)) return 'charts';
-          if (/framer-motion|popmotion|@motionone|style-value-types|tslib/.test(id)) return 'motion';
-          if (/@supabase|@supabase\/.*|@react-native|whatwg-url|websocket/.test(id)) return 'supabase';
-          if (/react-router|react-dom|[/\\]react[/\\]|[/\\]scheduler[/\\]/.test(id)) return 'react';
-          if (/date-fns/.test(id)) return 'date';
-          if (/lucide-react/.test(id)) return 'icons';
-          return 'vendor';
-        },
-      },
-    },
+    // Let Vite/Rollup chunk automatically. (A manual React/vendor split broke the
+    // load order — React came back undefined at runtime.) Route-level code-splitting
+    // and lazy PDF/Excel already do the heavy lifting; just quiet the advisory
+    // raw-size warning since gzip transfer is what actually matters.
+    chunkSizeWarningLimit: 900,
   },
 });
