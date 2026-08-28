@@ -156,6 +156,14 @@ export const useStore = create<StoreState>((set, get) => {
   };
   const findTx = (id: string) => get().transactions.find((t) => t.id === id);
 
+  // Apply the device theme on boot (localStorage wins over the loaded settings) and
+  // keep the store's settings.theme in sync so the Settings toggle highlights correctly.
+  const bootTheme = (fallback: 'dark' | 'light' | 'pink') => {
+    const t = deviceTheme(fallback);
+    applyTheme(t);
+    if (t !== get().settings.theme) set((s) => ({ settings: { ...s.settings, theme: t } }));
+  };
+
   const monthKeyNow = () => new Date().toISOString().slice(0, 7);
   const incomeOwner = () => (get().cloud && get().authed ? get().userId : 'local');
   const siId = (kind: string, owner: string, mk: string) => `si-${kind}-${owner}-${mk}`;
@@ -291,7 +299,7 @@ export const useStore = create<StoreState>((set, get) => {
           await saveData(seeded);
           set({ ...seeded, ready: true, authReady: true });
         }
-        applyTheme(get().settings.theme);
+        bootTheme(get().settings.theme);
         ensureStandingIncome();
         ensureBankSubcategories();
         return;
@@ -308,7 +316,7 @@ export const useStore = create<StoreState>((set, get) => {
         if (id) { if (!get().authed) get().loadFromCloud(id); }
         else { if (unsubRealtime) { unsubRealtime(); unsubRealtime = null; } set({ authed: false, authReady: true, ready: true }); }
       });
-      applyTheme(get().settings.theme);
+      bootTheme(get().settings.theme);
     },
 
     loadFromCloud: async (userId) => {
@@ -376,7 +384,7 @@ export const useStore = create<StoreState>((set, get) => {
         locked: !!settings.pinEnabled,
         authError: '',
       });
-      applyTheme(settings.theme);
+      bootTheme(settings.theme);
       ensureStandingIncome(); // auto-add this month's salary + vouchers if missing
       ensureBankSubcategories(); // nest ING/BRD/… under "Card de credit"
       void flushOutbox(); // retry any writes queued while offline in a previous session
@@ -649,10 +657,22 @@ export const useStore = create<StoreState>((set, get) => {
 });
 
 function applyTheme(theme: 'dark' | 'light' | 'pink') {
+  // Persist synchronously so the choice survives an immediate reload (IndexedDB
+  // writes are async) and there's no theme flash on next load.
+  try { localStorage.setItem('ff_theme', theme); } catch { /* ignore */ }
   const root = document.documentElement;
   // Pink is a light-based theme, so it reuses the light utility remaps and adds a pink skin on top.
   const isLightLike = theme === 'light' || theme === 'pink';
   root.classList.toggle('dark', theme === 'dark');
   root.classList.toggle('light', isLightLike);
   root.classList.toggle('pink', theme === 'pink');
+}
+
+// The device's current theme — localStorage (most recent, synchronous) wins over the fallback.
+function deviceTheme(fallback: 'dark' | 'light' | 'pink'): 'dark' | 'light' | 'pink' {
+  try {
+    const s = localStorage.getItem('ff_theme');
+    if (s === 'dark' || s === 'light' || s === 'pink') return s;
+  } catch { /* ignore */ }
+  return fallback;
 }
