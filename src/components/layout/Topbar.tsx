@@ -1,4 +1,4 @@
-import { Search, Plus, Bell, Command, Eye, EyeOff } from 'lucide-react';
+import { Search, Plus, Bell, Command, Eye, EyeOff, RefreshCw, CloudOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useStore } from '@/store/useStore';
@@ -7,7 +7,12 @@ export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSea
   const name = useStore((s) => s.settings.name);
   const privacy = useStore((s) => s.privacy);
   const togglePrivacy = useStore((s) => s.togglePrivacy);
+  const syncState = useStore((s) => s.syncState);
+  const pending = useStore((s) => s.outbox.length);
+  const retrySync = useStore((s) => s.retrySync);
+  const cloudOn = useStore((s) => s.cloud && s.authed);
   const nav = useNavigate();
+  const showSync = cloudOn && syncState !== 'idle';
   return (
     <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 pt-[max(0.4rem,env(safe-area-inset-top))] mb-1 chrome-glass border-b border-white/5 flex items-center gap-2.5 sm:gap-3">
       <div className="lg:hidden flex items-center gap-2 font-extrabold">
@@ -20,6 +25,14 @@ export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSea
       </button>
       <button onClick={onSearch} className="sm:hidden rounded-xl bg-white/5 border border-white/10 p-2"><Search size={18} /></button>
       <div className="flex-1 sm:hidden" />
+      {showSync && (
+        <button onClick={syncState === 'error' ? retrySync : undefined}
+          aria-label={syncState === 'error' ? 'Retry sync' : 'Syncing'}
+          title={syncState === 'error' ? `${pending} change(s) not synced — tap to retry` : `Syncing ${pending} change(s)…`}
+          className={`rounded-xl border p-2 transition ${syncState === 'error' ? 'bg-expense/15 border-expense/30 text-expense' : 'bg-white/5 border-white/10 text-white/50'}`}>
+          {syncState === 'error' ? <CloudOff size={18} /> : <RefreshCw size={18} className="animate-spin" />}
+        </button>
+      )}
       <button onClick={togglePrivacy} aria-label={privacy ? 'Show amounts' : 'Hide amounts'} title={privacy ? 'Show amounts' : 'Hide amounts (presentation mode)'}
         className={`rounded-xl border p-2 hover:bg-white/10 transition ${privacy ? 'bg-amber-500/15 border-amber-400/30 text-amber-300' : 'bg-white/5 border-white/10 text-white/60'}`}>
         {privacy ? <EyeOff size={18} /> : <Eye size={18} />}

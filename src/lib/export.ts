@@ -1,8 +1,9 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Transaction, Category, CurrencyCode } from '@/types';
 import { formatMoney } from './format';
+
+// Heavy libraries (xlsx ~ hundreds of KB, jsPDF) are dynamically imported inside the
+// functions that need them, so they're only fetched when the user actually exports —
+// they no longer weigh down the initial app bundle.
 
 function rows(txs: Transaction[], cats: Category[]) {
   return txs.map((t) => ({
@@ -24,14 +25,17 @@ export function exportCSV(txs: Transaction[], cats: Category[], name = 'transact
   download(new Blob([csv], { type: 'text/csv' }), `${name}.csv`);
 }
 
-export function exportXLSX(txs: Transaction[], cats: Category[], name = 'transactions') {
+export async function exportXLSX(txs: Transaction[], cats: Category[], name = 'transactions') {
+  const XLSX = await import('xlsx');
   const ws = XLSX.utils.json_to_sheet(rows(txs, cats));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
   XLSX.writeFile(wb, `${name}.xlsx`);
 }
 
-export function exportPDF(txs: Transaction[], cats: Category[], title = 'Financial Report', subtitle = '') {
+export async function exportPDF(txs: Transaction[], cats: Category[], title = 'Financial Report', subtitle = '') {
+  const jsPDF = (await import('jspdf')).default;
+  const autoTable = (await import('jspdf-autotable')).default;
   const doc = new jsPDF();
   doc.setFontSize(18); doc.text(title, 14, 18);
   if (subtitle) { doc.setFontSize(10); doc.setTextColor(120); doc.text(subtitle, 14, 25); }
@@ -57,7 +61,9 @@ export interface MonthlyReport {
 }
 
 /** A full end-of-month PDF: headline metrics, top categories, who-spent-what, and every transaction. */
-export function exportMonthlyReportPDF(r: MonthlyReport) {
+export async function exportMonthlyReportPDF(r: MonthlyReport) {
+  const jsPDF = (await import('jspdf')).default;
+  const autoTable = (await import('jspdf-autotable')).default;
   const doc = new jsPDF();
   const W = doc.internal.pageSize.getWidth();
 

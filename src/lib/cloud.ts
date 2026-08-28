@@ -165,21 +165,32 @@ export async function fetchTable(table: Table, householdId: string) {
   return (data ?? []).map(map as any);
 }
 
-export async function upsert(table: Table, obj: any, householdId: string, uid: string) {
-  const row = TO_ROW[table](obj, householdId, uid);
-  const { error } = await supabase!.from(table).upsert(row);
-  if (error) console.error(`upsert ${table}`, error);
+// These return true on success / false on failure so the store's offline outbox
+// can retry failed or offline writes instead of silently dropping them.
+export async function upsert(table: Table, obj: any, householdId: string, uid: string): Promise<boolean> {
+  try {
+    const row = TO_ROW[table](obj, householdId, uid);
+    const { error } = await supabase!.from(table).upsert(row);
+    if (error) { console.warn(`upsert ${table}`, error.message); return false; }
+    return true;
+  } catch { return false; }
 }
-export async function upsertMany(table: Table, objs: any[], householdId: string, uid: string) {
-  if (!objs.length) return;
-  const rows = objs.map((o) => TO_ROW[table](o, householdId, uid));
-  const { error } = await supabase!.from(table).upsert(rows);
-  if (error) console.error(`upsertMany ${table}`, error);
+export async function upsertMany(table: Table, objs: any[], householdId: string, uid: string): Promise<boolean> {
+  if (!objs.length) return true;
+  try {
+    const rows = objs.map((o) => TO_ROW[table](o, householdId, uid));
+    const { error } = await supabase!.from(table).upsert(rows);
+    if (error) { console.warn(`upsertMany ${table}`, error.message); return false; }
+    return true;
+  } catch { return false; }
 }
-export async function remove(table: Table, ids: string[]) {
-  if (!ids.length) return;
-  const { error } = await supabase!.from(table).delete().in('id', ids);
-  if (error) console.error(`delete ${table}`, error);
+export async function remove(table: Table, ids: string[]): Promise<boolean> {
+  if (!ids.length) return true;
+  try {
+    const { error } = await supabase!.from(table).delete().in('id', ids);
+    if (error) { console.warn(`delete ${table}`, error.message); return false; }
+    return true;
+  } catch { return false; }
 }
 
 // Seed a brand-new household with the default categories so budgets/labels work.

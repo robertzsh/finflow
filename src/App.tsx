@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
@@ -16,13 +16,19 @@ import { useIdleLock } from '@/hooks/useIdleLock';
 import { setInsightCurrency } from '@/lib/insights';
 import { currencySymbol } from '@/lib/format';
 
-import Dashboard from '@/features/dashboard/Dashboard';
-import Transactions from '@/features/transactions/Transactions';
-import Goals from '@/features/goals/Goals';
-import Investments from '@/features/investments/Investments';
-import Calendar from '@/features/calendar/Calendar';
-import Reports from '@/features/reports/Reports';
-import SettingsPage from '@/features/settings/Settings';
+// Route pages are lazy-loaded so each one is its own chunk — the initial load only
+// pulls the dashboard, not every screen (and their charts) up front.
+const Dashboard = lazy(() => import('@/features/dashboard/Dashboard'));
+const Transactions = lazy(() => import('@/features/transactions/Transactions'));
+const Goals = lazy(() => import('@/features/goals/Goals'));
+const Investments = lazy(() => import('@/features/investments/Investments'));
+const Calendar = lazy(() => import('@/features/calendar/Calendar'));
+const Reports = lazy(() => import('@/features/reports/Reports'));
+const SettingsPage = lazy(() => import('@/features/settings/Settings'));
+
+function PageLoader() {
+  return <div className="flex items-center justify-center py-24 text-white/40 text-sm">Loading…</div>;
+}
 
 export default function App() {
   const { ready, init, locked, settings, cloud, authed, authReady } = useStore();
@@ -75,6 +81,7 @@ export default function App() {
       <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-8">
         <Topbar onQuickAdd={() => setQuickAdd(true)} onSearch={() => setPaletteOpen(true)} />
         <AnimatePresence mode="wait">
+          <Suspense fallback={<PageLoader />}>
           <Routes key={privacy ? 'priv' : 'norm'}>
             <Route path="/" element={<Dashboard onQuickAdd={() => setQuickAdd(true)} />} />
             <Route path="/transactions" element={<Transactions />} />
@@ -85,6 +92,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </AnimatePresence>
       </main>
       <MobileNav />

@@ -32,6 +32,9 @@ interface StoreState extends AppData {
   locked: boolean;
   privacy: boolean;
   togglePrivacy: () => void;
+  outbox: OutboxOp[];
+  syncState: SyncState;
+  retrySync: () => void;
 
   // cloud / multi-user
   cloud: boolean;
@@ -91,20 +94,65 @@ interface StoreState extends AppData {
 }
 
 let unsubRealtime: (() => void) | null = null;
+let flushing = false;
+
+export type OutboxOp = {
+  id: string;
+  kind: 'upsert' | 'upsertMany' | 'remove';
+  table: cloud.Table;
+  obj?: any;
+  objs?: any[];
+  ids?: string[];
+};
+export type SyncState = 'idle' | 'pending' | 'error';
 
 export const useStore = create<StoreState>((set, get) => {
-  // fire-and-forget helpers that push a local change up to the cloud
+  // --- Offline-safe write outbox -------------------------------------------
+  // Every cloud write goes through a queue. If it fails (offline / server error)
+  // it stays queued and is retried on reconnect, so changes are never lost and
+  // both devices converge. syncState drives the little indicator in the top bar.
+  const OUTBOX_KEY = 'ff_outbox';
+  const persistOutbox = () => { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(get().outbox)); } catch { /* ignore */ } };
+  const enqueue = (op: OutboxOp) => {
+    set((s) => ({ outbox: [...s.outbox, op], syncState: 'pending' }));
+    persistOutbox();
+    void flushOutbox();
+  };
   const push = (table: cloud.Table, obj: any) => {
     const s = get();
-    if (s.cloud && s.authed && s.householdId && s.userId) cloud.upsert(table, obj, s.householdId, s.userId);
+    if (s.cloud && s.authed && s.householdId && s.userId) enqueue({ id: uid('ob'), kind: 'upsert', table, obj });
   };
   const pushMany = (table: cloud.Table, objs: any[]) => {
     const s = get();
-    if (s.cloud && s.authed && s.householdId && s.userId) cloud.upsertMany(table, objs, s.householdId, s.userId);
+    if (s.cloud && s.authed && s.householdId && s.userId && objs.length) enqueue({ id: uid('ob'), kind: 'upsertMany', table, objs });
   };
   const del = (table: cloud.Table, ids: string[]) => {
     const s = get();
-    if (s.cloud && s.authed) cloud.remove(table, ids);
+    if (s.cloud && s.authed && s.householdId && s.userId && ids.length) enqueue({ id: uid('ob'), kind: 'remove', table, ids });
+  };
+  const flushOutbox = async () => {
+    const s = get();
+    if (!s.cloud || !s.authed || !s.householdId || !s.userId) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) { set((st) => ({ syncState: st.outbox.length ? 'pending' : 'idle' })); return; }
+    if (flushing) return;
+    flushing = true;
+    try {
+      while (get().outbox.length) {
+        const op = get().outbox[0];
+        let ok = false;
+        try {
+          if (op.kind === 'upsert') ok = await cloud.upsert(op.table, op.obj, s.householdId, s.userId);
+          else if (op.kind === 'upsertMany') ok = await cloud.upsertMany(op.table, op.objs ?? [], s.householdId, s.userId);
+          else if (op.kind === 'remove') ok = await cloud.remove(op.table, op.ids ?? []);
+        } catch { ok = false; }
+        if (!ok) { set({ syncState: 'error' }); break; }
+        set((st) => ({ outbox: st.outbox.slice(1) }));
+        persistOutbox();
+      }
+      if (get().outbox.length === 0) set({ syncState: 'idle' });
+    } finally {
+      flushing = false;
+    }
   };
   const findTx = (id: string) => get().transactions.find((t) => t.id === id);
 
@@ -215,6 +263,8 @@ export const useStore = create<StoreState>((set, get) => {
     ready: false,
     locked: false,
     privacy: (() => { try { return localStorage.getItem('ff_privacy') === '1'; } catch { return false; } })(),
+    outbox: (() => { try { return JSON.parse(localStorage.getItem('ff_outbox') || '[]'); } catch { return []; } })(),
+    syncState: 'idle',
     cloud: CLOUD_ENABLED,
     authReady: false,
     authed: false,
@@ -226,6 +276,11 @@ export const useStore = create<StoreState>((set, get) => {
     authError: '',
 
     init: async () => {
+      // Retry queued writes whenever we come back online; reflect offline in the badge.
+      if (typeof window !== 'undefined') {
+        window.addEventListener('online', () => { void flushOutbox(); });
+        window.addEventListener('offline', () => set((st) => ({ syncState: st.outbox.length ? 'pending' : 'idle' })));
+      }
       if (!CLOUD_ENABLED) {
         const saved = await loadData();
         if (saved) {
@@ -324,6 +379,7 @@ export const useStore = create<StoreState>((set, get) => {
       applyTheme(settings.theme);
       ensureStandingIncome(); // auto-add this month's salary + vouchers if missing
       ensureBankSubcategories(); // nest ING/BRD/… under "Card de credit"
+      void flushOutbox(); // retry any writes queued while offline in a previous session
 
       if (unsubRealtime) unsubRealtime();
       unsubRealtime = cloud.subscribe(profile.householdId, ({ table, type, obj }) => {
@@ -549,6 +605,7 @@ export const useStore = create<StoreState>((set, get) => {
       return true;
     },
     togglePrivacy: () => set((s) => { const v = !s.privacy; setMoneyPrivacy(v); try { localStorage.setItem('ff_privacy', v ? '1' : '0'); } catch {} return { privacy: v }; }),
+    retrySync: () => { void flushOutbox(); },
     lock: () => set({ locked: true }),
     unlock: (pin) => {
       const s = get();

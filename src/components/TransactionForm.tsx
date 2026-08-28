@@ -23,6 +23,7 @@ const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit
 export function TransactionForm({ existing, onDone, defaultDate }: { existing?: Transaction; onDone: () => void; defaultDate?: string }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId } = useStore();
   const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const showPaidBy = cloud && authed && members.length > 1;
   const [paidBy, setPaidBy] = useState<string>(existing?.createdBy ?? userId ?? '');
 
@@ -48,11 +49,13 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
   const subCats = categories.filter((c) => c.parent === topId && c.kind === type);
 
   const onValid = (v: FormValues) => {
+    if (submitting) return; // guard against rapid double-submit → duplicate rows
+    setSubmitting(true);
     setFormError('');
     try {
       const amount = parseAmount(v.amount as unknown as string);
-      if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); return; }
-      if (!v.categoryId) { setFormError('Pick a category.'); return; }
+      if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
+      if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
       const cat = categories.find((c) => c.id === v.categoryId);
       const payload = {
         type: v.type, amount, categoryId: v.categoryId,
@@ -67,6 +70,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       onDone();
     } catch (e: any) {
       setFormError(e?.message ?? 'Could not save. Please try again.');
+      setSubmitting(false);
     }
   };
 
@@ -162,7 +166,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       )}
 
       <div className="flex gap-2 pt-1">
-        <Button type="submit" className="flex-1">{existing ? 'Save changes' : 'Add transaction'}</Button>
+        <Button type="submit" className="flex-1" disabled={submitting}>{existing ? 'Save changes' : 'Add transaction'}</Button>
         {existing && <Button type="button" variant="danger" aria-label="Delete transaction" onClick={() => { deleteTransaction(existing.id); onDone(); }}><Trash2 size={16} /></Button>}
       </div>
     </form>

@@ -4,21 +4,28 @@ import { cx } from '@/lib/format';
 
 const base = 'w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-sm outline-none focus:border-blue-400/50 focus:bg-white/[0.07] transition placeholder:text-white/30';
 
-export function Label({ children }: { children: ReactNode }) {
-  return <label className="block text-xs font-medium text-white/60 mb-1.5">{children}</label>;
+export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
+  return <label htmlFor={htmlFor} className="block text-xs font-medium text-white/60 mb-1.5">{children}</label>;
+}
+
+// Fallback accessible name: if the field has no explicit label association, use its
+// placeholder so screen readers still announce something (baseline a11y).
+function ariaFrom(rest: any): string | undefined {
+  if (rest['aria-label'] || rest['aria-labelledby'] || rest.id) return undefined;
+  return rest.placeholder ? String(rest.placeholder) : undefined;
 }
 
 // forwardRef is required so React Hook Form's register() ref attaches to the
 // real DOM node — otherwise field values are never captured on submit.
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
-    return <input ref={ref} {...rest} className={cx(base, className)} />;
+    return <input ref={ref} aria-label={ariaFrom(rest)} {...rest} className={cx(base, className)} />;
   },
 );
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
   function Textarea({ className, ...rest }, ref) {
-    return <textarea ref={ref} {...rest} className={cx(base, 'resize-none', className)} />;
+    return <textarea ref={ref} aria-label={ariaFrom(rest)} {...rest} className={cx(base, 'resize-none', className)} />;
   },
 );
 
