@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
@@ -9,6 +9,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
+  },
+  // Vitest = unit tests only (src/**/*.test.ts). The Playwright E2E specs live in
+  // tests/e2e/*.spec.ts and must NOT be picked up here (Playwright runs those).
+  test: {
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['tests/**', 'node_modules/**', 'dist/**'],
   },
   build: {
     // Let Vite/Rollup chunk automatically. (A manual React/vendor split broke the
