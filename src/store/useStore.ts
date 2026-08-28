@@ -98,11 +98,18 @@ let flushing = false;
 
 export type OutboxOp = {
   id: string;
-  kind: 'upsert' | 'upsertMany' | 'remove';
-  table: cloud.Table;
+  kind: 'upsert' | 'upsertMany' | 'remove' | 'opening' | 'income' | 'profileName' | 'household';
+  table?: cloud.Table;
   obj?: any;
   objs?: any[];
   ids?: string[];
+  uid?: string;
+  amount?: number;
+  salary?: number;
+  vouchers?: number;
+  name?: string;
+  householdId?: string;
+  patch?: { currency?: string; fxRates?: Record<string, number> };
 };
 export type SyncState = 'idle' | 'pending' | 'error';
 
@@ -141,9 +148,13 @@ export const useStore = create<StoreState>((set, get) => {
         const op = get().outbox[0];
         let ok = false;
         try {
-          if (op.kind === 'upsert') ok = await cloud.upsert(op.table, op.obj, s.householdId, s.userId);
-          else if (op.kind === 'upsertMany') ok = await cloud.upsertMany(op.table, op.objs ?? [], s.householdId, s.userId);
-          else if (op.kind === 'remove') ok = await cloud.remove(op.table, op.ids ?? []);
+          if (op.kind === 'upsert') ok = await cloud.upsert(op.table!, op.obj, s.householdId, s.userId);
+          else if (op.kind === 'upsertMany') ok = await cloud.upsertMany(op.table!, op.objs ?? [], s.householdId, s.userId);
+          else if (op.kind === 'remove') ok = await cloud.remove(op.table!, op.ids ?? []);
+          else if (op.kind === 'opening') ok = await cloud.setOpeningBalance(op.uid!, op.amount ?? 0);
+          else if (op.kind === 'income') ok = await cloud.setIncome(op.uid!, { salary: op.salary, vouchers: op.vouchers });
+          else if (op.kind === 'profileName') ok = await cloud.setProfileName(op.uid!, op.name ?? '');
+          else if (op.kind === 'household') ok = await cloud.setHouseholdSettings(op.householdId!, op.patch ?? {});
         } catch { ok = false; }
         if (!ok) { set({ syncState: 'error' }); break; }
         set((st) => ({ outbox: st.outbox.slice(1) }));
@@ -413,8 +424,9 @@ export const useStore = create<StoreState>((set, get) => {
     setMyOpeningBalance: async (amount) => {
       const s = get();
       if (s.cloud && s.authed && s.userId) {
-        await cloud.setOpeningBalance(s.userId, amount);
-        await get().refreshMembers();
+        const ok = await cloud.setOpeningBalance(s.userId, amount);
+        if (ok) await get().refreshMembers();
+        else enqueue({ id: uid('ob'), kind: 'opening', uid: s.userId, amount }); // offline → retry on reconnect
       } else {
         get().updateSettings({ openingBalance: amount });
       }
@@ -424,7 +436,11 @@ export const useStore = create<StoreState>((set, get) => {
       set((st) => ({ settings: { ...st.settings, salary, vouchers } }));
       get().persist();
       const s = get();
-      if (s.cloud && s.authed && s.userId) { await cloud.setIncome(s.userId, { salary, vouchers }); await get().refreshMembers(); }
+      if (s.cloud && s.authed && s.userId) {
+        const ok = await cloud.setIncome(s.userId, { salary, vouchers });
+        if (ok) await get().refreshMembers();
+        else enqueue({ id: uid('ob'), kind: 'income', uid: s.userId, salary, vouchers });
+      }
       applyIncomeToCurrentMonth(salary, vouchers);
     },
     ensureStandingIncome,
@@ -597,13 +613,15 @@ export const useStore = create<StoreState>((set, get) => {
       if (patch.theme) applyTheme(patch.theme);
       get().persist();
       const s = get();
-      if (patch.name && s.cloud && s.authed && s.userId) cloud.setProfileName(s.userId, patch.name);
+      if (patch.name && s.cloud && s.authed && s.userId) {
+        const u = s.userId, nm = patch.name;
+        cloud.setProfileName(u, nm).then((ok) => { if (!ok) enqueue({ id: uid('ob'), kind: 'profileName', uid: u, name: nm }); });
+      }
       // currency + fx rates are household-wide → persist to the cloud for both members
       if ((patch.currency || patch.fxRates) && s.cloud && s.authed && s.householdId) {
-        cloud.setHouseholdSettings(s.householdId, {
-          currency: patch.currency,
-          fxRates: patch.fxRates ? s.settings.fxRates : undefined,
-        });
+        const hh = s.householdId;
+        const hpatch = { currency: patch.currency, fxRates: patch.fxRates ? s.settings.fxRates : undefined };
+        cloud.setHouseholdSettings(hh, hpatch).then((ok) => { if (!ok) enqueue({ id: uid('ob'), kind: 'household', householdId: hh, patch: hpatch }); });
       }
     },
     refreshRates: async () => {

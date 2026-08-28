@@ -11,6 +11,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { ProgressBar } from '@/components/ui/Progress';
 import { Modal } from '@/components/ui/Modal';
 import { exportJSON, parseBankCSV } from '@/lib/export';
+import { parseBackup } from '@/lib/validate';
 import { spendingByCategory } from '@/lib/finance';
 import { currencySymbol, parseAmount, formatMoney } from '@/lib/format';
 import type { AppData, CurrencyCode, Category } from '@/types';
@@ -34,7 +35,14 @@ export default function Settings() {
   function onRestore(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { try { restore(JSON.parse(r.result as string)); flash('Data restored'); } catch { flash('Invalid backup file'); } };
+    r.onload = () => {
+      try {
+        const parsed = parseBackup(JSON.parse(r.result as string));
+        if (!parsed.success) { flash('That file isn’t a valid FinFlow backup'); return; }
+        restore(parsed.data as unknown as AppData);
+        flash('Data restored');
+      } catch { flash('Invalid backup file'); }
+    };
     r.readAsText(f);
   }
   function onCSV(e: React.ChangeEvent<HTMLInputElement>) {

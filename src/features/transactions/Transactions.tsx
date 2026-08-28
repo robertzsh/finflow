@@ -170,7 +170,9 @@ export default function Transactions() {
           </div>
           <div className="divide-y divide-white/5">
             {grouped.map(([date, items]) => (
-              <div key={date}>
+              // content-visibility skips rendering/layout for off-screen day groups —
+              // keeps a long history (hundreds/thousands of rows) fast to scroll.
+              <div key={date} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 320px' } as React.CSSProperties}>
                 <div className="px-4 py-2 text-xs font-medium text-white/40 bg-white/[0.02] sticky top-0">
                   {isSameDay(parseISO(date), new Date()) ? 'Today' : format(parseISO(date), 'EEEE, d MMM yyyy')}
                 </div>

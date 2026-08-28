@@ -100,14 +100,21 @@ export async function getProfile(uid: string) {
   if (error) throw error;
   return { name: data.name as string, householdId: data.household_id as string };
 }
-export async function setOpeningBalance(uid: string, amount: number) {
-  await supabase!.from('profiles').update({ opening_balance: amount }).eq('id', uid);
+export async function setOpeningBalance(uid: string, amount: number): Promise<boolean> {
+  try {
+    const { error } = await supabase!.from('profiles').update({ opening_balance: amount }).eq('id', uid);
+    return !error;
+  } catch { return false; }
 }
-export async function setIncome(uid: string, patch: { salary?: number; vouchers?: number }) {
+export async function setIncome(uid: string, patch: { salary?: number; vouchers?: number }): Promise<boolean> {
   const row: any = {};
   if (patch.salary !== undefined) row.salary = patch.salary;
   if (patch.vouchers !== undefined) row.vouchers = patch.vouchers;
-  if (Object.keys(row).length) await supabase!.from('profiles').update(row).eq('id', uid);
+  if (!Object.keys(row).length) return true;
+  try {
+    const { error } = await supabase!.from('profiles').update(row).eq('id', uid);
+    return !error;
+  } catch { return false; }
 }
 export async function getHousehold(householdId: string) {
   const { data, error } = await supabase!.from('households').select('name, invite_code, currency, fx_rates').eq('id', householdId).single();
@@ -119,11 +126,15 @@ export async function getHousehold(householdId: string) {
     fxRates: (data.fx_rates ?? null) as Record<string, number> | null,
   };
 }
-export async function setHouseholdSettings(householdId: string, patch: { currency?: string; fxRates?: Record<string, number> }) {
+export async function setHouseholdSettings(householdId: string, patch: { currency?: string; fxRates?: Record<string, number> }): Promise<boolean> {
   const row: any = {};
   if (patch.currency) row.currency = patch.currency;
   if (patch.fxRates) row.fx_rates = patch.fxRates;
-  if (Object.keys(row).length) await supabase!.from('households').update(row).eq('id', householdId);
+  if (!Object.keys(row).length) return true;
+  try {
+    const { error } = await supabase!.from('households').update(row).eq('id', householdId);
+    return !error;
+  } catch { return false; }
 }
 export async function getMembers(householdId: string): Promise<Member[]> {
   const { data, error } = await supabase!.from('profiles').select('id, name, opening_balance, salary, vouchers').eq('household_id', householdId);
@@ -135,8 +146,11 @@ export async function joinHousehold(code: string) {
   if (error) throw error;
   return data as string;
 }
-export async function setProfileName(uid: string, name: string) {
-  await supabase!.from('profiles').update({ name }).eq('id', uid);
+export async function setProfileName(uid: string, name: string): Promise<boolean> {
+  try {
+    const { error } = await supabase!.from('profiles').update({ name }).eq('id', uid);
+    return !error;
+  } catch { return false; }
 }
 
 // ---------------------------------------------------------------------------
