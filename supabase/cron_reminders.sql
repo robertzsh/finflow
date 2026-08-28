@@ -21,7 +21,7 @@ select cron.schedule(
     url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/send-reminders',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-cron-secret', 'RNESMnTxS_fyjY6e7LgyilnYEGnZ4Jb8'
+      'x-cron-secret', '<YOUR_CRON_SECRET>'
     ),
     body    := '{}'::jsonb
   );

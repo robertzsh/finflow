@@ -6,9 +6,16 @@ You only do this once. After that, you and Iulia just flip the toggle in the app
 
 Your pre-generated keys (already wired into the app + files):
 
-- **VAPID public key** (already committed in the app): `BEN9kgA8-NiPWYttBZnCLhPmtyOqa_QBiT_Yc87d7j_tQ5_O8jmlcLFY7OWCbtLKqSg7HKkYNZ73lOOJOBNWhkI`
-- **VAPID private key** (secret — set in step 3): `y6LEnC2N1fZEU-2bM5Ml-gvIin8eiCpfBjoK0XZGHU8`
-- **CRON_SECRET** (already in `cron_reminders.sql`): `RNESMnTxS_fyjY6e7LgyilnYEGnZ4Jb8`
+Generate your own keys — nothing key-related is committed:
+
+```bash
+npx web-push generate-vapid-keys   # → a public + private key
+```
+
+- **VAPID public key** → set as the GitHub Actions repo secret `VITE_VAPID_PUBLIC_KEY`
+  (and in local `.env` for dev). It's safe to expose. Without it, reminders are disabled.
+- **VAPID private key** → Supabase function secret only (step 3). Never commit it.
+- **CRON_SECRET** → any random string (`node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`); function secret + the cron SQL.
 
 ---
 
@@ -39,8 +46,8 @@ Supabase → **Edge Functions → send-reminders → Secrets** (or via CLI). Add
 | Name                 | Value                                        |
 | -------------------- | -------------------------------------------- |
 | `VAPID_PUBLIC_KEY`   | `BEN9kgA8-…OBNWhkI` (the public key above)    |
-| `VAPID_PRIVATE_KEY`  | `y6LEnC2N1fZEU-2bM5Ml-gvIin8eiCpfBjoK0XZGHU8` |
-| `CRON_SECRET`        | `RNESMnTxS_fyjY6e7LgyilnYEGnZ4Jb8`            |
+| `VAPID_PRIVATE_KEY`  | `<YOUR_VAPID_PRIVATE_KEY>` |
+| `CRON_SECRET`        | `<YOUR_CRON_SECRET>`            |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to the function
 automatically — you don't set those.
@@ -49,8 +56,8 @@ CLI equivalent:
 
 ```bash
 supabase secrets set VAPID_PUBLIC_KEY='BEN9kgA8-NiPWYttBZnCLhPmtyOqa_QBiT_Yc87d7j_tQ5_O8jmlcLFY7OWCbtLKqSg7HKkYNZ73lOOJOBNWhkI'
-supabase secrets set VAPID_PRIVATE_KEY='y6LEnC2N1fZEU-2bM5Ml-gvIin8eiCpfBjoK0XZGHU8'
-supabase secrets set CRON_SECRET='RNESMnTxS_fyjY6e7LgyilnYEGnZ4Jb8'
+supabase secrets set VAPID_PRIVATE_KEY='<YOUR_VAPID_PRIVATE_KEY>'
+supabase secrets set CRON_SECRET='<YOUR_CRON_SECRET>'
 ```
 
 ## 4. Schedule the hourly run
@@ -75,7 +82,7 @@ for the top of the hour, or trigger the function once manually:
 
 ```bash
 curl -X POST 'https://<PROJECT_REF>.supabase.co/functions/v1/send-reminders' \
-  -H 'x-cron-secret: RNESMnTxS_fyjY6e7LgyilnYEGnZ4Jb8'
+  -H 'x-cron-secret: <YOUR_CRON_SECRET>'
 ```
 
 It replies `{"sent":N,"cleaned":M}`. If your current local hour matches your

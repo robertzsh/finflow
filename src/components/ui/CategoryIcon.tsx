@@ -1,7 +1,7 @@
-import * as Icons from 'lucide-react';
+import { getIcon } from '@/lib/icons';
 
 export function CategoryIcon({ icon, color, size = 18, bg = true, emoji }: { icon: string; color: string; size?: number; bg?: boolean; emoji?: string }) {
-  const Icon = (Icons as any)[icon] ?? Icons.Circle;
+  const Icon = getIcon(icon);
   const inner = emoji
     ? <span style={{ fontSize: size }} className="leading-none">{emoji}</span>
     : <Icon size={size} color={color} />;

@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion';
-import * as Icons from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Card } from './Card';
+import { getIcon } from '@/lib/icons';
 import { cx, accentHex } from '@/lib/format';
 import { useStore } from '@/store/useStore';
 
 interface Props {
   label: string;
   value: string;
-  icon: keyof typeof Icons;
+  icon: string;
   accent: 'income' | 'expense' | 'savings' | 'invest' | 'goal';
   delta?: string;
   deltaUp?: boolean;
@@ -16,7 +17,7 @@ interface Props {
 
 export function StatCard({ label, value, icon, accent, delta, deltaUp, delay = 0 }: Props) {
   const theme = useStore((s) => s.settings.theme);
-  const Icon = (Icons[icon] ?? Icons.Circle) as React.ComponentType<{ size?: number; color?: string }>;
+  const Icon = getIcon(icon);
   const color = accentHex(accent, theme);
   return (
     <Card hover delay={delay} className="p-4 sm:p-5 relative overflow-hidden">
@@ -31,7 +32,7 @@ export function StatCard({ label, value, icon, accent, delta, deltaUp, delay = 0
           >{value}</motion.p>
           {delta && (
             <p className={cx('mt-1 text-[11px] sm:text-xs font-medium flex items-center gap-1 truncate', deltaUp ? 'text-income' : 'text-expense')}>
-              {deltaUp ? <Icons.ArrowUpRight size={13} className="shrink-0" /> : <Icons.ArrowDownRight size={13} className="shrink-0" />}<span className="truncate">{delta}</span>
+              {deltaUp ? <ArrowUpRight size={13} className="shrink-0" /> : <ArrowDownRight size={13} className="shrink-0" />}<span className="truncate">{delta}</span>
             </p>
           )}
         </div>

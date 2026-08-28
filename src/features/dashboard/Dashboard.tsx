@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import * as Icons from 'lucide-react';
+import { Plus, FileBarChart, Download, Sparkles } from 'lucide-react';
+import { getIcon } from '@/lib/icons';
 import { isSameMonth, parseISO, format } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { exportMonthlyReportPDF } from '@/lib/export';
@@ -95,17 +96,17 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   return (
     <Page>
       <PageHeader title={`Hi ${settings.name} 👋`} subtitle={`${format(REF, 'MMMM yyyy')} · ${isHousehold ? 'family totals (both of you)' : 'monthly totals reset on the 1st'}`}
-        action={<Button onClick={onQuickAdd}><Icons.Plus size={16} /> Add transaction</Button>} />
+        action={<Button onClick={onQuickAdd}><Plus size={16} /> Add transaction</Button>} />
 
       {showReportPrompt && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           className="glass rounded-2xl border border-emerald-500/30 p-4 mb-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-xl bg-emerald-500/20 p-2"><Icons.FileBarChart size={18} className="text-emerald-400" /></span>
+          <span className="rounded-xl bg-emerald-500/20 p-2"><FileBarChart size={18} className="text-emerald-400" /></span>
           <div className="flex-1 min-w-[180px]">
             <div className="font-semibold text-sm">Your {lastMonthLabel} report is ready</div>
             <div className="text-xs text-white/50">Transactions, top categories, money set aside and all metrics.</div>
           </div>
-          <Button onClick={downloadLastMonth}><Icons.Download size={16} /> Download PDF</Button>
+          <Button onClick={downloadLastMonth}><Download size={16} /> Download PDF</Button>
           <button onClick={dismissReport} className="text-white/40 hover:text-white text-sm px-2">Dismiss</button>
         </motion.div>
       )}
@@ -298,7 +299,7 @@ function PayerChips({ payers, members, memberIds }: { payers?: Set<string>; memb
 
 function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]; i: number }) {
   const theme = useStore((s) => s.settings.theme);
-  const Icon = (Icons as any)[ins.icon] ?? Icons.Sparkles;
+  const Icon = getIcon(ins.icon, Sparkles);
   const color = accentHex(ins.tone, theme);
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}

@@ -38,6 +38,8 @@ jobs:
           # Without them the app builds in local-only mode.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Web Push public key (safe to expose). Without it, daily reminders are disabled.
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
