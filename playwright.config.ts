@@ -16,10 +16,13 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   // Build in local mode, then preview the static dist.
+  // The inline empty VITE_SUPABASE_* vars force LOCAL mode (no login) and take
+  // priority over any .env / .env.local on macOS/Linux. On Windows, run the build
+  // once yourself with those vars empty, then `npx playwright test`.
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+    command: 'VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npm run build && npm run preview -- --port 4173 --strictPort',
     url: 'http://localhost:4173',
-    timeout: 120_000,
+    timeout: 180_000,
     reuseExistingServer: !process.env.CI,
     env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
   },

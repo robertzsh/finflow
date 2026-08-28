@@ -16,18 +16,17 @@ test.describe('Goals — create, fund, history', () => {
     await dialog.getByRole('button', { name: /create goal/i }).click();
     await expect(dialog).toBeHidden();
 
-    await expect(page.getByText('E2E Test Goal')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E2E Test Goal' })).toBeVisible();
 
-    // fund it
-    const card = page.locator('div', { hasText: 'E2E Test Goal' }).first();
+    // fund it — scope to the specific goal card (`.glass` = the Card container)
+    const card = page.locator('.glass').filter({ hasText: 'E2E Test Goal' }).first();
     await card.getByRole('button', { name: /add money/i }).click();
     const fund = page.getByRole('dialog');
     await fund.getByPlaceholder('0,00').fill('250,50');
-    await fund.getByRole('button', { name: /add/i }).click();
+    await fund.getByRole('button', { name: /^add\b/i }).last().click();
     await expect(fund).toBeHidden();
 
-    // progress / contribution reflected
-    await expect(page.getByText('E2E Test Goal')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E2E Test Goal' })).toBeVisible();
   });
 
   test('empty state renders when there are no goals (documented)', async ({ page }) => {

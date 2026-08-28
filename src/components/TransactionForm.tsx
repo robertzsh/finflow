@@ -163,7 +163,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
 
       <div className="flex gap-2 pt-1">
         <Button type="submit" className="flex-1">{existing ? 'Save changes' : 'Add transaction'}</Button>
-        {existing && <Button type="button" variant="danger" onClick={() => { deleteTransaction(existing.id); onDone(); }}><Trash2 size={16} /></Button>}
+        {existing && <Button type="button" variant="danger" aria-label="Delete transaction" onClick={() => { deleteTransaction(existing.id); onDone(); }}><Trash2 size={16} /></Button>}
       </div>
     </form>
   );

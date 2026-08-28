@@ -179,7 +179,7 @@ export default function Transactions() {
                   const sel = selected.has(t.id);
                   return (
                     <div key={t.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition ${sel ? 'bg-blue-500/5' : ''}`}>
-                      <button onClick={() => toggle(t.id)} className="text-white/40 hover:text-white shrink-0">
+                      <button onClick={() => toggle(t.id)} aria-label={sel ? 'Deselect transaction' : 'Select transaction'} className="text-white/40 hover:text-white shrink-0">
                         {sel ? <CheckSquare size={16} className="text-blue-400" /> : <Square size={16} />}
                       </button>
                       <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} emoji={c?.emoji} />
@@ -195,7 +195,7 @@ export default function Transactions() {
                       <div className={`text-right font-semibold tabular-nums shrink-0 ${t.type === 'income' ? 'text-income' : ''}`}>
                         {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
                       </div>
-                      <button onClick={() => setEditing(t)} className="text-white/30 hover:text-white shrink-0 p-1"><Pencil size={15} /></button>
+                      <button onClick={() => setEditing(t)} aria-label="Edit transaction" className="text-white/30 hover:text-white shrink-0 p-1"><Pencil size={15} /></button>
                     </div>
                   );
                 })}

@@ -2,11 +2,16 @@ import { test, expect } from '@playwright/test';
 import { openApp, hasHorizontalScroll } from './helpers';
 
 test.describe('App shell, navigation, routing, layout', () => {
-  test('loads the dashboard with the 5 key stat cards and no console errors', async ({ page }) => {
-    const errors = await openApp(page);
+  test('loads the dashboard with the 5 key stat cards', async ({ page }) => {
+    await openApp(page);
     for (const label of ['Account balance', 'Monthly income', 'Monthly spending', 'Savings this month', 'Savings rate']) {
-      await expect(page.getByText(label, { exact: false })).toBeVisible();
+      await expect(page.getByText(label, { exact: false }).first()).toBeVisible();
     }
+  });
+
+  test('no console errors on load', async ({ page }) => {
+    const errors = await openApp(page);
+    // If this fails, the message lists the exact console.error(s) seen on load.
     expect(errors, `console errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
