@@ -278,10 +278,22 @@ function perMonth(amount: number, frequency?: string): number {
   }
 }
 
-export function recurringSummary(txs: Transaction[], memberIds: string[]): RecurringSummary {
+// Categories that are recurring by their nature (subscriptions + phone/internet),
+// so their transactions count as monthly bills even if "Recurring" wasn't ticked.
+function subscriptionLikeIds(categories: Category[]): Set<string> {
+  const ids = new Set<string>(['subscriptions', 'digi']);
+  for (const c of categories) if (c.parent === 'subscriptions') ids.add(c.id);
+  return ids;
+}
+
+export function recurringSummary(txs: Transaction[], memberIds: string[], categories: Category[] = []): RecurringSummary {
+  const subLike = subscriptionLikeIds(categories);
   const map = new Map<string, Transaction>();
   for (const t of txs) {
-    if (!t.recurring || t.type !== 'expense') continue;
+    if (t.type !== 'expense') continue;
+    // Count a transaction as a bill if it's flagged Recurring, OR it's in a
+    // subscription-type category (Spotify/Netflix/Claude Pro/Crunchyroll/Digi…).
+    if (!t.recurring && !subLike.has(t.categoryId)) continue;
     // Key by payer too, so each person's own Gym/Spotify/etc. is tracked separately
     // (otherwise two people with the same monthly bill collapse into one).
     const key = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}|${t.frequency ?? 'monthly'}`;

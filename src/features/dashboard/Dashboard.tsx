@@ -47,7 +47,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const byMember = perMemberSpending(transactions, REF, memberIds);
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
     const catPayers = categoryPayers(transactions, categories, REF);
-    const recurring = recurringSummary(transactions, memberIds);
+    const recurring = recurringSummary(transactions, memberIds, categories);
     return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
