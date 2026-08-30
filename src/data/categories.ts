@@ -37,6 +37,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'healthcare', name: 'Healthcare', kind: 'expense', icon: 'HeartPulse', color: '#f87171', emoji: '🩺' },
   { id: 'education', name: 'Education', kind: 'expense', icon: 'GraduationCap', color: '#fca5a5', emoji: '🎓' },
   { id: 'electronics', name: 'Electronics', kind: 'expense', icon: 'Smartphone', color: '#f59e0b', emoji: '📱' },
+  // Electronics stores roll up under Electronics, each tracked separately
+  { id: 'altex', name: 'Altex', kind: 'expense', icon: 'Laptop', color: '#e11d48', emoji: '💻', parent: 'electronics' },
+  { id: 'emag', name: 'eMAG', kind: 'expense', icon: 'Laptop', color: '#0ea5e9', emoji: '💻', parent: 'electronics' },
+  { id: 'pcgarage', name: 'PC Garage', kind: 'expense', icon: 'Laptop', color: '#22c55e', emoji: '💻', parent: 'electronics' },
+  { id: 'flanco', name: 'Flanco', kind: 'expense', icon: 'Laptop', color: '#a855f7', emoji: '💻', parent: 'electronics' },
   { id: 'family', name: 'Family', kind: 'expense', icon: 'Users', color: '#fbbf24', emoji: '👨‍👩‍👧' },
   { id: 'pets', name: 'Pets', kind: 'expense', icon: 'PawPrint', color: '#facc15', emoji: '🐾' },
   { id: 'taxes', name: 'Taxes', kind: 'expense', icon: 'Landmark', color: '#dc2626', emoji: '🏛️' },
