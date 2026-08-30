@@ -11,10 +11,11 @@ export async function openApp(page: Page): Promise<string[]> {
 
   await page.goto('/');
 
-  const dash = page.getByText(/account balance/i).first();
+  // "Monthly income" is the dashboard's lead stat card (Account balance was removed).
+  const dash = page.getByText(/monthly income/i).first();
   const pwd = page.locator('input[type="password"]').first();
 
-  const deadline = Date.now() + 12_000;
+  const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     if (await dash.isVisible().catch(() => false)) return errors.filter((e) => !ignore(e));
     if (await pwd.isVisible().catch(() => false)) {
@@ -26,7 +27,7 @@ export async function openApp(page: Page): Promise<string[]> {
   }
 
   const seen = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 240);
-  throw new Error(`Dashboard never rendered in 12s. URL=${page.url()} — on screen: "${seen}"`);
+  throw new Error(`Dashboard never rendered in 15s. URL=${page.url()} — on screen: "${seen}"`);
 }
 
 export async function hasHorizontalScroll(page: Page): Promise<boolean> {

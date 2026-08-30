@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import { openApp, hasHorizontalScroll } from './helpers';
 
 test.describe('App shell, navigation, routing, layout', () => {
-  test('loads the dashboard with the 5 key stat cards', async ({ page }) => {
+  test('loads the dashboard with the key stat cards', async ({ page }) => {
     await openApp(page);
-    for (const label of ['Account balance', 'Monthly income', 'Monthly spending', 'Savings this month', 'Savings rate']) {
+    for (const label of ['Monthly income', 'Monthly spending', 'Savings this month', 'Savings rate']) {
       await expect(page.getByText(label, { exact: false }).first()).toBeVisible();
     }
   });
@@ -34,7 +34,7 @@ test.describe('App shell, navigation, routing, layout', () => {
   test('invalid URL redirects to the dashboard (catch-all route)', async ({ page }) => {
     await openApp(page);
     await page.goto('/#/definitely-not-a-real-page');
-    await expect(page.getByText(/account balance/i)).toBeVisible();
+    await expect(page.getByText(/monthly income/i).first()).toBeVisible();
   });
 
   test('theme selection persists across reload', async ({ page, viewport }) => {
