@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Trash2, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { parseAmount, formatMoney } from '@/lib/format';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
@@ -121,10 +122,10 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Category</Label>
-          <Select aria-label="Category" value={topId} onChange={(e) => setValue('categoryId', e.target.value, { shouldValidate: true })}>
-            <option value="">Select…</option>
-            {topCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
-          </Select>
+          <SearchableSelect ariaLabel="Category" searchLabel="Search categories…" placeholder="Select…"
+            value={topId}
+            options={topCats.map((c) => ({ value: c.id, label: c.name, emoji: c.emoji }))}
+            onChange={(v) => setValue('categoryId', v, { shouldValidate: true })} />
           {errors.categoryId && <p className="text-xs text-expense mt-1">{errors.categoryId.message}</p>}
         </div>
         <div>
