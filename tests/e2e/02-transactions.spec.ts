@@ -9,9 +9,10 @@ test.describe('Transactions — create / edit / delete / search / sort', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByPlaceholder('0,00').fill('123,45');
-    // Category is a searchable combobox: open it, then pick the first option.
+    // Category is a searchable combobox: open it, then pick the first option from
+    // its listbox (scoped so we don't hit hidden <option>s of the native selects).
     await dialog.getByRole('combobox', { name: 'Category', exact: true }).click();
-    await dialog.getByRole('option').first().click();
+    await dialog.getByRole('listbox').getByRole('option').first().click();
     await dialog.getByRole('button', { name: /^add transaction$/i }).click();
     await expect(dialog).toBeHidden();
 
