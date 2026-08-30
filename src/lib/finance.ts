@@ -275,7 +275,9 @@ export function recurringSummary(txs: Transaction[], memberIds: string[]): Recur
   const map = new Map<string, Transaction>();
   for (const t of txs) {
     if (!t.recurring || t.type !== 'expense') continue;
-    const key = `${t.merchant}|${t.categoryId}|${t.frequency ?? 'monthly'}`;
+    // Key by payer too, so each person's own Gym/Spotify/etc. is tracked separately
+    // (otherwise two people with the same monthly bill collapse into one).
+    const key = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}|${t.frequency ?? 'monthly'}`;
     const prev = map.get(key);
     if (!prev || t.date > prev.date) map.set(key, t);
   }

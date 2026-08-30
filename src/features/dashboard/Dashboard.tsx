@@ -250,10 +250,14 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
           <div className="flex-1 min-h-[260px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
-        <Card className="p-5" delay={0.15}>
+        <Card className="p-5 flex flex-col" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
-          <DonutChart data={spendDonut} centerLabel="Income" centerValue={formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })} />
-          <div className="mt-3 space-y-1.5">
+          <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })} /></div>
+          <div className="mt-1 flex items-center justify-between text-xs text-white/45">
+            <span>Spent {formatMoney(expenseTotal, cur)} of {formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })}</span>
+            <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
+          </div>
+          <div className="mt-3 space-y-1.5 flex-1">
             {data.byCat.slice(0, 12).map((c) => {
               const cat = categories.find((x) => x.id === c.id);
               const pct = (c.value / allocDenom) * 100;
@@ -262,20 +266,20 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
                   <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
                   {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
-                  <span className="tabular-nums text-white/50 text-xs">{pct.toFixed(0)}%</span>
+                  <span className="tabular-nums text-white/50 text-xs w-9 text-right">{pct.toFixed(0)}%</span>
                   <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
                 </div>
               );
             })}
-            {availableBal > 0 && (
-              <div className="flex items-center gap-2 text-sm pt-1 border-t border-white/5">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#cbd5e1' }} />
-                <span className="text-white/50 truncate flex-1">Available to spend</span>
-                <span className="tabular-nums text-white/50 text-xs">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
-                <span className="tabular-nums font-medium w-24 text-right">{formatMoney(availableBal, cur)}</span>
-              </div>
-            )}
           </div>
+          {availableBal > 0 && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income" />
+              <span className="text-sm font-medium flex-1">Available to spend</span>
+              <span className="tabular-nums text-white/50 text-xs w-9 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
+              <span className="tabular-nums font-semibold text-income w-24 text-right">{formatMoney(availableBal, cur)}</span>
+            </div>
+          )}
         </Card>
       </div>
 
