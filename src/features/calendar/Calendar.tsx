@@ -142,20 +142,31 @@ export default function Calendar() {
                 <p className="text-sm text-white/40">No transactions this day.</p>
               ) : (
                 <>
-                  <div className="flex gap-2 mb-3">
-                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                      <div className="text-[10px] text-white/40 uppercase">In</div>
-                      <div className="text-income font-semibold text-sm">{formatMoney(dayIncome, cur)}</div>
+                  {dayIncome > 0 && dayExpense > 0 ? (
+                    // Both directions on this day → show In / Out / Net.
+                    <div className="flex gap-2 mb-3">
+                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                        <div className="text-[10px] text-white/40 uppercase">In</div>
+                        <div className="text-income font-semibold text-sm">{formatMoney(dayIncome, cur)}</div>
+                      </div>
+                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                        <div className="text-[10px] text-white/40 uppercase">Out</div>
+                        <div className="text-expense font-semibold text-sm">{formatMoney(dayExpense, cur)}</div>
+                      </div>
+                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
+                        <div className="text-[10px] text-white/40 uppercase">Net</div>
+                        <div className="font-semibold text-sm">{formatMoney(dayIncome - dayExpense, cur, { sign: true })}</div>
+                      </div>
                     </div>
-                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                      <div className="text-[10px] text-white/40 uppercase">Out</div>
-                      <div className="text-expense font-semibold text-sm">{formatMoney(dayExpense, cur)}</div>
+                  ) : (
+                    // One-directional day → a single clear total (no redundant 0.00 / net).
+                    <div className="rounded-xl bg-white/[0.03] px-4 py-3 mb-3 flex items-center justify-between">
+                      <span className="text-[11px] text-white/40 uppercase tracking-wider">{dayExpense > 0 ? 'Spent' : 'Received'}</span>
+                      <span className={`font-bold ${dayExpense > 0 ? 'text-expense' : 'text-income'}`}>
+                        {dayExpense > 0 ? '−' : '+'}{formatMoney(dayExpense > 0 ? dayExpense : dayIncome, cur)}
+                      </span>
                     </div>
-                    <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                      <div className="text-[10px] text-white/40 uppercase">Net</div>
-                      <div className="font-semibold text-sm">{formatMoney(dayIncome - dayExpense, cur, { sign: true })}</div>
-                    </div>
-                  </div>
+                  )}
                   <div className="space-y-2 max-h-[420px] overflow-y-auto no-scrollbar">
                     {selectedItems.map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);

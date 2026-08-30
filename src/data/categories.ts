@@ -24,6 +24,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'restaurants', name: 'Restaurants', kind: 'expense', icon: 'Utensils', color: '#f43f5e', emoji: '🍽️' },
   { id: 'coffee', name: 'Coffee', kind: 'expense', icon: 'Coffee', color: '#e11d48', emoji: '☕' },
   { id: 'shopping', name: 'Shopping', kind: 'expense', icon: 'ShoppingBag', color: '#ec4899', emoji: '🛍️' },
+  { id: 'ikea', name: 'Ikea', kind: 'expense', icon: 'Sofa', color: '#0058a3', emoji: '🛋️' },
   { id: 'manipedi', name: 'Mani + Pedi', kind: 'expense', icon: 'Sparkles', color: '#f472b6', emoji: '💅' },
   { id: 'piscina', name: 'Piscina', kind: 'expense', icon: 'Waves', color: '#06b6d4', emoji: '🏊' },
   { id: 'travel', name: 'Travel', kind: 'expense', icon: 'Plane', color: '#f472b6', emoji: '✈️' },
