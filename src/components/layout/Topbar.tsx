@@ -1,4 +1,4 @@
-import { Search, Plus, Bell, Command, Eye, EyeOff, RefreshCw, CloudOff } from 'lucide-react';
+import { Search, Plus, CalendarDays, Command, Eye, EyeOff, RefreshCw, CloudOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useStore } from '@/store/useStore';
@@ -37,9 +37,9 @@ export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSea
         className={`rounded-xl border p-2 hover:bg-white/10 transition ${privacy ? 'bg-amber-500/15 border-amber-400/30 text-amber-300' : 'bg-white/5 border-white/10 text-white/60'}`}>
         {privacy ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>
-      <button onClick={() => nav('/calendar')} aria-label="Upcoming bills" title="Upcoming bills"
-        className="rounded-xl bg-white/5 border border-white/10 p-2 text-white/60 relative hover:bg-white/10">
-        <Bell size={18} /><span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-400" />
+      <button onClick={() => nav('/calendar')} aria-label="Calendar" title="Calendar"
+        className="rounded-xl bg-white/5 border border-white/10 p-2 text-white/60 hover:bg-white/10">
+        <CalendarDays size={18} />
       </button>
       <Button onClick={onQuickAdd} className="!px-3"><Plus size={16} /><span className="hidden sm:inline">Add</span></Button>
       <button onClick={() => nav('/settings')} aria-label="Settings"

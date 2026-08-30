@@ -130,7 +130,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
               const net = b.income - b.expense;
               const savePct = b.income > 0 ? (net / b.income) * 100 : null;
-              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items.slice(0, 6);
+              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items;
               const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
               const color = palette[i % palette.length];
               return (
@@ -216,7 +216,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           <SectionCardHeader title="Spending by category" hint="Share of your balance · this month" />
           <DonutChart data={spendDonut} centerLabel="Balance" centerValue={formatMoney(data.balance, cur, { compact: data.balance > 9999 })} />
           <div className="mt-3 space-y-1.5">
-            {data.byCat.slice(0, 6).map((c) => {
+            {data.byCat.slice(0, 12).map((c) => {
               const cat = categories.find((x) => x.id === c.id);
               const pct = (c.value / allocDenom) * 100;
               return (

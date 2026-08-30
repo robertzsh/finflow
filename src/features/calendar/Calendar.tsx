@@ -15,11 +15,13 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { Plus } from 'lucide-react';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { formatMoney } from '@/lib/format';
+import type { Transaction } from '@/types';
 
 const TODAY = new Date();
 
 interface DayItem {
   key: string;                 // date yyyy-MM-dd
+  id?: string;                 // real transaction id (absent for projected occurrences)
   merchant: string;
   amount: number;
   type: 'income' | 'expense';
@@ -36,6 +38,7 @@ export default function Calendar() {
   const [month, setMonth] = useState(startOfMonth(TODAY));
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   const showPayer = cloud && authed && members.length > 1;
   const payerLabel = (id?: string) => id === 'all' ? '👥 Both' : (members.find((m) => m.id === id)?.name ? `👤 ${members.find((m) => m.id === id)!.name}` : '');
@@ -53,7 +56,7 @@ export default function Calendar() {
     const map = new Map<string, DayItem[]>();
     const add = (d: DayItem) => { const a = map.get(d.key) ?? []; a.push(d); map.set(d.key, a); };
     for (const t of transactions) {
-      add({ key: t.date, merchant: t.merchant, amount: t.amount, type: t.type, categoryId: t.categoryId, createdBy: t.createdBy, recurring: t.recurring, frequency: t.frequency });
+      add({ key: t.date, id: t.id, merchant: t.merchant, amount: t.amount, type: t.type, categoryId: t.categoryId, createdBy: t.createdBy, recurring: t.recurring, frequency: t.frequency });
     }
     for (const u of upcoming) {
       // only add a projected occurrence if there isn't already a real one that day for the same merchant
@@ -170,8 +173,13 @@ export default function Calendar() {
                   <div className="space-y-2 max-h-[420px] overflow-y-auto no-scrollbar">
                     {selectedItems.map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);
+                      const editable = !e.projected && !!e.id;
+                      const openEdit = () => { if (editable) setEditing(transactions.find((t) => t.id === e.id) ?? null); };
                       return (
-                        <div key={i} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
+                        <div key={i} onClick={openEdit}
+                          role={editable ? 'button' : undefined} tabIndex={editable ? 0 : undefined}
+                          onKeyDown={(ev) => { if (editable && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openEdit(); } }}
+                          className={`flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5 ${editable ? 'cursor-pointer hover:bg-white/[0.06] transition' : ''}`}>
                           <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate flex items-center gap-1.5">
@@ -222,6 +230,7 @@ export default function Calendar() {
       </div>
 
       <TransactionModal open={adding} onClose={() => setAdding(false)} defaultDate={selected ?? undefined} />
+      <TransactionModal open={!!editing} onClose={() => setEditing(null)} existing={editing ?? undefined} />
     </Page>
   );
 }
