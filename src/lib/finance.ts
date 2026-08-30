@@ -253,3 +253,45 @@ export function scoreLabel(score: number) {
   if (score >= 50) return { label: 'Fair', color: '#eab308' };
   return { label: 'Needs work', color: '#ef4444' };
 }
+
+// ---------------------------------------------------------------------------
+// Recurring commitments — normalised to a monthly figure, per household + person.
+// Distinct commitments are keyed by merchant + category + frequency (latest wins),
+// so re-logging the same subscription each month doesn't double-count it.
+// ---------------------------------------------------------------------------
+export interface RecurringItem { id: string; merchant: string; categoryId: string; frequency: string; monthly: number; by?: string }
+export interface RecurringSummary { items: RecurringItem[]; householdMonthly: number; perMember: Map<string, number> }
+
+function perMonth(amount: number, frequency?: string): number {
+  switch (frequency) {
+    case 'weekly': return amount * (52 / 12);
+    case 'quarterly': return amount / 3;
+    case 'yearly': return amount / 12;
+    default: return amount; // monthly
+  }
+}
+
+export function recurringSummary(txs: Transaction[], memberIds: string[]): RecurringSummary {
+  const map = new Map<string, Transaction>();
+  for (const t of txs) {
+    if (!t.recurring || t.type !== 'expense') continue;
+    const key = `${t.merchant}|${t.categoryId}|${t.frequency ?? 'monthly'}`;
+    const prev = map.get(key);
+    if (!prev || t.date > prev.date) map.set(key, t);
+  }
+  const items: RecurringItem[] = [...map.values()]
+    .map((t) => ({ id: t.id, merchant: t.merchant, categoryId: t.categoryId, frequency: t.frequency ?? 'monthly', monthly: r2(perMonth(t.amount, t.frequency)), by: t.createdBy }))
+    .sort((a, b) => b.monthly - a.monthly);
+
+  const perMember = new Map<string, number>();
+  for (const id of memberIds) perMember.set(id, 0);
+  const n = Math.max(1, memberIds.length);
+  for (const it of items) {
+    if (it.by === 'all' || !it.by || !memberIds.includes(it.by)) {
+      for (const id of memberIds) perMember.set(id, r2((perMember.get(id) ?? 0) + it.monthly / n));
+    } else {
+      perMember.set(it.by, r2((perMember.get(it.by) ?? 0) + it.monthly));
+    }
+  }
+  return { items, householdMonthly: r2(items.reduce((a, i) => a + i.monthly, 0)), perMember };
+}

@@ -4,8 +4,8 @@ import { Trash2, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
-import { parseAmount } from '@/lib/format';
-import type { Transaction, TxType, PaymentMethod, RecurringFrequency } from '@/types';
+import { parseAmount, formatMoney } from '@/lib/format';
+import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
 
 interface FormValues {
   type: TxType;
@@ -21,11 +21,15 @@ interface FormValues {
 const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
 
 export function TransactionForm({ existing, onDone, defaultDate }: { existing?: Transaction; onDone: () => void; defaultDate?: string }) {
-  const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId } = useStore();
+  const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId, settings } = useStore();
+  const base = settings.currency;
+  const fx = settings.fxRates;
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const showPaidBy = cloud && authed && members.length > 1;
   const [paidBy, setPaidBy] = useState<string>(existing?.createdBy ?? userId ?? '');
+  // New transactions can be entered in another currency; converted to base at today's rate.
+  const [txCur, setTxCur] = useState<CurrencyCode>(base);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: existing ? {
@@ -53,7 +57,10 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
     setSubmitting(true);
     setFormError('');
     try {
-      const amount = parseAmount(v.amount as unknown as string);
+      const raw = parseAmount(v.amount as unknown as string);
+      // Convert to the base currency at today's rate (fx = lei per 1 unit). Editing keeps base.
+      const rate = existing || txCur === base ? 1 : (fx[txCur] ?? 1);
+      const amount = Math.round(raw * rate * 100) / 100;
       if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
       if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
       const cat = categories.find((c) => c.id === v.categoryId);
@@ -91,8 +98,18 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Amount</Label>
-          <Input type="text" inputMode="decimal" placeholder="0,00"
-            {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
+          <div className="flex gap-2">
+            <Input type="text" inputMode="decimal" placeholder="0,00" className="flex-1"
+              {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
+            {!existing && (
+              <Select value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
+                {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            )}
+          </div>
+          {!existing && txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (
+            <p className="text-[11px] text-white/50 mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * (fx[txCur] ?? 1), base)} at {fx[txCur]} {base}/{txCur}</p>
+          )}
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
         <div>
