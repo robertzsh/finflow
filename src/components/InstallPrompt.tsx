@@ -53,7 +53,7 @@ export function InstallPrompt() {
       {show && (
         <motion.div
           initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-          className="fixed z-50 left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+84px)] lg:bottom-6 w-[min(92vw,26rem)]">
+          className="fixed z-50 left-3 right-3 mx-auto max-w-md bottom-[calc(env(safe-area-inset-bottom)+84px)] lg:bottom-6">
           <div className="glass rounded-2xl p-4 flex items-center gap-3 shadow-glass">
             <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 p-2 shrink-0">
               <Download size={18} className="text-white" />
