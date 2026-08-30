@@ -44,6 +44,12 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'entertainment', name: 'Entertainment', kind: 'expense', icon: 'Clapperboard', color: '#e879f9', emoji: '🎬' },
   { id: 'gym', name: 'Gym', kind: 'expense', icon: 'Dumbbell', color: '#c026d3', emoji: '🏋️' },
   { id: 'subscriptions', name: 'Subscriptions', kind: 'expense', icon: 'RefreshCw', color: '#d946ef', emoji: '🔁' },
+  // Individual subscriptions roll up under Subscriptions
+  { id: 'netflix', name: 'Netflix', kind: 'expense', icon: 'Clapperboard', color: '#e50914', emoji: '🎬', parent: 'subscriptions' },
+  { id: 'spotify', name: 'Spotify', kind: 'expense', icon: 'Music', color: '#1db954', emoji: '🎵', parent: 'subscriptions' },
+  { id: 'claudepro', name: 'Claude Pro', kind: 'expense', icon: 'Sparkles', color: '#d97757', emoji: '🤖', parent: 'subscriptions' },
+  { id: 'crunchyroll', name: 'Crunchyroll', kind: 'expense', icon: 'Film', color: '#f47521', emoji: '🍥', parent: 'subscriptions' },
+  { id: 'digi', name: 'Digi', kind: 'expense', icon: 'Smartphone', color: '#e11d48', emoji: '📶' },
   { id: 'insurance', name: 'Insurance', kind: 'expense', icon: 'ShieldCheck', color: '#a21caf', emoji: '🛡️' },
   { id: 'healthcare', name: 'Healthcare', kind: 'expense', icon: 'HeartPulse', color: '#f87171', emoji: '🩺' },
   { id: 'education', name: 'Education', kind: 'expense', icon: 'GraduationCap', color: '#fca5a5', emoji: '🎓' },
