@@ -9,7 +9,7 @@ test.describe('Transactions — create / edit / delete / search / sort', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByPlaceholder('0,00').fill('123,45');
-    await dialog.getByRole('combobox').first().selectOption({ index: 1 });
+    await dialog.getByRole('combobox', { name: 'Category', exact: true }).selectOption({ index: 1 });
     await dialog.getByRole('button', { name: /^add transaction$/i }).click();
     await expect(dialog).toBeHidden();
 

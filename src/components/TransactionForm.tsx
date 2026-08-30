@@ -102,7 +102,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
             <Input type="text" inputMode="decimal" placeholder="0,00" className="flex-1"
               {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
             {!existing && (
-              <Select value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
+              <Select aria-label="Currency" value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
                 {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
               </Select>
             )}
@@ -122,7 +122,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Category</Label>
-          <Select value={topId} onChange={(e) => setValue('categoryId', e.target.value, { shouldValidate: true })}>
+          <Select aria-label="Category" value={topId} onChange={(e) => setValue('categoryId', e.target.value, { shouldValidate: true })}>
             <option value="">Select…</option>
             {topCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
           </Select>
