@@ -260,7 +260,14 @@ export function scoreLabel(score: number) {
 // so re-logging the same subscription each month doesn't double-count it.
 // ---------------------------------------------------------------------------
 export interface RecurringItem { id: string; merchant: string; categoryId: string; frequency: string; monthly: number; by?: string }
-export interface RecurringSummary { items: RecurringItem[]; householdMonthly: number; perMember: Map<string, number> }
+// A line as it appears under one person: their full own bills + half of each shared bill.
+export interface RecurringMemberItem { id: string; merchant: string; categoryId: string; frequency: string; monthly: number; shared: boolean }
+export interface RecurringSummary {
+  items: RecurringItem[];
+  householdMonthly: number;
+  perMember: Map<string, number>;
+  perMemberItems: Map<string, RecurringMemberItem[]>;
+}
 
 function perMonth(amount: number, frequency?: string): number {
   switch (frequency) {
@@ -286,14 +293,24 @@ export function recurringSummary(txs: Transaction[], memberIds: string[]): Recur
     .sort((a, b) => b.monthly - a.monthly);
 
   const perMember = new Map<string, number>();
-  for (const id of memberIds) perMember.set(id, 0);
+  const perMemberItems = new Map<string, RecurringMemberItem[]>();
+  for (const id of memberIds) { perMember.set(id, 0); perMemberItems.set(id, []); }
   const n = Math.max(1, memberIds.length);
   for (const it of items) {
-    if (it.by === 'all' || !it.by || !memberIds.includes(it.by)) {
-      for (const id of memberIds) perMember.set(id, r2((perMember.get(id) ?? 0) + it.monthly / n));
+    const isShared = it.by === 'all' || !it.by || !memberIds.includes(it.by);
+    if (isShared) {
+      // shared bill: each member carries an equal split (e.g. rent 2200 → 1100 each)
+      const share = r2(it.monthly / n);
+      for (const id of memberIds) {
+        perMember.set(id, r2((perMember.get(id) ?? 0) + share));
+        perMemberItems.get(id)!.push({ id: `${it.id}:${id}`, merchant: it.merchant, categoryId: it.categoryId, frequency: it.frequency, monthly: share, shared: true });
+      }
     } else {
-      perMember.set(it.by, r2((perMember.get(it.by) ?? 0) + it.monthly));
+      const by = it.by as string;
+      perMember.set(by, r2((perMember.get(by) ?? 0) + it.monthly));
+      perMemberItems.get(by)!.push({ id: it.id, merchant: it.merchant, categoryId: it.categoryId, frequency: it.frequency, monthly: it.monthly, shared: false });
     }
   }
-  return { items, householdMonthly: r2(items.reduce((a, i) => a + i.monthly, 0)), perMember };
+  for (const id of memberIds) perMemberItems.get(id)!.sort((a, b) => b.monthly - a.monthly);
+  return { items, householdMonthly: r2(items.reduce((a, i) => a + i.monthly, 0)), perMember, perMemberItems };
 }

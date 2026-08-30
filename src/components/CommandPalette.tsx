@@ -5,6 +5,8 @@ import { Search, Plus, LayoutDashboard, ArrowLeftRight, Target, LineChart, Calen
 import { useStore } from '@/store/useStore';
 import { formatMoney } from '@/lib/format';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
+import { TransactionModal } from '@/components/TransactionModal';
+import type { Transaction } from '@/types';
 
 const PAGES = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard },
@@ -19,6 +21,7 @@ const PAGES = [
 export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; onClose: () => void; onQuickAdd: () => void }) {
   const { transactions, categories, settings } = useStore();
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<Transaction | null>(null);
   const nav = useNavigate();
   useEffect(() => { if (open) setQ(''); }, [open]);
 
@@ -57,7 +60,7 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
               {results.map((t) => {
                 const c = categories.find((x) => x.id === t.categoryId);
                 return (
-                  <button key={t.id} onClick={() => { nav('/transactions'); onClose(); }}
+                  <button key={t.id} onClick={() => setEditing(t)}
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-white/10 text-left">
                     <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={15} emoji={c?.emoji} />
                     <span className="flex-1 truncate">{t.merchant || c?.name || '—'}</span>
@@ -80,6 +83,8 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
           <KeyClose onClose={onClose} />
         </motion.div>
       )}
+      {/* Editing a search result opens the transaction directly; closing it returns to the app. */}
+      <TransactionModal open={!!editing} existing={editing ?? undefined} onClose={() => { setEditing(null); onClose(); }} />
     </AnimatePresence>
   );
 }

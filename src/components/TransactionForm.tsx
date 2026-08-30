@@ -58,8 +58,9 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
     setFormError('');
     try {
       const raw = parseAmount(v.amount as unknown as string);
-      // Convert to the base currency at today's rate (fx = lei per 1 unit). Editing keeps base.
-      const rate = existing || txCur === base ? 1 : (fx[txCur] ?? 1);
+      // Convert to the base currency at today's rate (fx = lei per 1 unit).
+      // Works for new AND edited transactions: pick EUR, type the euro amount, it stores RON.
+      const rate = txCur === base ? 1 : (fx[txCur] ?? 1);
       const amount = Math.round(raw * rate * 100) / 100;
       if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
       if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
@@ -101,13 +102,11 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
           <div className="flex gap-2">
             <Input type="text" inputMode="decimal" placeholder="0,00" className="flex-1"
               {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
-            {!existing && (
-              <Select aria-label="Currency" value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
-                {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
-              </Select>
-            )}
+            <Select aria-label="Currency" value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
+              {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
           </div>
-          {!existing && txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (
+          {txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (
             <p className="text-[11px] text-white/50 mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * (fx[txCur] ?? 1), base)} at {fx[txCur]} {base}/{txCur}</p>
           )}
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}

@@ -211,36 +211,52 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       {data.recurring.items.length > 0 && (
         <Card className="p-5 mt-4" delay={0.15}>
           <SectionCardHeader title="Recurring & bills" hint={`Estimated ${formatMoney(data.recurring.householdMonthly, cur)}/mo${isHousehold ? ' for the family' : ''}`} />
-          {isHousehold && (
-            <div className="grid sm:grid-cols-2 gap-3 mb-4">
+          {isHousehold ? (
+            <div className="grid sm:grid-cols-2 gap-3">
               {members.map((m, i) => {
                 const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
+                const its = data.recurring.perMemberItems.get(m.id) ?? [];
                 return (
-                  <div key={m.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3 flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: palette[i % palette.length] }}>{(m.name || '?').charAt(0).toUpperCase()}</span>
-                      {m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}
-                    </span>
-                    <span className="font-semibold text-sm">{formatMoney(data.recurring.perMember.get(m.id) ?? 0, cur)}<span className="text-white/40 text-xs">/mo</span></span>
+                  <div key={m.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: palette[i % palette.length] }}>{(m.name || '?').charAt(0).toUpperCase()}</span>
+                        {m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}
+                      </span>
+                      <span className="font-semibold text-sm">{formatMoney(data.recurring.perMember.get(m.id) ?? 0, cur)}<span className="text-white/40 text-xs">/mo</span></span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {its.length === 0 && <div className="text-xs text-white/30">No recurring bills yet.</div>}
+                      {its.map((it) => {
+                        const c = categories.find((x) => x.id === it.categoryId);
+                        return (
+                          <div key={it.id} className="flex items-center gap-2 text-sm">
+                            <span className="truncate flex-1">{c?.emoji ? `${c.emoji} ` : ''}{it.merchant || c?.name}</span>
+                            {it.shared && <span className="text-[10px] text-white/40 px-1.5 py-0.5 rounded-full bg-white/10 shrink-0">½ shared</span>}
+                            <span className="tabular-nums font-medium w-24 text-right">{formatMoney(it.monthly, cur)}<span className="text-white/40 text-[11px]">/mo</span></span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {data.recurring.items.map((it) => {
+                const c = categories.find((x) => x.id === it.categoryId);
+                return (
+                  <div key={it.id} className="flex items-center gap-2 text-sm">
+                    <span className="truncate flex-1">{c?.emoji ? `${c.emoji} ` : ''}{it.merchant || c?.name}</span>
+                    <span className="text-white/40 text-xs capitalize">{it.frequency}</span>
+                    <span className="tabular-nums font-medium w-28 text-right">{formatMoney(it.monthly, cur)}<span className="text-white/40 text-[11px]">/mo</span></span>
                   </div>
                 );
               })}
             </div>
           )}
-          <div className="space-y-1.5">
-            {data.recurring.items.map((it) => {
-              const c = categories.find((x) => x.id === it.categoryId);
-              return (
-                <div key={it.id} className="flex items-center gap-2 text-sm">
-                  <span className="truncate flex-1">{c?.emoji ? `${c.emoji} ` : ''}{it.merchant || c?.name}</span>
-                  {isHousehold && <PayerChips payers={new Set([it.by ?? ''])} members={members} memberIds={memberIds} />}
-                  <span className="text-white/40 text-xs capitalize">{it.frequency}</span>
-                  <span className="tabular-nums font-medium w-28 text-right">{formatMoney(it.monthly, cur)}<span className="text-white/40 text-[11px]">/mo</span></span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-white/40 mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 per person.</p>
+          <p className="text-[11px] text-white/40 mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 — each person carries half (e.g. rent).</p>
         </Card>
       )}
 
