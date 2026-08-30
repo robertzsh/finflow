@@ -60,11 +60,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const incomeTotal = data.bySource.reduce((a, b) => a + b.value, 0);
   const allocTotal = data.alloc.reduce((a, b) => a + b.value, 0);
 
-  // "Spending by category" is shown as a share of your account balance (money you
-  // have), not a share of spending — so €2,200 rent against a €10k balance reads
-  // as ~22%, not 45%. An "Available" slice fills the rest so the ring is coherent.
-  const allocDenom = data.balance > 0 ? data.balance : (expenseTotal || 1);
-  const availableBal = Math.max(0, data.balance - expenseTotal);
+  // "Spending by category" is shown as a share of this month's income — so each
+  // category reads as "X% of what came in" — with an "Available" slice for income
+  // not yet spent, so the ring is coherent.
+  const monthIncome = data.stats.income;
+  const allocDenom = monthIncome > 0 ? monthIncome : (expenseTotal || 1);
+  const availableBal = Math.max(0, monthIncome - expenseTotal);
   const spendDonut = [
     ...data.byCat.slice(0, 8),
     ...(availableBal > 0 ? [{ id: 'available', name: 'Available', color: '#cbd5e1', value: availableBal }] : []),
@@ -113,7 +114,6 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
       {/* Stat cards — full width on phones so long amounts never clip, 2-up tablet, 3-up desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
-        <StatCard label="Account balance" value={formatMoney(data.balance, cur)} icon="Wallet" accent="savings" delay={0} />
         <StatCard label="Monthly income" value={M(formatMoney(data.stats.income, cur))} icon="ArrowDownToLine" accent="income" delta={privacy ? undefined : `${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
         <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
         <StatCard label="Savings this month" value={M(formatMoney(data.stats.net, cur, { sign: true }))} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
@@ -181,7 +181,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               );
             })}
           </div>
-          <p className="text-xs text-white/40 mt-3">Family remaining balance: <span className="text-white/70 font-medium">{formatMoney(data.balance, cur)}</span> · combined spend this month {formatMoney(data.stats.expense, cur)}</p>
+          <p className="text-xs text-white/40 mt-3">Combined income this month <span className="text-white/70 font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
         </Card>
       )}
 
@@ -213,8 +213,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           <div className="flex-1 min-h-[260px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
         <Card className="p-5" delay={0.15}>
-          <SectionCardHeader title="Spending by category" hint="Share of your balance · this month" />
-          <DonutChart data={spendDonut} centerLabel="Balance" centerValue={formatMoney(data.balance, cur, { compact: data.balance > 9999 })} />
+          <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
+          <DonutChart data={spendDonut} centerLabel="Income" centerValue={formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })} />
           <div className="mt-3 space-y-1.5">
             {data.byCat.slice(0, 12).map((c) => {
               const cat = categories.find((x) => x.id === c.id);
