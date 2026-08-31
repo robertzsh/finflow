@@ -28,8 +28,14 @@ export function SearchableSelect({ value, options, onChange, placeholder = 'Sele
     return s ? options.filter((o) => o.label.toLowerCase().includes(s)) : options;
   }, [q, options]);
 
+  // Escape closes only this dropdown (and is stopped from bubbling to a parent
+  // Modal's Escape-to-close handler, which would otherwise discard the whole form).
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (open && e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); setOpen(false); }
+  };
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} onKeyDown={onKeyDown}>
       <button type="button" role="combobox" aria-label={ariaLabel} aria-expanded={open} aria-haspopup="listbox"
         onClick={() => setOpen((o) => !o)}
         className={cx(base, 'flex items-center justify-between gap-2 text-left')}>

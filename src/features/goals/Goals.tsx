@@ -233,7 +233,7 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
           </div>
         </div>
         {editing && <p className="text-[11px] text-white/40">Editing the target or saved amount here adjusts the goal directly — it isn't logged in the contribution history. Use “Add money” to record a dated contribution.</p>}
-        <Button className="w-full" disabled={!name || !target} onClick={() => onSubmit({ name, target: parseAmount(target) || 0, saved: parseAmount(saved) || 0, monthlyContribution: parseAmount(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
+        <Button className="w-full" disabled={!name.trim() || !(parseAmount(target) > 0)} onClick={() => onSubmit({ name: name.trim(), target: parseAmount(target) || 0, saved: parseAmount(saved) || 0, monthlyContribution: parseAmount(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
           {editing ? 'Save changes' : 'Create goal'}
         </Button>
       </div>
