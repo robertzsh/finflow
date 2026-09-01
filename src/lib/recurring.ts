@@ -1,5 +1,5 @@
 import { addWeeks, addMonths, addQuarters, addYears, parseISO, isAfter, format } from 'date-fns';
-import type { Transaction, RecurringFrequency } from '@/types';
+import type { Transaction, RecurringFrequency, Category } from '@/types';
 
 export function nextDate(from: Date, freq: RecurringFrequency): Date {
   switch (freq) {
@@ -10,35 +10,51 @@ export function nextDate(from: Date, freq: RecurringFrequency): Date {
   }
 }
 
+// Subscription-type categories (Netflix/Spotify/Claude Pro/Crunchyroll + Digi) count
+// as monthly bills even without the "Recurring" flag — so they project & post too.
+function subscriptionLikeIds(categories: Category[]): Set<string> {
+  const ids = new Set<string>(['subscriptions', 'digi']);
+  for (const c of categories) if (c.parent === 'subscriptions') ids.add(c.id);
+  return ids;
+}
+
+/** A transaction that should be treated as a recurring template, with its effective
+ *  frequency (subscription categories default to monthly when no frequency is set). */
+function recurringTemplates(txs: Transaction[], categories: Category[]): { t: Transaction; freq: RecurringFrequency }[] {
+  const sub = subscriptionLikeIds(categories);
+  const seen = new Map<string, { t: Transaction; freq: RecurringFrequency }>();
+  for (const t of txs) {
+    if (t.type !== 'expense' && !(t.recurring && t.frequency)) continue; // income can still be a flagged recurring
+    const isRecur = (t.recurring && t.frequency) || sub.has(t.categoryId);
+    if (!isRecur) continue;
+    const freq = (t.frequency ?? 'monthly') as RecurringFrequency;
+    const k = `${t.merchant}|${t.categoryId}|${freq}`;
+    const prev = seen.get(k);
+    if (!prev || parseISO(t.date) > parseISO(prev.t.date)) seen.set(k, { t, freq });
+  }
+  return [...seen.values()];
+}
+
 export interface Upcoming {
   base: Transaction;
   date: string;
   amount: number;
 }
 
-/** Project the next N occurrences of every recurring transaction after `today`. */
-export function upcomingOccurrences(txs: Transaction[], horizonDays = 45, today = new Date()): Upcoming[] {
+/** Project the next N occurrences of every recurring transaction after `today`.
+ *  Pass `categories` so subscription-type expenses project even without the flag. */
+export function upcomingOccurrences(txs: Transaction[], horizonDays = 45, today = new Date(), categories: Category[] = []): Upcoming[] {
   const out: Upcoming[] = [];
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + horizonDays);
 
-  const recur = txs.filter((t) => t.recurring && t.frequency);
-  // dedupe by merchant+category to avoid multiple historical copies
-  const seen = new Map<string, Transaction>();
-  for (const t of recur) {
-    const k = `${t.merchant}|${t.categoryId}|${t.frequency}`;
-    const prev = seen.get(k);
-    if (!prev || parseISO(t.date) > parseISO(prev.date)) seen.set(k, t);
-  }
-
-  for (const t of seen.values()) {
+  for (const { t, freq } of recurringTemplates(txs, categories)) {
     let d = parseISO(t.date);
-    // advance to first future date
     let guard = 0;
-    while (!isAfter(d, today) && guard < 400) { d = nextDate(d, t.frequency!); guard++; }
+    while (!isAfter(d, today) && guard < 400) { d = nextDate(d, freq); guard++; }
     while (d <= horizon && guard < 400) {
       out.push({ base: t, date: format(d, 'yyyy-MM-dd'), amount: t.amount });
-      d = nextDate(d, t.frequency!);
+      d = nextDate(d, freq);
       guard++;
     }
   }
@@ -72,21 +88,13 @@ export interface DueOccurrence {
  *  Idempotent: skips an occurrence if any transaction already exists in the same period
  *  for that merchant+category (covers both prior auto-posts and manual entries), or if
  *  its recurrenceKey was explicitly skipped. */
-export function dueOccurrences(txs: Transaction[], today = new Date(), skipped: string[] = []): DueOccurrence[] {
+export function dueOccurrences(txs: Transaction[], today = new Date(), skipped: string[] = [], categories: Category[] = []): DueOccurrence[] {
   const skipSet = new Set(skipped);
-  const templates = txs.filter((t) => t.recurring && t.frequency);
-  // latest template per merchant|category|frequency
-  const seen = new Map<string, Transaction>();
-  for (const t of templates) {
-    const k = `${t.merchant}|${t.categoryId}|${t.frequency}`;
-    const prev = seen.get(k);
-    if (!prev || parseISO(t.date) > parseISO(prev.date)) seen.set(k, t);
-  }
+  const templates = recurringTemplates(txs, categories); // includes subscription categories
 
   // index existing transactions by merchant|category → set of period keys already present
   const present = new Map<string, Set<string>>();
   for (const t of txs) {
-    if (!t.frequency && !t.recurring) { /* still index one-offs so manual logs block a duplicate */ }
     const freq = (t.frequency ?? 'monthly') as RecurringFrequency;
     const mk = `${t.merchant}|${t.categoryId}`;
     if (!present.has(mk)) present.set(mk, new Set());
@@ -95,20 +103,20 @@ export function dueOccurrences(txs: Transaction[], today = new Date(), skipped: 
 
   const out: DueOccurrence[] = [];
   const todayStr = format(today, 'yyyy-MM-dd');
-  for (const t of seen.values()) {
+  for (const { t, freq } of templates) {
     const mk = `${t.merchant}|${t.categoryId}`;
-    let d = nextDate(parseISO(t.date), t.frequency!); // first occurrence AFTER the template's own date
+    let d = nextDate(parseISO(t.date), freq); // first occurrence AFTER the template's own date
     let guard = 0;
     while (format(d, 'yyyy-MM-dd') <= todayStr && guard < 400) {
       const ds = format(d, 'yyyy-MM-dd');
-      const pk = periodKey(ds, t.frequency!);
-      const rk = recurrenceKeyFor(t, ds);
+      const pk = periodKey(ds, freq);
+      const rk = `${t.merchant}|${t.categoryId}|${freq}|${ds}`;
       const already = present.get(mk)?.has(pk);
       if (!already && !skipSet.has(rk)) {
         out.push({ base: t, date: ds, amount: t.amount, variable: !!t.variableAmount, recurrenceKey: rk });
         present.get(mk)!.add(pk); // don't emit two occurrences in the same period
       }
-      d = nextDate(d, t.frequency!);
+      d = nextDate(d, freq);
       guard++;
     }
   }

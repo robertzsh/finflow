@@ -43,7 +43,7 @@ export default function Calendar() {
   const showPayer = cloud && authed && members.length > 1;
   const payerLabel = (id?: string) => id === 'all' ? '👥 Both' : (members.find((m) => m.id === id)?.name ? `👤 ${members.find((m) => m.id === id)!.name}` : '');
 
-  const upcoming = useMemo(() => upcomingOccurrences(transactions, 90, TODAY), [transactions]);
+  const upcoming = useMemo(() => upcomingOccurrences(transactions, 90, TODAY, categories), [transactions, categories]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });

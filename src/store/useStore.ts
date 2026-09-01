@@ -533,7 +533,7 @@ export const useStore = create<StoreState>((set, get) => {
 
     runRecurringPosting: () => {
       const s = get();
-      const due = dueOccurrences(s.transactions, new Date(), loadSkipped());
+      const due = dueOccurrences(s.transactions, new Date(), loadSkipped(), s.categories);
       const fixed = due.filter((d) => !d.variable);
       const variable = due.filter((d) => d.variable);
       if (fixed.length) {

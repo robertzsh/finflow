@@ -22,8 +22,18 @@ describe('upcomingOccurrences', () => {
     expect(up.every((u) => u.date > '2026-07-28')).toBe(true);
     expect(up[0].amount).toBe(55);
   });
-  it('ignores non-recurring transactions', () => {
-    const oneOff: Transaction = { ...base, id: 'x', recurring: false, frequency: undefined };
+  it('ignores non-recurring, non-subscription transactions', () => {
+    // groceries is neither flagged recurring nor a subscription category → not projected
+    const oneOff: Transaction = { ...base, id: 'x', categoryId: 'groceries', merchant: 'Lidl', recurring: false, frequency: undefined };
     expect(upcomingOccurrences([oneOff], 45, new Date('2026-07-28')).length).toBe(0);
+  });
+
+  it('projects subscription-category expenses even without the recurring flag', () => {
+    // Spotify sits under the subscriptions parent; a plain (non-flagged) purchase still projects monthly
+    const spotify: Transaction = { ...base, id: 's', categoryId: 'spotify', merchant: 'Spotify', recurring: false, frequency: undefined, amount: 26, date: '2026-07-05' };
+    const cats = [{ id: 'spotify', name: 'Spotify', kind: 'expense', icon: 'Music', color: '#000', parent: 'subscriptions' } as any];
+    const up = upcomingOccurrences([spotify], 45, new Date('2026-07-28'), cats);
+    expect(up.length).toBeGreaterThan(0);
+    expect(up[0].amount).toBe(26);
   });
 });
