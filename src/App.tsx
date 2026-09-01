@@ -51,6 +51,16 @@ export default function App() {
     } catch { /* ignore */ }
   }, [ready, refreshRates]);
 
+  // Once data is loaded, auto-post any recurring bills whose date has passed
+  // (and queue variable-amount ones for confirmation). Re-runs when the tx set changes.
+  const runRecurringPosting = useStore((s) => s.runRecurringPosting);
+  const txCount = useStore((s) => s.transactions.length);
+  useEffect(() => {
+    if (ready && (!cloud || authed)) {
+      try { runRecurringPosting(); } catch (e) { console.warn('recurring posting skipped', e); }
+    }
+  }, [ready, cloud, authed, txCount, runRecurringPosting]);
+
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
   useIdleLock();

@@ -28,7 +28,10 @@ export interface Transaction {
   notes?: string;
   recurring: boolean;
   frequency?: RecurringFrequency;
-  receipt?: string;        // data URL
+  variableAmount?: boolean; // recurring bill whose amount changes (Digi/EON…) → confirm before posting
+  auto?: boolean;           // this instance was auto-posted from a recurring template
+  recurrenceKey?: string;   // idempotency: merchant|categoryId|frequency|occurrenceDate
+  receipt?: string;         // data URL
   createdAt: string;
   createdBy?: string;      // profile id (cloud mode) — who added it
 }

@@ -9,6 +9,11 @@ import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
 import { fetchFxRates } from '@/lib/rates';
 import { setMoneyPrivacy } from '@/lib/format';
+import { dueOccurrences } from '@/lib/recurring';
+
+const SKIP_KEY = 'ff_skipped_recur';
+const loadSkipped = (): string[] => { try { return JSON.parse(localStorage.getItem(SKIP_KEY) || '[]'); } catch { return []; } };
+const saveSkipped = (s: string[]) => { try { localStorage.setItem(SKIP_KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -67,6 +72,12 @@ interface StoreState extends AppData {
   deleteTransactions: (ids: string[]) => void;
   bulkUpdate: (ids: string[], patch: Partial<Transaction>) => void;
   importTransactions: (list: Partial<Transaction>[]) => void;
+
+  // recurring auto-posting
+  pendingRecurring: import('@/lib/recurring').DueOccurrence[];
+  runRecurringPosting: () => void;                       // auto-post fixed due bills, queue variable ones
+  confirmRecurring: (recurrenceKey: string, amount: number) => void;
+  skipRecurring: (recurrenceKey: string) => void;
 
   addCategory: (c: Omit<Category, 'id'>) => void;
   updateCategory: (id: string, patch: Partial<Category>) => void;
@@ -283,6 +294,7 @@ export const useStore = create<StoreState>((set, get) => {
     locked: false,
     privacy: (() => { try { return localStorage.getItem('ff_privacy') === '1'; } catch { return false; } })(),
     outbox: (() => { try { return JSON.parse(localStorage.getItem('ff_outbox') || '[]'); } catch { return []; } })(),
+    pendingRecurring: [],
     syncState: 'idle',
     cloud: CLOUD_ENABLED,
     authReady: false,
@@ -517,6 +529,45 @@ export const useStore = create<StoreState>((set, get) => {
       }));
       set((s) => ({ transactions: [...mapped, ...s.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
       get().persist(); pushMany('transactions', mapped);
+    },
+
+    runRecurringPosting: () => {
+      const s = get();
+      const due = dueOccurrences(s.transactions, new Date(), loadSkipped());
+      const fixed = due.filter((d) => !d.variable);
+      const variable = due.filter((d) => d.variable);
+      if (fixed.length) {
+        const now = new Date().toISOString();
+        const posted: Transaction[] = fixed.map((d) => ({
+          ...d.base, id: uid('tx'), date: d.date, amount: d.amount,
+          auto: true, recurrenceKey: d.recurrenceKey, createdAt: now,
+          // keep it recurring so the template lineage continues, keep payer
+          createdBy: d.base.createdBy,
+        }));
+        set((st) => ({ transactions: [...posted, ...st.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
+        get().persist(); pushMany('transactions', posted);
+      }
+      // variable bills wait for the user to confirm the amount
+      set({ pendingRecurring: variable });
+    },
+    confirmRecurring: (recurrenceKey, amount) => {
+      const s = get();
+      const occ = s.pendingRecurring.find((d) => d.recurrenceKey === recurrenceKey);
+      if (!occ || !(amount > 0)) return;
+      const tx: Transaction = {
+        ...occ.base, id: uid('tx'), date: occ.date, amount,
+        auto: true, recurrenceKey, createdAt: new Date().toISOString(), createdBy: occ.base.createdBy,
+      };
+      set((st) => ({
+        transactions: [tx, ...st.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)),
+        pendingRecurring: st.pendingRecurring.filter((d) => d.recurrenceKey !== recurrenceKey),
+      }));
+      get().persist(); push('transactions', tx);
+    },
+    skipRecurring: (recurrenceKey) => {
+      const next = [...loadSkipped(), recurrenceKey];
+      saveSkipped(next);
+      set((st) => ({ pendingRecurring: st.pendingRecurring.filter((d) => d.recurrenceKey !== recurrenceKey) }));
     },
 
     addCategory: (c) => {

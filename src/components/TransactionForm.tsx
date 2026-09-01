@@ -17,6 +17,7 @@ interface FormValues {
   notes?: string;
   recurring: boolean;
   frequency?: string;
+  variableAmount?: boolean;
 }
 
 const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
@@ -36,10 +37,10 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
     defaultValues: existing ? {
       type: existing.type, amount: existing.amount, categoryId: existing.categoryId,
       method: existing.method, date: existing.date,
-      notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly',
+      notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly', variableAmount: existing.variableAmount ?? false,
     } : {
       type: 'expense', amount: undefined as unknown as number, categoryId: '',
-      method: 'Card', date: defaultDate || new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly',
+      method: 'Card', date: defaultDate || new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly', variableAmount: false,
     },
   });
 
@@ -71,6 +72,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
         merchant: existing?.merchant || cat?.name || '', // no manual merchant — default to category name
         method: v.method as PaymentMethod, date: v.date, notes: v.notes,
         recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
+        variableAmount: v.recurring ? !!v.variableAmount : undefined,
         receipt: existing?.receipt,
         createdBy: showPaidBy ? (paidBy || userId || undefined) : existing?.createdBy,
       };
@@ -173,6 +175,13 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
             <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
             <option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
           </Select>
+          <label className="flex items-center gap-2.5 mt-3 text-sm cursor-pointer">
+            <input type="checkbox" {...register('variableAmount')} className="w-5 h-5 accent-blue-500" />
+            <span>
+              <span className="font-medium">Amount varies each time</span>
+              <span className="block text-xs text-white/40">We'll ask you to confirm the amount before it posts (e.g. Digi, utilities)</span>
+            </span>
+          </label>
         </div>
       )}
 

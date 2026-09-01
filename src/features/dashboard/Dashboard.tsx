@@ -17,6 +17,7 @@ import {
   investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers, recurringSummary,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
+import { BillsDueCard } from '@/components/BillsDueCard';
 import { formatMoney, accentHex } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
@@ -206,6 +207,9 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           </div>
         </Card>
       )}
+
+      {/* Variable recurring bills that came due — confirm the amount to post them */}
+      <BillsDueCard />
 
       {/* Recurring & bills — estimated monthly commitment, household + per person */}
       {data.recurring.items.length > 0 && (

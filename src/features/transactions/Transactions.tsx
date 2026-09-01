@@ -189,6 +189,7 @@ export default function Transactions() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium truncate">{t.merchant || c?.name || '—'}</span>
                           {t.recurring && <span className="shrink-0 text-goal text-[11px]" title={`Recurring · ${t.frequency}`}>↻</span>}
+                          {t.auto && <span className="shrink-0 text-[10px] text-white/40 px-1 py-0.5 rounded bg-white/10" title="Posted automatically from a recurring bill">auto</span>}
                         </div>
                         <div className="text-xs text-white/40 truncate">
                           {c?.name} · {t.method}{t.recurring ? ` · ${t.frequency}` : ''}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerLabel(t.createdBy) ? ` · ${payerLabel(t.createdBy)}` : ''}
