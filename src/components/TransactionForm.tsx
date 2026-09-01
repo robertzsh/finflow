@@ -6,6 +6,7 @@ import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
 import { parseAmount, formatMoney } from '@/lib/format';
+import { rateForDate } from '@/lib/rates';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
 
 interface FormValues {
@@ -60,9 +61,9 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
     setFormError('');
     try {
       const raw = parseAmount(v.amount as unknown as string);
-      // Convert to the base currency at today's rate (fx = lei per 1 unit).
-      // Works for new AND edited transactions: pick EUR, type the euro amount, it stores RON.
-      const rate = txCur === base ? 1 : (fx[txCur] ?? 1);
+      // Convert to the base currency using the rate on the transaction's DATE when
+      // we have a snapshot for it, otherwise the current rate (fx = lei per 1 unit).
+      const rate = txCur === base ? 1 : rateForDate(v.date, txCur, fx);
       const amount = Math.round(raw * rate * 100) / 100;
       if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
       if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
@@ -109,9 +110,10 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
               {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </div>
-          {txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (
-            <p className="text-[11px] text-white/50 mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * (fx[txCur] ?? 1), base)} at {fx[txCur]} {base}/{txCur}</p>
-          )}
+          {txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (() => {
+            const r = rateForDate(watch('date'), txCur, fx);
+            return <p className="text-[11px] text-white/50 mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * r, base)} at {r} {base}/{txCur}</p>;
+          })()}
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
         <div>

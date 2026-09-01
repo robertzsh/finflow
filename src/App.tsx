@@ -21,6 +21,7 @@ import { currencySymbol } from '@/lib/format';
 const Dashboard = lazy(() => import('@/features/dashboard/Dashboard'));
 const Transactions = lazy(() => import('@/features/transactions/Transactions'));
 const Goals = lazy(() => import('@/features/goals/Goals'));
+const Budgets = lazy(() => import('@/features/budgets/Budgets'));
 const Investments = lazy(() => import('@/features/investments/Investments'));
 const Calendar = lazy(() => import('@/features/calendar/Calendar'));
 const Reports = lazy(() => import('@/features/reports/Reports'));
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/" element={<Dashboard onQuickAdd={() => setQuickAdd(true)} />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/budgets" element={<Budgets />} />
             <Route path="/investments" element={<Investments />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/reports" element={<Reports />} />

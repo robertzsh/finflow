@@ -11,13 +11,15 @@ import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
+import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList, InvestHistory } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers, recurringSummary,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers, recurringSummary, netWorthSeries,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
+import { SettleUpCard } from '@/components/SettleUpCard';
+import { BudgetAlertCard } from '@/components/BudgetAlertCard';
 import { formatMoney, accentHex } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
@@ -49,7 +51,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
     const catPayers = categoryPayers(transactions, categories, REF);
     const recurring = recurringSummary(transactions, memberIds, categories);
-    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
+    const netWorth = netWorthSeries(transactions, investments, 12, opening, settings.fxRates);
+    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring, netWorth };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
 
@@ -210,6 +213,19 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
       {/* Variable recurring bills that came due — confirm the amount to post them */}
       <BillsDueCard />
+
+      {/* Who owes whom this month (two-person households) */}
+      <SettleUpCard />
+
+      {/* Budget progress + over-spend alerts */}
+      <BudgetAlertCard />
+
+      {/* Net worth over time — cash balance + investments */}
+      <Card className="p-5 mt-4 flex flex-col" delay={0.1}>
+        <SectionCardHeader title="Net worth" hint="Cash balance + investments, last 12 months"
+          action={<span className="text-lg font-bold tabular-nums">{formatMoney(data.netWorth[data.netWorth.length - 1]?.value ?? 0, cur)}</span>} />
+        <div className="flex-1 min-h-[220px] mt-1"><InvestHistory data={data.netWorth} /></div>
+      </Card>
 
       {/* Recurring & bills — estimated monthly commitment, household + per person */}
       {data.recurring.items.length > 0 && (

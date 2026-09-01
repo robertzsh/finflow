@@ -211,6 +211,33 @@ export function investmentAllocation(inv: Investment[], rates?: FxRates) {
   return [...map.entries()].map(([name, value]) => ({ name, value: r2(value), color: palette[name] ?? '#eab308' }));
 }
 
+/** Total investment value as of the END of month `ref`: each holding's latest
+ *  history point dated on/before that month (converted to base). */
+export function investmentValueAsOf(inv: Investment[], ref: Date, rates?: FxRates): number {
+  const cutoff = format(new Date(ref.getFullYear(), ref.getMonth() + 1, 0), 'yyyy-MM-dd'); // last day of month
+  let total = 0;
+  for (const i of inv) {
+    const pts = [...(i.history ?? [])].filter((p) => p.date <= cutoff).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const v = pts.length ? pts[pts.length - 1].value : i.currentValue;
+    total += toBase(v, i.currency, rates);
+  }
+  return total;
+}
+
+/** Net worth per month = running account balance + investment value that month. */
+export function netWorthSeries(txs: Transaction[], inv: Investment[], months = 12, opening = 0, rates?: FxRates) {
+  const now = new Date();
+  const out: { month: string; value: number; cash: number; invest: number }[] = [];
+  let running = opening;
+  for (let m = months - 1; m >= 0; m--) {
+    const ref = startOfMonth(subMonths(now, m));
+    running += monthStats(txs, ref).net;
+    const invest = investmentValueAsOf(inv, ref, rates);
+    out.push({ month: format(ref, 'MMM'), value: r2(running + invest), cash: r2(running), invest: r2(invest) });
+  }
+  return out;
+}
+
 export function investmentHistory(inv: Investment[], rates?: FxRates) {
   const byMonth = new Map<string, number>();
   for (const i of inv) for (const p of i.history) byMonth.set(p.date, (byMonth.get(p.date) ?? 0) + toBase(p.value, i.currency, rates));
@@ -246,6 +273,40 @@ export function healthScore(txs: Transaction[], budgets: Budget[], cats: Categor
 }
 
 export function r2(n: number) { return Math.round(n * 100) / 100; }
+
+// ---------------------------------------------------------------------------
+// Settle-up: for a two-person household where costs are shared 50/50, figure out
+// who fronted more this month and how much the other owes to even it out.
+// Each expense is "paid" by whoever logged it (createdBy); 'all'/unattributed is
+// treated as fronted half-and-half. Fair share = total household expense / 2.
+// ---------------------------------------------------------------------------
+export interface SettleUp {
+  total: number;
+  fairShare: number;
+  paid: Record<string, number>;
+  net: Record<string, number>;            // paid − fairShare (positive = is owed)
+  owe: { fromId: string; toId: string; amount: number } | null;
+}
+export function settleUp(txs: Transaction[], ref: Date, memberIds: string[]): SettleUp | null {
+  if (memberIds.length !== 2) return null;  // only meaningful for a two-person split
+  const [a, b] = memberIds;
+  const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');
+  const paid: Record<string, number> = { [a]: 0, [b]: 0 };
+  let total = 0;
+  for (const t of m) {
+    total += t.amount;
+    if (t.createdBy && memberIds.includes(t.createdBy)) paid[t.createdBy] += t.amount;
+    else { paid[a] += t.amount / 2; paid[b] += t.amount / 2; } // shared/unattributed → both fronted half
+  }
+  const fairShare = total / 2;
+  const net: Record<string, number> = { [a]: r2(paid[a] - fairShare), [b]: r2(paid[b] - fairShare) };
+  let owe: SettleUp['owe'] = null;
+  const diff = r2(Math.abs(net[a]));
+  if (diff >= 0.01) {
+    owe = net[a] < 0 ? { fromId: a, toId: b, amount: diff } : { fromId: b, toId: a, amount: diff };
+  }
+  return { total: r2(total), fairShare: r2(fairShare), paid: { [a]: r2(paid[a]), [b]: r2(paid[b]) }, net, owe };
+}
 
 export function scoreLabel(score: number) {
   if (score >= 80) return { label: 'Excellent', color: '#10b981' };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ArrowLeftRight, Target, LineChart, CalendarDays, FileBarChart, Settings, Sparkles, MoreHorizontal,
+  LayoutDashboard, ArrowLeftRight, Target, Wallet, LineChart, CalendarDays, FileBarChart, Settings, Sparkles, MoreHorizontal,
 } from 'lucide-react';
 import { cx } from '@/lib/format';
 
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/goals', label: 'Goals', icon: Target },
+  { to: '/budgets', label: 'Budgets', icon: Wallet },
   { to: '/investments', label: 'Investments', icon: LineChart },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/reports', label: 'Reports', icon: FileBarChart },

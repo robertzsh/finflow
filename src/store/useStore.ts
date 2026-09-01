@@ -7,7 +7,7 @@ import {
 import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
-import { fetchFxRates } from '@/lib/rates';
+import { fetchFxRates, snapshotRates } from '@/lib/rates';
 import { setMoneyPrivacy } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
 
@@ -679,6 +679,7 @@ export const useStore = create<StoreState>((set, get) => {
       const rates = await fetchFxRates();
       if (!rates) return false;
       get().updateSettings({ fxRates: { ...get().settings.fxRates, ...rates, RON: 1 } });
+      snapshotRates(get().settings.fxRates); // record today's rates for historical conversion
       return true;
     },
     togglePrivacy: () => set((s) => { const v = !s.privacy; setMoneyPrivacy(v); try { localStorage.setItem('ff_privacy', v ? '1' : '0'); } catch {} return { privacy: v }; }),
