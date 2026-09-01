@@ -12,14 +12,18 @@ let _privacy = (() => { try { return localStorage.getItem('ff_privacy') === '1';
 export function setMoneyPrivacy(v: boolean) { _privacy = v; }
 export const MONEY_MASK = '••••';
 
-export function formatMoney(n: number, currency: CurrencyCode = 'RON', opts?: { compact?: boolean; sign?: boolean }) {
+export function formatMoney(n: number, currency: CurrencyCode = 'RON', opts?: { compact?: boolean; sign?: boolean; cents?: boolean }) {
   if (_privacy) return MONEY_MASK;
   const sign = opts?.sign && n > 0 ? '+' : '';
+  // Consistent strategy: whole amounts show no decimals ("7.600 RON"); only show
+  // the two decimals when there's an actual fractional part ("49,99 RON"). This
+  // keeps the dashboard calm and scannable instead of ".,00" everywhere.
+  const hasCents = opts?.cents ?? (Math.round(Math.abs(n) * 100) % 100 !== 0);
   return sign + new Intl.NumberFormat(LOCALE[currency] ?? 'en-GB', {
     style: 'currency', currency,
     notation: opts?.compact ? 'compact' : 'standard',
-    maximumFractionDigits: opts?.compact ? 1 : 2,
-    minimumFractionDigits: opts?.compact ? 0 : 2,
+    maximumFractionDigits: opts?.compact ? 1 : (hasCents ? 2 : 0),
+    minimumFractionDigits: opts?.compact ? 0 : (hasCents ? 2 : 0),
   }).format(n);
 }
 

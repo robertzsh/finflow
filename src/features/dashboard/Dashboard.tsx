@@ -11,10 +11,11 @@ import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, memberCategoryBreakdown, categoryPayers, recurringSummary,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
@@ -114,78 +115,72 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         </motion.div>
       )}
 
-      {/* Stat cards — full width on phones so long amounts never clip, 2-up tablet, 3-up desktop */}
+      {/* Stat cards — primary trio (income / spending / saved) reads large; savings
+          rate sits below as secondary. Full width on phones so amounts never clip. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
-        <StatCard label="Monthly income" value={M(formatMoney(data.stats.income, cur))} icon="ArrowDownToLine" accent="income" delta={privacy ? undefined : `${Math.abs(incDelta).toFixed(0)}% vs last mo`} deltaUp={incDelta >= 0} delay={0.05} />
-        <StatCard label="Monthly spending" value={formatMoney(data.stats.expense, cur)} icon="ArrowUpFromLine" accent="expense" delta={`${Math.abs(spendDelta).toFixed(0)}% vs last mo`} deltaUp={spendDelta < 0} delay={0.1} />
-        <StatCard label="Savings this month" value={M(formatMoney(data.stats.net, cur, { sign: true }))} icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'} delay={0.15} />
-        <StatCard label="Savings rate" value={privacy ? '••••' : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—')} icon="Percent" accent="savings" delta="put aside vs income" deltaUp={savingsRate >= 0} delay={0.2} />
+        <StatCard label="Monthly income" value={data.stats.income > 0 ? M(formatMoney(data.stats.income, cur)) : '—'} icon="ArrowDownToLine" accent="income"
+          delta={privacy || data.prev.income <= 0 ? undefined : `${Math.abs(incDelta).toFixed(0)}% vs last month`} deltaUp={incDelta >= 0}
+          note={data.stats.income > 0 ? undefined : 'No income yet'} emphasis delay={0.05} />
+        <StatCard label="Monthly spending" value={data.stats.expense > 0 ? formatMoney(data.stats.expense, cur) : '—'} icon="ArrowUpFromLine" accent="expense"
+          delta={privacy || data.prev.expense <= 0 ? undefined : `${Math.abs(spendDelta).toFixed(0)}% vs last month`} deltaUp={spendDelta < 0}
+          note={data.stats.expense > 0 ? undefined : 'No expenses yet'} emphasis delay={0.1} />
+        <StatCard label="Saved this month" value={data.stats.income > 0 || data.stats.expense > 0 ? M(formatMoney(data.stats.net, cur, { sign: true })) : '—'}
+          icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'}
+          note={privacy ? undefined : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}% savings rate` : 'Nothing set aside yet')} emphasis delay={0.15} />
+        <StatCard label="Savings rate" value={privacy ? '••••' : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—')} icon="Percent" accent="savings"
+          note="put aside vs income" delay={0.2} />
       </div>
 
-      {/* Per-member breakdown (shared household) */}
-      {isHousehold && (
-        <Card className="p-5 mt-4" delay={0.15}>
-          <SectionCardHeader title="Statistics per person" hint="Your own spending vs your partner's this month · shared expenses split 50/50" />
-          <div className="grid sm:grid-cols-2 gap-3">
-            {members.map((m, i) => {
-              const b = data.byMember.get(m.id) ?? { income: 0, expense: 0 };
-              const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
-              const net = b.income - b.expense;
-              const savePct = b.income > 0 ? (net / b.income) * 100 : null;
-              const topCats = memberCategoryBreakdown(transactions, REF, m.id, memberIds, categories).items;
-              const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
-              const color = palette[i % palette.length];
-              return (
-                <div key={m.id} className={`rounded-xl border p-4 ${m.id === userId ? 'bg-blue-500/10 border-blue-400/30' : 'bg-white/[0.03] border-white/10'}`}>
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: color }}>
-                      {(m.name || '?').charAt(0).toUpperCase()}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold">{m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}</div>
-                      <div className="text-[11px] text-white/40">set aside {M(formatMoney(net, cur, { sign: true, compact: Math.abs(net) > 9999 }))}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-expense">{formatMoney(b.expense, cur)}</div>
-                      <div className="text-[11px] text-white/40">spent</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 my-2 text-center">
-                    <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
-                      <div className="text-income font-semibold text-sm truncate">{M(formatMoney(b.income, cur, { compact: true }))}</div>
-                      <div className="text-[10px] text-white/40">income</div>
-                    </div>
-                    <div className="rounded-lg bg-white/[0.04] py-1.5 px-1 min-w-0">
-                      <div className={`font-semibold text-sm truncate ${net >= 0 ? 'text-savings' : 'text-expense'}`}>{M(formatMoney(net, cur, { sign: true, compact: true }))}</div>
-                      <div className="text-[10px] text-white/40">saved</div>
-                    </div>
-                    <div className="rounded-lg bg-white/[0.04] py-1.5">
-                      <div className="font-semibold text-sm">{privacy ? '••••' : (savePct === null ? '—' : `${savePct.toFixed(0)}%`)}</div>
-                      <div className="text-[10px] text-white/40">saved rate</div>
-                    </div>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${share}%`, background: color }} />
-                  </div>
-                  <div className="text-[11px] text-white/40 mt-1.5">{share.toFixed(0)}% of family spend</div>
-                  {topCats.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {topCats.map((c) => (
-                        <div key={c.id} className="flex items-center gap-2 text-[11px]">
-                          <span className="truncate flex-1 text-white/60">{c.emoji ? `${c.emoji} ` : ''}{c.name}</span>
-                          <span className="text-white/40">{c.pct.toFixed(0)}%</span>
-                          <span className="tabular-nums text-white/70 w-20 text-right">{formatMoney(c.value, cur)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+      {/* Per-member comparison (shared household) — one glance to compare the two of you */}
+      {isHousehold && (() => {
+        const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
+        const cols = members.map((m, i) => {
+          const b = data.byMember.get(m.id) ?? { income: 0, expense: 0 };
+          const net = b.income - b.expense;
+          const savePct = b.income > 0 ? (net / b.income) * 100 : null;
+          const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
+          return { m, b, net, savePct, share, color: palette[i % palette.length], you: m.id === userId };
+        });
+        const gridStyle = { gridTemplateColumns: `minmax(84px,auto) repeat(${cols.length}, minmax(0,1fr))` } as React.CSSProperties;
+        const MetricRow = ({ label, render }: { label: string; render: (c: typeof cols[number]) => React.ReactNode }) => (
+          <>
+            <div className="text-xs text-white/45 py-2 self-center">{label}</div>
+            {cols.map((c) => (
+              <div key={c.m.id} className="py-2 text-right tabular-nums text-sm font-medium self-center">{render(c)}</div>
+            ))}
+          </>
+        );
+        return (
+          <Card className="p-5 mt-4" delay={0.15}>
+            <SectionCardHeader title="Statistics per person" hint="This month · shared expenses split 50/50" />
+            <div className="grid gap-x-3 sm:gap-x-6" style={gridStyle}>
+              <div />
+              {cols.map((c) => (
+                <div key={c.m.id} className="flex items-center justify-end gap-2 pb-2.5 mb-1 border-b border-white/10">
+                  <span className="w-7 h-7 rounded-full grid place-items-center text-white text-xs font-bold shrink-0" style={{ background: c.color }}>
+                    {(c.m.name || '?').charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-sm font-semibold truncate">{c.m.name}{c.you && <span className="text-white/40 font-normal"> (you)</span>}</span>
                 </div>
-              );
-            })}
-          </div>
-          <p className="text-xs text-white/40 mt-3">Combined income this month <span className="text-white/70 font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
-        </Card>
-      )}
+              ))}
+
+              <MetricRow label="Income" render={(c) => <span className="text-income">{M(formatMoney(c.b.income, cur))}</span>} />
+              <MetricRow label="Spent" render={(c) => formatMoney(c.b.expense, cur)} />
+              <MetricRow label="Saved" render={(c) => <span className={c.net >= 0 ? 'text-savings' : 'text-expense'}>{M(formatMoney(c.net, cur, { sign: true }))}</span>} />
+              <MetricRow label="Save rate" render={(c) => (privacy ? '••••' : (c.savePct === null ? '—' : `${c.savePct.toFixed(0)}%`))} />
+
+              <div className="text-xs text-white/45 pt-3 self-start">Share of spend</div>
+              {cols.map((c) => (
+                <div key={c.m.id} className="pt-3">
+                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${c.share}%`, background: c.color }} /></div>
+                  <div className="text-[11px] text-white/40 mt-1 text-right tabular-nums">{c.share.toFixed(0)}%</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-white/40 mt-4">Combined income <span className="text-white/70 font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
+          </Card>
+        );
+      })()}
 
       {/* Groceries by store */}
       {data.groceriesByStore.items.length > 0 && (
@@ -273,33 +268,41 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         </Card>
         <Card className="p-5 flex flex-col" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
-          <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })} /></div>
-          <div className="mt-1 flex items-center justify-between text-xs text-white/45">
-            <span>Spent {formatMoney(expenseTotal, cur)} of {formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })}</span>
-            <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
-          </div>
-          <div className="mt-3 space-y-1.5 flex-1">
-            {data.byCat.slice(0, 12).map((c) => {
-              const cat = categories.find((x) => x.id === c.id);
-              const pct = (c.value / allocDenom) * 100;
-              return (
-                <div key={c.id} className="flex items-center gap-2 text-sm">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                  <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
-                  {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
-                  <span className="tabular-nums text-white/50 text-xs w-9 text-right">{pct.toFixed(0)}%</span>
-                  <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
+          {expenseTotal === 0 ? (
+            <EmptyState icon="PieChart" title="No expenses this month"
+              subtitle="Once you add spending, your category breakdown appears here."
+              action={<Button onClick={onQuickAdd}><Plus size={16} /> Add expense</Button>} />
+          ) : (
+            <>
+              <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })} /></div>
+              <div className="mt-1 flex items-center justify-between text-xs text-white/45">
+                <span>Spent {formatMoney(expenseTotal, cur)} of {formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })}</span>
+                <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
+              </div>
+              <div className="mt-3 space-y-1.5 flex-1">
+                {data.byCat.slice(0, 12).map((c) => {
+                  const cat = categories.find((x) => x.id === c.id);
+                  const pct = (c.value / allocDenom) * 100;
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 text-sm">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                      <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
+                      {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
+                      <span className="tabular-nums text-white/50 text-xs w-9 text-right">{pct.toFixed(0)}%</span>
+                      <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {availableBal > 0 && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income" />
+                  <span className="text-sm font-medium flex-1">Available to spend</span>
+                  <span className="tabular-nums text-white/50 text-xs w-9 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
+                  <span className="tabular-nums font-semibold text-income w-24 text-right">{formatMoney(availableBal, cur)}</span>
                 </div>
-              );
-            })}
-          </div>
-          {availableBal > 0 && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income" />
-              <span className="text-sm font-medium flex-1">Available to spend</span>
-              <span className="tabular-nums text-white/50 text-xs w-9 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
-              <span className="tabular-nums font-semibold text-income w-24 text-right">{formatMoney(availableBal, cur)}</span>
-            </div>
+              )}
+            </>
           )}
         </Card>
       </div>

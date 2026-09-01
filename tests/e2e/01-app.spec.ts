@@ -4,7 +4,7 @@ import { openApp, hasHorizontalScroll } from './helpers';
 test.describe('App shell, navigation, routing, layout', () => {
   test('loads the dashboard with the key stat cards', async ({ page }) => {
     await openApp(page);
-    for (const label of ['Monthly income', 'Monthly spending', 'Savings this month', 'Savings rate']) {
+    for (const label of ['Monthly income', 'Monthly spending', 'Saved this month', 'Savings rate']) {
       await expect(page.getByText(label, { exact: false }).first()).toBeVisible();
     }
   });
