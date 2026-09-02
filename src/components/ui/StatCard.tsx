@@ -27,12 +27,12 @@ export function StatCard({ label, value, icon, accent, delta, deltaUp, note, emp
       <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r" style={{ background: color, opacity: 0.75 }} />
       <div className="flex items-start justify-between gap-2 relative">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.08em] text-white/45 font-medium truncate">{label}</p>
+          <p className="metric-label truncate">{label}</p>
           <motion.p
             key={value}
             initial={{ opacity: 0.5 }} animate={{ opacity: 1 }}
             className={cx(
-              'mt-2 font-bold tabular-nums tracking-tight leading-none truncate',
+              'metric-value mt-2 font-bold leading-none truncate',
               emphasis ? 'text-[1.6rem] sm:text-[2rem]' : 'text-xl sm:text-2xl',
             )}
           >{value}</motion.p>

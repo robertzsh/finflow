@@ -42,21 +42,21 @@ export default function Budgets() {
       {/* Overview */}
       <div className="grid sm:grid-cols-3 gap-4 mb-4">
         <Card className="p-5" delay={0}>
-          <p className="text-xs uppercase tracking-wider text-white/50">Total budget</p>
-          <p className="text-2xl font-bold mt-2">{formatMoney(totalBudget, cur)}</p>
+          <p className="metric-label">Total budget</p>
+          <p className="metric-value text-2xl font-bold mt-2">{formatMoney(totalBudget, cur)}</p>
           <div className="mt-3"><ProgressBar value={overallPct} color="#3b82f6" danger={overallPct > 100} /></div>
           <p className="text-xs text-white/40 mt-2">{formatMoney(totalSpent, cur)} spent · {overallPct.toFixed(0)}% used</p>
         </Card>
         <Card className="p-5" delay={0.05}>
-          <p className="text-xs uppercase tracking-wider text-white/50">Remaining</p>
-          <p className="text-2xl font-bold mt-2 text-income">{formatMoney(Math.max(0, totalBudget - totalSpent), cur)}</p>
+          <p className="metric-label">Remaining</p>
+          <p className="metric-value text-2xl font-bold mt-2 text-income">{formatMoney(Math.max(0, totalBudget - totalSpent), cur)}</p>
           <p className="text-xs text-white/40 mt-3">Across {progress.length} budgets</p>
         </Card>
         <Card className="p-5" delay={0.1}>
-          <p className="text-xs uppercase tracking-wider text-white/50">Alerts</p>
+          <p className="metric-label">Alerts</p>
           <div className="flex items-center gap-4 mt-2">
-            <div><p className="text-2xl font-bold text-expense">{overCount}</p><p className="text-xs text-white/40">over budget</p></div>
-            <div><p className="text-2xl font-bold text-invest">{warnCount}</p><p className="text-xs text-white/40">projected over</p></div>
+            <div><p className="metric-value text-2xl font-bold text-expense">{overCount}</p><p className="text-xs text-white/40">over budget</p></div>
+            <div><p className="metric-value text-2xl font-bold text-invest">{warnCount}</p><p className="text-xs text-white/40">projected over</p></div>
           </div>
         </Card>
       </div>

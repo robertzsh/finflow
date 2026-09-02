@@ -19,6 +19,8 @@ import {
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
+import { BillRow, type BillStatus } from '@/components/ui/BillRow';
+import { upcomingOccurrences } from '@/lib/recurring';
 import { formatMoney, accentHex } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
@@ -53,6 +55,19 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
+
+  // Next occurrence of each recurring bill (dedup by merchant+category), with a
+  // "paid this month" flag so the Recurring card can show due/paid status.
+  const paidBillKeys = new Set(
+    transactions.filter((t) => t.type === 'expense' && isSameMonth(parseISO(t.date), REF)).map((t) => `${t.merchant}|${t.categoryId}`),
+  );
+  const recurringUpcoming = (() => {
+    const up = upcomingOccurrences(transactions, 45, REF, categories);
+    const seen = new Set<string>(); const out: typeof up = [];
+    for (const u of up) { const k = `${u.base.merchant}|${u.base.categoryId}`; if (!seen.has(k)) { seen.add(k); out.push(u); } }
+    return out.slice(0, 5);
+  })();
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;
@@ -151,7 +166,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           </>
         );
         return (
-          <Card className="p-5 mt-4" delay={0.15}>
+          <Card className="p-5 section-gap" delay={0.15}>
             <SectionCardHeader title="Statistics per person" hint="This month · shared expenses split 50/50" />
             <div className="grid gap-x-3 sm:gap-x-6" style={gridStyle}>
               <div />
@@ -184,7 +199,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
       {/* Groceries by store */}
       {data.groceriesByStore.items.length > 0 && (
-        <Card className="p-5 mt-4" delay={0.15}>
+        <Card className="p-5 section-gap" delay={0.15}>
           <SectionCardHeader title="Groceries by store" hint={`This month · ${formatMoney(data.groceriesByStore.total, cur)} total`} />
           <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
             {data.groceriesByStore.items.map((s) => (
@@ -209,7 +224,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
       {/* Recurring & bills — estimated monthly commitment, household + per person */}
       {data.recurring.items.length > 0 && (
-        <Card className="p-5 mt-4" delay={0.15}>
+        <Card className="p-5 section-gap" delay={0.15}>
           <SectionCardHeader title="Recurring & bills" hint={`Estimated ${formatMoney(data.recurring.householdMonthly, cur)}/mo${isHousehold ? ' for the family' : ''}`} />
           {isHousehold ? (
             <div className="grid sm:grid-cols-2 gap-3">
@@ -256,12 +271,29 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               })}
             </div>
           )}
+          {recurringUpcoming.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="metric-label mb-1">Upcoming</div>
+              <div className="divide-y divide-white/5">
+                {recurringUpcoming.map((u) => {
+                  const c = categories.find((x) => x.id === u.base.categoryId);
+                  const paid = paidBillKeys.has(`${u.base.merchant}|${u.base.categoryId}`);
+                  const days = Math.round((parseISO(u.date).getTime() - startOfToday) / 86400000);
+                  const status: BillStatus = paid ? 'paid' : days <= 5 ? 'due-soon' : 'upcoming';
+                  return (
+                    <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
+                      name={u.base.merchant || c?.name || '—'} amount={u.amount} currency={cur} date={u.date} status={status} />
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <p className="text-[11px] text-white/40 mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 — each person carries half (e.g. rent).</p>
         </Card>
       )}
 
       {/* Charts row 1 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 section-gap">
         <Card className="p-5 lg:col-span-2 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
           <div className="flex-1 min-h-[260px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
@@ -308,7 +340,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Charts row 2 */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 section-gap">
         <Card className="p-5 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Income sources" hint="This month" />
           <div className="flex-1 min-h-[180px]"><Donut data={bySource} height="100%" centerLabel="Income" centerValue={formatMoney(incomeTotal, cur, { compact: incomeTotal > 9999 })} /></div>
@@ -325,7 +357,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Investments + insights */}
-      <div className="grid lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid lg:grid-cols-3 gap-4 section-gap">
         <Card className="p-5 flex flex-col" delay={0.1}>
           <SectionCardHeader title="Investment allocation"
             hint={`${formatMoney(data.invTotals.value, cur)} · ${data.invTotals.gain >= 0 ? '+' : ''}${data.invTotals.gainPct.toFixed(1)}%`} />

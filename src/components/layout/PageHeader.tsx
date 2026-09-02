@@ -16,10 +16,10 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 
 export function SectionCardHeader({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h3 className="font-semibold">{title}</h3>
-        {hint && <p className="text-xs text-white/40 mt-0.5">{hint}</p>}
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="min-w-0">
+        <h3 className="section-title truncate">{title}</h3>
+        {hint && <p className="section-hint">{hint}</p>}
       </div>
       {action}
     </div>

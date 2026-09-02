@@ -105,8 +105,8 @@ export default function Goals() {
                 <ProgressRing value={pct} color={g.color} label={pct >= 100 ? 'Done!' : 'saved'} />
               </div>
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="font-semibold text-goal truncate">{formatMoney(g.saved, gc)}</div><div className="text-white/40">saved</div></div>
-                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="font-semibold truncate">{formatMoney(remaining, gc)}</div><div className="text-white/40">to go</div></div>
+                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="metric-value font-semibold text-goal truncate">{formatMoney(g.saved, gc)}</div><div className="text-white/40">saved</div></div>
+                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="metric-value font-semibold truncate">{formatMoney(remaining, gc)}</div><div className="text-white/40">to go</div></div>
               </div>
               <p className="text-xs text-white/40 text-center mt-3">
                 {monthly > 0 && <>at {formatMoney(monthly, gc, { compact: monthly > 9999 })}/mo · </>}
