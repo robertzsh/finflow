@@ -14,9 +14,10 @@ const CHIP: Record<BillStatus, { label: (d: string, n: number) => string; cls: s
   overdue:    { label: () => 'Overdue',                  cls: 'bg-expense/15 text-expense' },
 };
 
-export function BillRow({ icon, color, emoji, name, amount, currency, date, status, who }: {
+export function BillRow({ icon, color, emoji, name, amount, currency, date, status, who, orig }: {
   icon: string; color: string; emoji?: string; name: string; amount: number; currency: CurrencyCode; date: string; status: BillStatus;
   who?: { name: string; color: string };
+  orig?: string; // e.g. "420 €" — shown as a caption when the bill is in a foreign currency
 }) {
   const days = Math.round((parseISO(date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
   const chip = CHIP[status];
@@ -37,7 +38,10 @@ export function BillRow({ icon, color, emoji, name, amount, currency, date, stat
       <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', chip.cls)}>
         {chip.label(format(parseISO(date), 'd MMM'), days)}
       </span>
-      <span className="tabular-nums font-semibold text-sm w-24 text-right shrink-0">{formatMoney(amount, currency)}</span>
+      <div className="w-24 text-right shrink-0">
+        <div className="tabular-nums font-semibold text-sm">{formatMoney(amount, currency)}</div>
+        {orig && <div className="text-[10px] text-white/35 tabular-nums">{orig}</div>}
+      </div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
 import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
-import { fetchFxRates, snapshotRates } from '@/lib/rates';
+import { fetchFxRates, snapshotRates, rateForDate } from '@/lib/rates';
 import { setMoneyPrivacy } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
 
@@ -538,12 +538,18 @@ export const useStore = create<StoreState>((set, get) => {
       const variable = due.filter((d) => d.variable);
       if (fixed.length) {
         const now = new Date().toISOString();
-        const posted: Transaction[] = fixed.map((d) => ({
-          ...d.base, id: uid('tx'), date: d.date, amount: d.amount,
-          auto: true, recurrenceKey: d.recurrenceKey, createdAt: now,
-          // keep it recurring so the template lineage continues, keep payer
-          createdBy: d.base.createdBy,
-        }));
+        const fx = s.settings.fxRates;
+        const posted: Transaction[] = fixed.map((d) => {
+          // Foreign bills post at the rate on their occurrence date (not today's).
+          const amount = d.base.origCurrency && d.base.origAmount != null
+            ? Math.round(d.base.origAmount * rateForDate(d.date, d.base.origCurrency, fx) * 100) / 100
+            : d.amount;
+          return {
+            ...d.base, id: uid('tx'), date: d.date, amount,
+            auto: true, recurrenceKey: d.recurrenceKey, createdAt: now,
+            createdBy: d.base.createdBy, // keep it recurring so the template lineage continues, keep payer
+          };
+        });
         set((st) => ({ transactions: [...posted, ...st.transactions].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
         get().persist(); pushMany('transactions', posted);
       }

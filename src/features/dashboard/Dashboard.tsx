@@ -15,13 +15,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
 import { BillRow, type BillStatus } from '@/components/ui/BillRow';
 import { upcomingOccurrences } from '@/lib/recurring';
-import { formatMoney, accentHex } from '@/lib/format';
+import { formatMoney, accentHex, currencySymbol } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
 const REF = new Date();
@@ -51,7 +51,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const byMember = perMemberSpending(transactions, REF, memberIds);
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
     const catPayers = categoryPayers(transactions, categories, REF);
-    const recurring = recurringSummary(transactions, memberIds, categories);
+    const recurring = recurringSummary(transactions, memberIds, categories, settings.fxRates);
     return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
   }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
   const memberIds = members.map((m) => m.id);
@@ -284,9 +284,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
                   const mIdx = members.findIndex((m) => m.id === u.base.createdBy);
                   const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: palette[mIdx % palette.length] } : undefined;
+                  // foreign-currency bills project at today's rate (so they move with the market)
+                  const amount = privacy ? u.amount : liveAmount(u.base, settings.fxRates);
+                  const orig = u.base.origCurrency ? `${u.base.origAmount} ${currencySymbol(u.base.origCurrency)}` : undefined;
                   return (
                     <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
-                      name={u.base.merchant || c?.name || '—'} amount={u.amount} currency={cur} date={u.date} status={status} who={who} />
+                      name={u.base.merchant || c?.name || '—'} amount={amount} currency={cur} date={u.date} status={status} who={who} orig={orig} />
                   );
                 })}
               </div>

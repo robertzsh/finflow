@@ -14,6 +14,7 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { TransactionModal } from '@/components/TransactionModal';
 import { Plus } from 'lucide-react';
 import { upcomingOccurrences } from '@/lib/recurring';
+import { liveAmount } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
 import type { Transaction } from '@/types';
 
@@ -62,11 +63,11 @@ export default function Calendar() {
       // only add a projected occurrence if there isn't already a real one that day for the same merchant
       const existing = map.get(u.date) ?? [];
       if (!existing.some((e) => e.merchant === u.base.merchant)) {
-        add({ key: u.date, merchant: u.base.merchant, amount: u.amount, type: u.base.type, categoryId: u.base.categoryId, projected: true, recurring: true, frequency: u.base.frequency });
+        add({ key: u.date, merchant: u.base.merchant, amount: liveAmount(u.base, settings.fxRates), type: u.base.type, categoryId: u.base.categoryId, projected: true, recurring: true, frequency: u.base.frequency });
       }
     }
     return map;
-  }, [transactions, upcoming]);
+  }, [transactions, upcoming, settings.fxRates]);
 
   const selectedItems = selected ? (itemsByDate.get(selected) ?? []) : [];
   const dayIncome = selectedItems.filter((i) => i.type === 'income').reduce((a, i) => a + i.amount, 0);

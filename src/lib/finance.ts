@@ -9,6 +9,13 @@ export function toBase(amount: number, currency: CurrencyCode | undefined, rates
   return amount * (r[currency ?? 'RON'] ?? 1);
 }
 
+/** The base-currency value of a transaction/bill *right now*: if it was entered in a
+ *  foreign currency, re-convert its original amount at the given rates; else its stored amount. */
+export function liveAmount(t: { origCurrency?: CurrencyCode; origAmount?: number; amount: number }, rates?: FxRates): number {
+  if (t.origCurrency && t.origAmount != null) return Math.round(toBase(t.origAmount, t.origCurrency, rates) * 100) / 100;
+  return t.amount;
+}
+
 export const monthKey = (d: Date | string) =>
   format(typeof d === 'string' ? parseISO(d) : d, 'yyyy-MM');
 
@@ -347,7 +354,7 @@ function subscriptionLikeIds(categories: Category[]): Set<string> {
   return ids;
 }
 
-export function recurringSummary(txs: Transaction[], memberIds: string[], categories: Category[] = []): RecurringSummary {
+export function recurringSummary(txs: Transaction[], memberIds: string[], categories: Category[] = [], rates?: FxRates): RecurringSummary {
   const subLike = subscriptionLikeIds(categories);
   const map = new Map<string, Transaction>();
   for (const t of txs) {
@@ -362,7 +369,7 @@ export function recurringSummary(txs: Transaction[], memberIds: string[], catego
     if (!prev || t.date > prev.date) map.set(key, t);
   }
   const items: RecurringItem[] = [...map.values()]
-    .map((t) => ({ id: t.id, merchant: t.merchant, categoryId: t.categoryId, frequency: t.frequency ?? 'monthly', monthly: r2(perMonth(t.amount, t.frequency)), by: t.createdBy }))
+    .map((t) => ({ id: t.id, merchant: t.merchant, categoryId: t.categoryId, frequency: t.frequency ?? 'monthly', monthly: r2(perMonth(liveAmount(t, rates), t.frequency)), by: t.createdBy }))
     .sort((a, b) => b.monthly - a.monthly);
 
   const perMember = new Map<string, number>();

@@ -31,12 +31,13 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
   const [submitting, setSubmitting] = useState(false);
   const showPaidBy = cloud && authed && members.length > 1;
   const [paidBy, setPaidBy] = useState<string>(existing?.createdBy ?? userId ?? '');
-  // New transactions can be entered in another currency; converted to base at today's rate.
-  const [txCur, setTxCur] = useState<CurrencyCode>(base);
+  // Transactions can be entered in another currency. If this one was, we remember the
+  // original currency + amount so editing shows those (and re-converts at the date's rate).
+  const [txCur, setTxCur] = useState<CurrencyCode>(existing?.origCurrency ?? base);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: existing ? {
-      type: existing.type, amount: existing.amount, categoryId: existing.categoryId,
+      type: existing.type, amount: existing.origAmount ?? existing.amount, categoryId: existing.categoryId,
       method: existing.method, date: existing.date,
       notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly', variableAmount: existing.variableAmount ?? false,
     } : {
@@ -63,13 +64,18 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       const raw = parseAmount(v.amount as unknown as string);
       // Convert to the base currency using the rate on the transaction's DATE when
       // we have a snapshot for it, otherwise the current rate (fx = lei per 1 unit).
-      const rate = txCur === base ? 1 : rateForDate(v.date, txCur, fx);
+      const foreign = txCur !== base;
+      const rate = foreign ? rateForDate(v.date, txCur, fx) : 1;
       const amount = Math.round(raw * rate * 100) / 100;
       if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
       if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
       const cat = categories.find((c) => c.id === v.categoryId);
       const payload = {
         type: v.type, amount, categoryId: v.categoryId,
+        // Remember the original foreign amount so future occurrences (or a change of
+        // date) re-convert at the right day's rate; clear it when entered in base.
+        origCurrency: foreign ? txCur : undefined,
+        origAmount: foreign ? raw : undefined,
         merchant: existing?.merchant || cat?.name || '', // no manual merchant — default to category name
         method: v.method as PaymentMethod, date: v.date, notes: v.notes,
         recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,

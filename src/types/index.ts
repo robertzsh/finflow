@@ -28,6 +28,8 @@ export interface Transaction {
   notes?: string;
   recurring: boolean;
   frequency?: RecurringFrequency;
+  origCurrency?: CurrencyCode; // if entered in a foreign currency, the currency it was typed in…
+  origAmount?: number;         // …and the amount in that currency (so it can re-convert at any date)
   variableAmount?: boolean; // recurring bill whose amount changes (Digi/EON…) → confirm before posting
   auto?: boolean;           // this instance was auto-posted from a recurring template
   recurrenceKey?: string;   // idempotency: merchant|categoryId|frequency|occurrenceDate

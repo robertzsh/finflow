@@ -11,6 +11,7 @@ const rowToTx = (r: any): Transaction => ({
   merchant: r.merchant, method: r.method, date: r.date, notes: r.notes ?? '',
   recurring: !!r.recurring, frequency: r.frequency ?? undefined, receipt: r.receipt ?? undefined,
   variableAmount: r.variable_amount ?? undefined, auto: r.auto ?? undefined, recurrenceKey: r.recurrence_key ?? undefined,
+  origCurrency: r.orig_currency ?? undefined, origAmount: r.orig_amount != null ? Number(r.orig_amount) : undefined,
   createdAt: r.created_at ?? '', createdBy: r.created_by ?? undefined,
 });
 const txToRow = (t: Transaction, householdId: string, uid: string) => ({
@@ -19,6 +20,7 @@ const txToRow = (t: Transaction, householdId: string, uid: string) => ({
   date: t.date, notes: t.notes ?? '', recurring: t.recurring,
   frequency: t.frequency ?? null, receipt: t.receipt ?? null,
   variable_amount: t.variableAmount ?? null, auto: t.auto ?? null, recurrence_key: t.recurrenceKey ?? null,
+  orig_currency: t.origCurrency ?? null, orig_amount: t.origAmount ?? null,
 });
 
 const rowToBudget = (r: any): Budget => ({ id: r.id, categoryId: r.category_id, amount: Number(r.amount), month: r.month ?? 'all' });
