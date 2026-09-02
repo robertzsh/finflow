@@ -14,8 +14,9 @@ const CHIP: Record<BillStatus, { label: (d: string, n: number) => string; cls: s
   overdue:    { label: () => 'Overdue',                  cls: 'bg-expense/15 text-expense' },
 };
 
-export function BillRow({ icon, color, emoji, name, amount, currency, date, status }: {
+export function BillRow({ icon, color, emoji, name, amount, currency, date, status, who }: {
   icon: string; color: string; emoji?: string; name: string; amount: number; currency: CurrencyCode; date: string; status: BillStatus;
+  who?: { name: string; color: string };
 }) {
   const days = Math.round((parseISO(date).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
   const chip = CHIP[status];
@@ -23,7 +24,14 @@ export function BillRow({ icon, color, emoji, name, amount, currency, date, stat
     <div className="flex items-center gap-3 py-2">
       <CategoryIcon icon={icon} color={color} emoji={emoji} size={16} />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">{name}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-medium truncate">{name}</span>
+          {who && (
+            <span className="shrink-0 w-4 h-4 rounded-full grid place-items-center text-white text-[9px] font-bold" style={{ background: who.color }} title={who.name}>
+              {who.name.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
         <div className="text-[11px] text-white/40">{format(parseISO(date), 'EEE d MMM')}</div>
       </div>
       <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', chip.cls)}>

@@ -58,14 +58,15 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
   // Next occurrence of each recurring bill (dedup by merchant+category), with a
   // "paid this month" flag so the Recurring card can show due/paid status.
+  const billKey = (t: { createdBy?: string; merchant: string; categoryId: string }) => `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}`;
   const paidBillKeys = new Set(
-    transactions.filter((t) => t.type === 'expense' && isSameMonth(parseISO(t.date), REF)).map((t) => `${t.merchant}|${t.categoryId}`),
+    transactions.filter((t) => t.type === 'expense' && isSameMonth(parseISO(t.date), REF)).map(billKey),
   );
   const recurringUpcoming = (() => {
     const up = upcomingOccurrences(transactions, 45, REF, categories);
     const seen = new Set<string>(); const out: typeof up = [];
-    for (const u of up) { const k = `${u.base.merchant}|${u.base.categoryId}`; if (!seen.has(k)) { seen.add(k); out.push(u); } }
-    return out.slice(0, 5);
+    for (const u of up) { const k = billKey(u.base); if (!seen.has(k)) { seen.add(k); out.push(u); } }
+    return out.slice(0, 8);
   })();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
 
@@ -277,12 +278,15 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               <div className="divide-y divide-white/5">
                 {recurringUpcoming.map((u) => {
                   const c = categories.find((x) => x.id === u.base.categoryId);
-                  const paid = paidBillKeys.has(`${u.base.merchant}|${u.base.categoryId}`);
+                  const paid = paidBillKeys.has(billKey(u.base));
                   const days = Math.round((parseISO(u.date).getTime() - startOfToday) / 86400000);
                   const status: BillStatus = paid ? 'paid' : days <= 5 ? 'due-soon' : 'upcoming';
+                  const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
+                  const mIdx = members.findIndex((m) => m.id === u.base.createdBy);
+                  const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: palette[mIdx % palette.length] } : undefined;
                   return (
                     <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
-                      name={u.base.merchant || c?.name || '—'} amount={u.amount} currency={cur} date={u.date} status={status} />
+                      name={u.base.merchant || c?.name || '—'} amount={u.amount} currency={cur} date={u.date} status={status} who={who} />
                   );
                 })}
               </div>

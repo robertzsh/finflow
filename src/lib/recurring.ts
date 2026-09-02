@@ -28,7 +28,9 @@ function recurringTemplates(txs: Transaction[], categories: Category[]): { t: Tr
     const isRecur = (t.recurring && t.frequency) || sub.has(t.categoryId);
     if (!isRecur) continue;
     const freq = (t.frequency ?? 'monthly') as RecurringFrequency;
-    const k = `${t.merchant}|${t.categoryId}|${freq}`;
+    // Key by payer too, so each person's own Gym/Spotify/etc. projects separately
+    // (matches the per-person "Recurring & bills" breakdown).
+    const k = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}|${freq}`;
     const prev = seen.get(k);
     if (!prev || parseISO(t.date) > parseISO(prev.t.date)) seen.set(k, { t, freq });
   }
@@ -72,8 +74,8 @@ export function periodKey(date: string, freq: RecurringFrequency): string {
   return freq === 'weekly' ? date : date.slice(0, 7); // yyyy-mm-dd | yyyy-mm
 }
 
-export function recurrenceKeyFor(t: Pick<Transaction, 'merchant' | 'categoryId' | 'frequency'>, occurrenceDate: string): string {
-  return `${t.merchant}|${t.categoryId}|${t.frequency}|${occurrenceDate}`;
+export function recurrenceKeyFor(t: Pick<Transaction, 'merchant' | 'categoryId' | 'frequency' | 'createdBy'>, occurrenceDate: string): string {
+  return `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}|${t.frequency}|${occurrenceDate}`;
 }
 
 export interface DueOccurrence {
@@ -92,11 +94,12 @@ export function dueOccurrences(txs: Transaction[], today = new Date(), skipped: 
   const skipSet = new Set(skipped);
   const templates = recurringTemplates(txs, categories); // includes subscription categories
 
-  // index existing transactions by merchant|category → set of period keys already present
+  // index existing transactions by payer|merchant|category → period keys already present
+  // (payer-scoped so each person's own bill posts independently, e.g. two Gyms).
   const present = new Map<string, Set<string>>();
   for (const t of txs) {
     const freq = (t.frequency ?? 'monthly') as RecurringFrequency;
-    const mk = `${t.merchant}|${t.categoryId}`;
+    const mk = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}`;
     if (!present.has(mk)) present.set(mk, new Set());
     present.get(mk)!.add(periodKey(t.date, freq));
   }
@@ -104,13 +107,13 @@ export function dueOccurrences(txs: Transaction[], today = new Date(), skipped: 
   const out: DueOccurrence[] = [];
   const todayStr = format(today, 'yyyy-MM-dd');
   for (const { t, freq } of templates) {
-    const mk = `${t.merchant}|${t.categoryId}`;
+    const mk = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}`;
     let d = nextDate(parseISO(t.date), freq); // first occurrence AFTER the template's own date
     let guard = 0;
     while (format(d, 'yyyy-MM-dd') <= todayStr && guard < 400) {
       const ds = format(d, 'yyyy-MM-dd');
       const pk = periodKey(ds, freq);
-      const rk = `${t.merchant}|${t.categoryId}|${freq}|${ds}`;
+      const rk = `${t.createdBy ?? 'all'}|${t.merchant}|${t.categoryId}|${freq}|${ds}`;
       const already = present.get(mk)?.has(pk);
       if (!already && !skipSet.has(rk)) {
         out.push({ base: t, date: ds, amount: t.amount, variable: !!t.variableAmount, recurrenceKey: rk });
