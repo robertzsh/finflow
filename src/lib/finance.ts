@@ -191,9 +191,15 @@ export function budgetProgress(budgets: Budget[], txs: Transaction[], cats: Cate
   const elapsed = Math.max(dayOfMonth, 1);
   return budgets.map((b) => {
     const childIds = new Set(cats.filter((c) => c.parent === b.categoryId).map((c) => c.id));
-    const spent = m.filter((t) => t.categoryId === b.categoryId || childIds.has(t.categoryId)).reduce((a, t) => a + t.amount, 0);
+    const catTx = m.filter((t) => t.categoryId === b.categoryId || childIds.has(t.categoryId));
+    const spent = catTx.reduce((a, t) => a + t.amount, 0);
+    // Recurring bills (e.g. Gym) are charged once a month — they must NOT be scaled by
+    // the daily run-rate. Only extrapolate the *variable* spend across the month.
+    const recurringSpent = catTx.filter((t) => t.recurring).reduce((a, t) => a + t.amount, 0);
+    const variableSpent = spent - recurringSpent;
+    const projectedVariable = elapsed > 0 ? (variableSpent / elapsed) * daysInMonth : variableSpent;
+    const projected = Math.max(spent, recurringSpent + projectedVariable);
     const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
-    const projected = (spent / elapsed) * daysInMonth;
     return {
       budget: b, category: cats.find((c) => c.id === b.categoryId),
       spent: r2(spent), pct, remaining: r2(b.amount - spent),
