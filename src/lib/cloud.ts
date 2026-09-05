@@ -14,14 +14,24 @@ const rowToTx = (r: any): Transaction => ({
   origCurrency: r.orig_currency ?? undefined, origAmount: r.orig_amount != null ? Number(r.orig_amount) : undefined,
   createdAt: r.created_at ?? '', createdBy: r.created_by ?? undefined,
 });
-const txToRow = (t: Transaction, householdId: string, uid: string) => ({
-  id: t.id, household_id: householdId, created_by: t.createdBy ?? uid, type: t.type,
-  amount: t.amount, category_id: t.categoryId, merchant: t.merchant, method: t.method,
-  date: t.date, notes: t.notes ?? '', recurring: t.recurring,
-  frequency: t.frequency ?? null, receipt: t.receipt ?? null,
-  variable_amount: t.variableAmount ?? null, auto: t.auto ?? null, recurrence_key: t.recurrenceKey ?? null,
-  orig_currency: t.origCurrency ?? null, orig_amount: t.origAmount ?? null,
-});
+// Columns added by later migrations. Sending them to a project whose DB hasn't run
+// migration_recurring.sql fails the whole upsert, so we only include a column when it
+// actually carries a value — a plain transaction then persists even on the old schema.
+const TX_OPTIONAL_COLS = ['variable_amount', 'auto', 'recurrence_key', 'orig_currency', 'orig_amount'];
+const txToRow = (t: Transaction, householdId: string, uid: string) => {
+  const row: Record<string, any> = {
+    id: t.id, household_id: householdId, created_by: t.createdBy ?? uid, type: t.type,
+    amount: t.amount, category_id: t.categoryId, merchant: t.merchant, method: t.method,
+    date: t.date, notes: t.notes ?? '', recurring: t.recurring,
+    frequency: t.frequency ?? null, receipt: t.receipt ?? null,
+  };
+  if (t.variableAmount != null) row.variable_amount = t.variableAmount;
+  if (t.auto != null) row.auto = t.auto;
+  if (t.recurrenceKey != null) row.recurrence_key = t.recurrenceKey;
+  if (t.origCurrency != null) row.orig_currency = t.origCurrency;
+  if (t.origAmount != null) row.orig_amount = t.origAmount;
+  return row;
+};
 
 const rowToBudget = (r: any): Budget => ({ id: r.id, categoryId: r.category_id, amount: Number(r.amount), month: r.month ?? 'all' });
 const budgetToRow = (b: Budget, h: string) => ({ id: b.id, household_id: h, category_id: b.categoryId, amount: b.amount, month: b.month });
@@ -183,12 +193,27 @@ export async function fetchTable(table: Table, householdId: string) {
   return (data ?? []).map(map as any);
 }
 
+// If a project's DB hasn't run the latest migration, PostgREST rejects the whole
+// write with a "column not found" schema error (PGRST204). Rather than lose the
+// transaction, strip the newer optional columns and retry so the core row still saves.
+function isMissingColumn(msg?: string) {
+  return !!msg && (/column/i.test(msg) && /(schema cache|does not exist|not found)/i.test(msg));
+}
+function stripOptional(row: Record<string, any>) {
+  const copy = { ...row };
+  for (const c of TX_OPTIONAL_COLS) delete copy[c];
+  return copy;
+}
+
 // These return true on success / false on failure so the store's offline outbox
 // can retry failed or offline writes instead of silently dropping them.
 export async function upsert(table: Table, obj: any, householdId: string, uid: string): Promise<boolean> {
   try {
     const row = TO_ROW[table](obj, householdId, uid);
-    const { error } = await supabase!.from(table).upsert(row);
+    let { error } = await supabase!.from(table).upsert(row);
+    if (error && table === 'transactions' && isMissingColumn(error.message)) {
+      ({ error } = await supabase!.from(table).upsert(stripOptional(row)));
+    }
     if (error) { console.warn(`upsert ${table}`, error.message); return false; }
     return true;
   } catch { return false; }
@@ -197,7 +222,10 @@ export async function upsertMany(table: Table, objs: any[], householdId: string,
   if (!objs.length) return true;
   try {
     const rows = objs.map((o) => TO_ROW[table](o, householdId, uid));
-    const { error } = await supabase!.from(table).upsert(rows);
+    let { error } = await supabase!.from(table).upsert(rows);
+    if (error && table === 'transactions' && isMissingColumn(error.message)) {
+      ({ error } = await supabase!.from(table).upsert(rows.map(stripOptional)));
+    }
     if (error) { console.warn(`upsertMany ${table}`, error.message); return false; }
     return true;
   } catch { return false; }
