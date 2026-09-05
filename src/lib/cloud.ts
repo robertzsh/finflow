@@ -193,15 +193,22 @@ export async function fetchTable(table: Table, householdId: string) {
   return (data ?? []).map(map as any);
 }
 
-// If a project's DB hasn't run the latest migration, PostgREST rejects the whole
-// write with a "column not found" schema error (PGRST204). Rather than lose the
-// transaction, strip the newer optional columns and retry so the core row still saves.
+// If a project's DB hasn't run a later migration, PostgREST rejects the whole write
+// with a "column not found" schema error (PGRST204). Rather than lose the row, strip
+// the newer optional columns for that table and retry so the core data still saves.
+// Columns here were all added by migrations after the initial schema.
+const OPTIONAL_COLS: Partial<Record<Table, string[]>> = {
+  transactions: TX_OPTIONAL_COLS,
+  goals: ['currency', 'owner', 'contributions'],
+  investments: ['currency'],
+  categories: ['custom', 'emoji', 'parent'],
+};
 function isMissingColumn(msg?: string) {
   return !!msg && (/column/i.test(msg) && /(schema cache|does not exist|not found)/i.test(msg));
 }
-function stripOptional(row: Record<string, any>) {
+function stripOptional(row: Record<string, any>, table: Table) {
   const copy = { ...row };
-  for (const c of TX_OPTIONAL_COLS) delete copy[c];
+  for (const c of OPTIONAL_COLS[table] ?? []) delete copy[c];
   return copy;
 }
 
@@ -211,8 +218,8 @@ export async function upsert(table: Table, obj: any, householdId: string, uid: s
   try {
     const row = TO_ROW[table](obj, householdId, uid);
     let { error } = await supabase!.from(table).upsert(row);
-    if (error && table === 'transactions' && isMissingColumn(error.message)) {
-      ({ error } = await supabase!.from(table).upsert(stripOptional(row)));
+    if (error && isMissingColumn(error.message)) {
+      ({ error } = await supabase!.from(table).upsert(stripOptional(row, table)));
     }
     if (error) { console.warn(`upsert ${table}`, error.message); return false; }
     return true;
@@ -223,8 +230,8 @@ export async function upsertMany(table: Table, objs: any[], householdId: string,
   try {
     const rows = objs.map((o) => TO_ROW[table](o, householdId, uid));
     let { error } = await supabase!.from(table).upsert(rows);
-    if (error && table === 'transactions' && isMissingColumn(error.message)) {
-      ({ error } = await supabase!.from(table).upsert(rows.map(stripOptional)));
+    if (error && isMissingColumn(error.message)) {
+      ({ error } = await supabase!.from(table).upsert(rows.map((r) => stripOptional(r, table))));
     }
     if (error) { console.warn(`upsertMany ${table}`, error.message); return false; }
     return true;

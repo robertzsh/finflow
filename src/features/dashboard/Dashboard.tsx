@@ -66,7 +66,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const up = upcomingOccurrences(transactions, 45, REF, categories);
     const seen = new Set<string>(); const out: typeof up = [];
     for (const u of up) { const k = billKey(u.base); if (!seen.has(k)) { seen.add(k); out.push(u); } }
-    return out.slice(0, 8);
+    return out.slice(0, 14); // show every recurring bill (both people's), not an arbitrary few
   })();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
 
