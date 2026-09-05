@@ -12,3 +12,8 @@ alter table public.transactions
 -- Helps the app avoid re-posting the same occurrence across devices.
 create index if not exists transactions_recurrence_key_idx
   on public.transactions (household_id, recurrence_key);
+
+-- Categories can be flagged as recurring bills (utilities, HOA/Întreținere), so every
+-- transaction in them counts as a monthly bill automatically.
+alter table public.categories
+  add column if not exists recurring boolean default false;
