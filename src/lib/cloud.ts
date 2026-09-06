@@ -42,8 +42,12 @@ const goalToRow = (g: Goal, h: string) => ({ id: g.id, household_id: h, name: g.
 const rowToInv = (r: any): Investment => ({ id: r.id, name: r.name, ticker: r.ticker ?? undefined, kind: r.kind, currency: r.currency ?? undefined, units: Number(r.units), costBasis: Number(r.cost_basis), currentValue: Number(r.current_value), history: (r.history ?? []) as InvestmentPoint[] });
 const invToRow = (i: Investment, h: string) => ({ id: i.id, household_id: h, name: i.name, ticker: i.ticker ?? null, kind: i.kind, currency: i.currency ?? null, units: i.units, cost_basis: i.costBasis, current_value: i.currentValue, history: i.history });
 
-const rowToCat = (r: any): Category => ({ id: r.id, name: r.name, kind: r.kind, icon: r.icon, color: r.color, emoji: r.emoji ?? undefined, parent: r.parent ?? undefined, custom: r.custom ?? false });
-const catToRow = (c: Category, h: string) => ({ id: c.id, household_id: h, name: c.name, kind: c.kind, icon: c.icon, color: c.color, emoji: c.emoji ?? null, parent: c.parent ?? null, custom: c.custom ?? false });
+const rowToCat = (r: any): Category => ({ id: r.id, name: r.name, kind: r.kind, icon: r.icon, color: r.color, emoji: r.emoji ?? undefined, parent: r.parent ?? undefined, custom: r.custom ?? false, recurring: r.recurring ?? undefined });
+const catToRow = (c: Category, h: string) => {
+  const row: Record<string, any> = { id: c.id, household_id: h, name: c.name, kind: c.kind, icon: c.icon, color: c.color, emoji: c.emoji ?? null, parent: c.parent ?? null, custom: c.custom ?? false };
+  if (c.recurring != null) row.recurring = c.recurring;
+  return row;
+};
 
 export type Table = 'transactions' | 'budgets' | 'goals' | 'investments' | 'categories';
 const TO_ROW: Record<Table, (o: any, h: string, uid: string) => any> = {
@@ -201,7 +205,7 @@ const OPTIONAL_COLS: Partial<Record<Table, string[]>> = {
   transactions: TX_OPTIONAL_COLS,
   goals: ['currency', 'owner', 'contributions'],
   investments: ['currency'],
-  categories: ['custom', 'emoji', 'parent'],
+  categories: ['custom', 'emoji', 'parent', 'recurring'],
 };
 function isMissingColumn(msg?: string) {
   return !!msg && (/column/i.test(msg) && /(schema cache|does not exist|not found)/i.test(msg));

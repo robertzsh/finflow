@@ -479,9 +479,10 @@ function CategoryModal({ open, onClose, onSave, existing }: { open: boolean; onC
   const [icon, setIcon] = useState(ICONS[0]);
   const [color, setColor] = useState(COLORS[0]);
   const [emoji, setEmoji] = useState('🛍️');
+  const [recurring, setRecurring] = useState(false);
   useEffect(() => {
-    if (existing) { setName(existing.name); setKind(existing.kind); setIcon(existing.icon); setColor(existing.color); setEmoji(existing.emoji ?? '🛍️'); }
-    else { setName(''); setKind('expense'); setIcon(ICONS[0]); setColor(COLORS[0]); setEmoji('🛍️'); }
+    if (existing) { setName(existing.name); setKind(existing.kind); setIcon(existing.icon); setColor(existing.color); setEmoji(existing.emoji ?? '🛍️'); setRecurring(!!existing.recurring); }
+    else { setName(''); setKind('expense'); setIcon(ICONS[0]); setColor(COLORS[0]); setEmoji('🛍️'); setRecurring(false); }
   }, [existing, open]);
   return (
     <Modal open={open} onClose={onClose} title={existing ? 'Edit category' : 'New category'}>
@@ -498,7 +499,16 @@ function CategoryModal({ open, onClose, onSave, existing }: { open: boolean; onC
         <div><Label>Colour</Label>
           <div className="flex gap-2">{COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}</div>
         </div>
-        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color, emoji })}>{existing ? 'Save changes' : 'Create category'}</Button>
+        {kind === 'expense' && (
+          <label className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-3 cursor-pointer">
+            <span>
+              <span className="text-sm font-medium">Recurring bill</span>
+              <span className="block text-xs text-white/40">Every transaction here counts as a monthly bill (utilities, HOA, Întreținere…)</span>
+            </span>
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="w-5 h-5 accent-blue-500 shrink-0" />
+          </label>
+        )}
+        <Button className="w-full" disabled={!name} onClick={() => onSave({ name, kind, icon, color, emoji, recurring: kind === 'expense' ? recurring : undefined })}>{existing ? 'Save changes' : 'Create category'}</Button>
       </div>
     </Modal>
   );

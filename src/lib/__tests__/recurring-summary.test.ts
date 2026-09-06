@@ -42,6 +42,16 @@ describe('recurringSummary', () => {
     expect(r.perMember.get(B)).toBe(155);
   });
 
+  it('auto-counts items in a user-flagged recurring category (e.g. Întreținere)', () => {
+    const utilCats: Category[] = [{ id: 'intretinere', name: 'Întreținere', kind: 'expense', icon: 'Home', color: '#000', recurring: true }];
+    const r = recurringSummary(
+      [tx({ merchant: 'Întreținere', categoryId: 'intretinere', amount: 350, recurring: false, createdBy: A })],
+      [A, B], utilCats,
+    );
+    expect(r.householdMonthly).toBe(350);
+    expect(r.perMember.get(A)).toBe(350);
+  });
+
   it('auto-counts subscription-category items even without the recurring flag', () => {
     const r = recurringSummary(
       [tx({ merchant: 'Spotify', categoryId: 'spotify', amount: 26, recurring: false, createdBy: A })],

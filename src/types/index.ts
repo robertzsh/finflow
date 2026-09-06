@@ -10,6 +10,7 @@ export interface Category {
   emoji?: string;    // shown next to the category in menus & lists
   parent?: string;   // if set, this is a sub-category (e.g. a store under Groceries)
   custom?: boolean;
+  recurring?: boolean; // treat every transaction in this category as a monthly bill (utilities, HOA…)
 }
 
 export type PaymentMethod =

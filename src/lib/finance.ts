@@ -356,7 +356,9 @@ function perMonth(amount: number, frequency?: string): number {
 // so their transactions count as monthly bills even if "Recurring" wasn't ticked.
 function subscriptionLikeIds(categories: Category[]): Set<string> {
   const ids = new Set<string>(['subscriptions', 'digi']);
-  for (const c of categories) if (c.parent === 'subscriptions') ids.add(c.id);
+  for (const c of categories) if (c.parent === 'subscriptions' || c.recurring) ids.add(c.id);
+  const recurringParents = new Set(categories.filter((c) => c.recurring).map((c) => c.id));
+  for (const c of categories) if (c.parent && recurringParents.has(c.parent)) ids.add(c.id);
   return ids;
 }
 

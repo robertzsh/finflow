@@ -20,15 +20,19 @@ import {
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
 import { BillRow, type BillStatus } from '@/components/ui/BillRow';
+import { TransactionModal } from '@/components/TransactionModal';
 import { upcomingOccurrences } from '@/lib/recurring';
+import { rateForDate } from '@/lib/rates';
+import type { Transaction } from '@/types';
 import { formatMoney, accentHex, currencySymbol } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 
 const REF = new Date();
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
-  const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId } = useStore();
+  const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId, addTransaction } = useStore();
   const privacy = useStore((s) => s.privacy);
+  const [editBill, setEditBill] = useState<Transaction | null>(null);
   const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
@@ -69,6 +73,17 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     return out.slice(0, 14); // show every recurring bill (both people's), not an arbitrary few
   })();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
+  // Log a projected bill as paid: create a real transaction for that occurrence,
+  // converting a foreign bill at the occurrence-day's rate.
+  const markBillPaid = (base: Transaction, date: string) => {
+    const rate = base.origCurrency ? rateForDate(date, base.origCurrency, settings.fxRates) : 1;
+    const amount = base.origCurrency && base.origAmount != null ? Math.round(base.origAmount * rate * 100) / 100 : base.amount;
+    addTransaction({
+      type: base.type, amount, categoryId: base.categoryId, merchant: base.merchant,
+      method: base.method, date, notes: base.notes, recurring: false,
+      origCurrency: base.origCurrency, origAmount: base.origAmount, createdBy: base.createdBy,
+    });
+  };
 
   const spendDelta = data.prev.expense > 0 ? ((data.stats.expense - data.prev.expense) / data.prev.expense) * 100 : 0;
   const incDelta = data.prev.income > 0 ? ((data.stats.income - data.prev.income) / data.prev.income) * 100 : 0;
@@ -289,7 +304,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   const orig = u.base.origCurrency ? `${u.base.origAmount} ${currencySymbol(u.base.origCurrency)}` : undefined;
                   return (
                     <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
-                      name={u.base.merchant || c?.name || '—'} amount={amount} currency={cur} date={u.date} status={status} who={who} orig={orig} />
+                      name={u.base.merchant || c?.name || '—'} amount={amount} currency={cur} date={u.date} status={status} who={who} orig={orig}
+                      onEdit={() => setEditBill(u.base)} onMarkPaid={paid ? undefined : () => markBillPaid(u.base, u.date)} />
                   );
                 })}
               </div>
@@ -379,6 +395,9 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           </div>
         </Card>
       </div>
+
+      {/* Edit a recurring bill straight from the Upcoming list */}
+      <TransactionModal open={!!editBill} existing={editBill ?? undefined} onClose={() => setEditBill(null)} />
     </Page>
   );
 }

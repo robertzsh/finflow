@@ -10,11 +10,15 @@ export function nextDate(from: Date, freq: RecurringFrequency): Date {
   }
 }
 
-// Subscription-type categories (Netflix/Spotify/Claude Pro/Crunchyroll + Digi) count
-// as monthly bills even without the "Recurring" flag — so they project & post too.
+// Categories that count as monthly bills even without the per-transaction "Recurring"
+// flag: the built-in subscriptions (Netflix/Spotify/Claude Pro/Crunchyroll + Digi) and
+// any category the user has marked as a recurring bill (utilities, HOA/Întreținere…).
 function subscriptionLikeIds(categories: Category[]): Set<string> {
   const ids = new Set<string>(['subscriptions', 'digi']);
-  for (const c of categories) if (c.parent === 'subscriptions') ids.add(c.id);
+  for (const c of categories) if (c.parent === 'subscriptions' || c.recurring) ids.add(c.id);
+  // children inherit a recurring parent
+  const recurringParents = new Set(categories.filter((c) => c.recurring).map((c) => c.id));
+  for (const c of categories) if (c.parent && recurringParents.has(c.parent)) ids.add(c.id);
   return ids;
 }
 
