@@ -8,6 +8,7 @@ import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
 import { fetchFxRates, snapshotRates, rateForDate } from '@/lib/rates';
+import { fetchCryptoPrices, fetchStockQuote } from '@/lib/prices';
 import { setMoneyPrivacy } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
 
@@ -94,6 +95,10 @@ interface StoreState extends AppData {
   addInvestment: (i: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, patch: Partial<Investment>) => void;
   deleteInvestment: (id: string) => void;
+  // live prices (transient day-change, not persisted); refreshPrices updates values
+  quotes: Record<string, { changePct: number; price: number }>;
+  pricesState: 'idle' | 'loading' | 'error';
+  refreshPrices: () => Promise<void>;
   importInvestments: (list: { name: string; ticker?: string; kind: string; units: number; costBasis: number; currency: string }[]) => number;
 
   updateSettings: (patch: Partial<Settings>) => void;
@@ -295,6 +300,8 @@ export const useStore = create<StoreState>((set, get) => {
     privacy: (() => { try { return localStorage.getItem('ff_privacy') === '1'; } catch { return false; } })(),
     outbox: (() => { try { return JSON.parse(localStorage.getItem('ff_outbox') || '[]'); } catch { return []; } })(),
     pendingRecurring: [],
+    quotes: {},
+    pricesState: 'idle',
     syncState: 'idle',
     cloud: CLOUD_ENABLED,
     authReady: false,
@@ -649,6 +656,52 @@ export const useStore = create<StoreState>((set, get) => {
     deleteInvestment: (id) => {
       set((s) => ({ investments: s.investments.filter((i) => i.id !== id) }));
       get().persist(); del('investments', [id]);
+    },
+    refreshPrices: async () => {
+      const s = get();
+      const invs = s.investments;
+      if (!invs.length) return;
+      set({ pricesState: 'loading' });
+      const quotes: Record<string, { changePct: number; price: number }> = {};
+      const today = new Date().toISOString().slice(0, 10);
+      const updates = new Map<string, { currentValue: number }>();
+      try {
+        // Crypto — batch per currency (CoinGecko, free).
+        const cryptos = invs.filter((i) => i.kind === 'Crypto' && i.ticker);
+        const byCur = new Map<string, typeof cryptos>();
+        for (const i of cryptos) { const c = (i.currency ?? s.settings.currency); (byCur.get(c) ?? byCur.set(c, []).get(c)!).push(i); }
+        for (const [ccy, list] of byCur) {
+          const m = await fetchCryptoPrices(list.map((i) => ({ ticker: i.ticker, name: i.name })), ccy);
+          for (const i of list) {
+            const q = m.get((i.ticker ?? i.name).toUpperCase()); if (!q) continue;
+            quotes[i.id] = { changePct: q.changePct, price: q.price };
+            updates.set(i.id, { currentValue: Math.round(q.price * i.units * 100) / 100 });
+          }
+        }
+        // Stocks / ETFs — Finnhub (needs the user's key). Native currency assumed = holding currency.
+        const key = s.settings.finnhubKey;
+        if (key) {
+          for (const i of invs.filter((x) => (x.kind === 'Stock' || x.kind === 'ETF') && x.ticker)) {
+            const q = await fetchStockQuote(i.ticker!, key); if (!q) continue;
+            quotes[i.id] = { changePct: q.changePct, price: q.price };
+            updates.set(i.id, { currentValue: Math.round(q.price * i.units * 100) / 100 });
+          }
+        }
+      } catch { /* ignore */ }
+
+      if (updates.size === 0) { set({ pricesState: 'error', quotes }); return; }
+      set((st) => ({
+        quotes,
+        pricesState: 'idle',
+        investments: st.investments.map((i) => {
+          const u = updates.get(i.id); if (!u) return i;
+          const history = [...(i.history ?? [])].filter((p) => p.date !== today);
+          history.push({ date: today, value: u.currentValue });
+          return { ...i, currentValue: u.currentValue, history };
+        }),
+      }));
+      get().persist();
+      pushMany('investments', get().investments.filter((i) => updates.has(i.id)));
     },
     importInvestments: (list) => {
       const valid = new Set(['RON', 'EUR', 'USD', 'GBP']);

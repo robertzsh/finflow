@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, TrendingUp, TrendingDown, Upload } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Upload, RefreshCw, Pencil, KeyRound } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
@@ -11,18 +11,37 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
-import { investmentTotals, investmentAllocation, investmentHistory } from '@/lib/finance';
-import { formatMoney } from '@/lib/format';
+import { investmentTotals, investmentAllocation, investmentHistory, toBase } from '@/lib/finance';
+import { formatMoney, cx } from '@/lib/format';
 import { parseInvestmentsCSV } from '@/lib/export';
 import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
 
 const KINDS: InvestmentKind[] = ['Stock', 'ETF', 'Crypto', 'Savings', 'Pension'];
+const LIVE_KINDS = new Set<InvestmentKind>(['Stock', 'ETF', 'Crypto']);
+
+/** Tiny inline sparkline from a holding's value history. */
+function Sparkline({ points, up }: { points: number[]; up: boolean }) {
+  if (points.length < 2) return <div className="w-16 h-6" />;
+  const min = Math.min(...points), max = Math.max(...points);
+  const span = max - min || 1;
+  const w = 64, h = 24;
+  const d = points.map((p, i) => `${(i / (points.length - 1)) * w},${h - ((p - min) / span) * h}`).join(' ');
+  return (
+    <svg width={w} height={h} className="shrink-0" aria-hidden>
+      <polyline points={d} fill="none" stroke={up ? 'var(--income, #10b981)' : 'var(--expense, #f43f5e)'} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+    </svg>
+  );
+}
 
 export default function Investments() {
-  const { investments, settings, addInvestment, deleteInvestment, importInvestments } = useStore();
+  const { investments, settings, addInvestment, updateInvestment, deleteInvestment, importInvestments, refreshPrices, quotes, pricesState, updateSettings } = useStore();
   const cur = settings.currency;
+  const fx = settings.fxRates;
   const [open, setOpen] = useState(false);
+  const [editInv, setEditInv] = useState<Investment | null>(null);
   const [msg, setMsg] = useState('');
+  const [keyInput, setKeyInput] = useState(settings.finnhubKey ?? '');
+  const [showKey, setShowKey] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
 
   function onCSV(e: React.ChangeEvent<HTMLInputElement>) {
@@ -30,43 +49,97 @@ export default function Investments() {
     const r = new FileReader();
     r.onload = () => {
       const holdings = parseInvestmentsCSV(r.result as string);
-      if (!holdings.length) { setMsg('No holdings found in that CSV. Make sure it’s a Trading 212 (or similar) export.'); }
-      else { const n = importInvestments(holdings); setMsg(`Imported ${n} holdings. Update each "current value" to reflect today’s price.`); }
+      if (!holdings.length) setMsg('No holdings found in that CSV. Make sure it’s a Trading 212 (or similar) export.');
+      else { const n = importInvestments(holdings); setMsg(`Imported ${n} holdings. Tap Refresh to pull live prices.`); }
       setTimeout(() => setMsg(''), 6000);
     };
     r.readAsText(f);
     e.target.value = '';
   }
 
-  const fx = settings.fxRates;
   const totals = useMemo(() => investmentTotals(investments, fx), [investments, fx]);
   const alloc = useMemo(() => investmentAllocation(investments, fx), [investments, fx]);
   const history = useMemo(() => investmentHistory(investments, fx), [investments, fx]);
   const allocTotal = alloc.reduce((a, b) => a + b.value, 0);
 
+  // Portfolio day change: value-weighted from each live holding's % (base currency).
+  const dayChange = useMemo(() => {
+    let base = 0, delta = 0;
+    for (const i of investments) {
+      const q = quotes[i.id]; if (!q) continue;
+      const v = toBase(i.currentValue, i.currency, fx);
+      base += v; delta += v * (q.changePct / 100);
+    }
+    return { abs: delta, pct: base > 0 ? (delta / base) * 100 : 0, has: base > 0 };
+  }, [investments, quotes, fx]);
+
+  const hasLive = investments.some((i) => LIVE_KINDS.has(i.kind) && i.ticker);
+  const needsKey = investments.some((i) => (i.kind === 'Stock' || i.kind === 'ETF') && i.ticker) && !settings.finnhubKey;
+
+  const doRefresh = () => { try { localStorage.setItem('ff-prices-ts', String(Date.now())); } catch { /* */ } refreshPrices(); };
+
+  // Auto-refresh live prices on open, at most once per hour (cached via localStorage)
+  // so opening the page feels current without hammering the free APIs.
+  useEffect(() => {
+    if (!hasLive) return;
+    try {
+      const last = Number(localStorage.getItem('ff-prices-ts') || 0);
+      if (Date.now() - last > 60 * 60 * 1000) doRefresh();
+    } catch { /* ignore */ }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Page>
-      <PageHeader title="Investments" subtitle="Portfolio value, allocation and performance"
+      <PageHeader title="Investments" subtitle="Portfolio value, allocation and live performance"
         action={<div className="flex gap-2">
-          <Button variant="ghost" onClick={() => csvRef.current?.click()}><Upload size={16} /> Import CSV</Button>
-          <Button onClick={() => setOpen(true)}><Plus size={16} /> Add holding</Button>
+          {hasLive && <Button variant="ghost" onClick={doRefresh} disabled={pricesState === 'loading'}>
+            <RefreshCw size={16} className={pricesState === 'loading' ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
+          </Button>}
+          <Button variant="ghost" onClick={() => csvRef.current?.click()}><Upload size={16} /><span className="hidden sm:inline">Import</span></Button>
+          <Button onClick={() => setOpen(true)}><Plus size={16} /> Add</Button>
           <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={onCSV} />
         </div>} />
 
       {msg && <div className="mb-4 rounded-xl bg-invest/15 border border-invest/30 text-invest px-4 py-2.5 text-sm">{msg}</div>}
 
-      <div className="grid sm:grid-cols-3 gap-4 mb-4">
-        <Card className="p-5"><p className="text-xs uppercase tracking-wider text-white/50">Portfolio value</p><p className="text-2xl font-bold mt-2">{formatMoney(totals.value, cur)}</p></Card>
-        <Card className="p-5"><p className="text-xs uppercase tracking-wider text-white/50">Total invested</p><p className="text-2xl font-bold mt-2">{formatMoney(totals.cost, cur)}</p></Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-wider text-white/50">Total gain / loss</p>
-          <p className={`text-2xl font-bold mt-2 flex items-center gap-2 ${totals.gain >= 0 ? 'text-income' : 'text-expense'}`}>
-            {totals.gain >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-            {formatMoney(totals.gain, cur, { sign: true })}
-            <span className="text-sm">({totals.gainPct >= 0 ? '+' : ''}{totals.gainPct.toFixed(1)}%)</span>
-          </p>
+      {/* Portfolio summary — value, all-time P/L, today */}
+      <Card className="p-5 mb-4">
+        <p className="metric-label">Portfolio value</p>
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-2 mt-1">
+          <p className="metric-value text-3xl font-bold">{formatMoney(totals.value, cur)}</p>
+          <div className="flex items-center gap-4 pb-1">
+            <div>
+              <div className={cx('metric-value font-semibold flex items-center gap-1', totals.gain >= 0 ? 'text-income' : 'text-expense')}>
+                {totals.gain >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                {formatMoney(totals.gain, cur, { sign: true })} ({totals.gainPct >= 0 ? '+' : ''}{totals.gainPct.toFixed(1)}%)
+              </div>
+              <div className="text-[11px] text-white/40">all time</div>
+            </div>
+            {dayChange.has && (
+              <div>
+                <div className={cx('metric-value font-semibold', dayChange.abs >= 0 ? 'text-income' : 'text-expense')}>
+                  {dayChange.abs >= 0 ? '+' : ''}{formatMoney(dayChange.abs, cur)} ({dayChange.pct >= 0 ? '+' : ''}{dayChange.pct.toFixed(2)}%)
+                </div>
+                <div className="text-[11px] text-white/40">today</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {needsKey && (
+        <Card className="p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2"><KeyRound size={16} className="text-invest" /><span className="text-sm font-medium">Live stock & ETF prices</span></div>
+          <p className="text-xs text-white/50 mb-3">Add a free <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Finnhub</a> API key to pull live stock/ETF quotes. Crypto is already live (free, no key).</p>
+          <div className="flex gap-2">
+            <Input type={showKey ? 'text' : 'password'} value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Finnhub API key" className="flex-1" />
+            <Button variant="ghost" onClick={() => setShowKey((v) => !v)}>{showKey ? 'Hide' : 'Show'}</Button>
+            <Button disabled={!keyInput.trim()} onClick={() => { updateSettings({ finnhubKey: keyInput.trim() }); doRefresh(); }}>Save & refresh</Button>
+          </div>
         </Card>
-      </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
         <Card className="p-5">
@@ -74,38 +147,46 @@ export default function Investments() {
           <DonutChart data={alloc} height={200} />
           <div className="mt-3"><LegendList data={alloc} total={allocTotal} currency={cur} /></div>
         </Card>
-        <Card className="p-5 lg:col-span-2">
-          <SectionCardHeader title="Historical value" hint="Total portfolio, last 12 months" />
-          <InvestHistory data={history} />
+        <Card className="p-5 lg:col-span-2 flex flex-col">
+          <SectionCardHeader title="Portfolio value" hint="Last 12 months" />
+          <div className="flex-1 min-h-[200px]"><InvestHistory data={history} /></div>
         </Card>
       </div>
 
       {investments.length === 0 ? (
-        <Card><EmptyState icon="LineChart" title="No holdings yet" subtitle="Add stocks, ETFs, crypto, savings or pensions."
+        <Card><EmptyState icon="LineChart" title="No holdings yet" subtitle="Add stocks, ETFs, crypto, savings or pensions — then tap Refresh for live prices."
           action={<Button onClick={() => setOpen(true)}><Plus size={16} /> Add holding</Button>} /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <SectionCardHeader title="Holdings" />
+          <SectionCardHeader title="Holdings" hint={hasLive ? 'Prices update on Refresh · crypto free, stocks via Finnhub' : undefined} />
           <div className="divide-y divide-white/5 -mx-5 -mb-5">
             {investments.map((inv, i) => {
               const gain = inv.currentValue - inv.costBasis;
               const gp = inv.costBasis > 0 ? (gain / inv.costBasis) * 100 : 0;
               const ic = inv.currency ?? cur;
+              const price = inv.units > 0 ? inv.currentValue / inv.units : inv.currentValue;
+              const q = quotes[inv.id];
+              const share = allocTotal > 0 ? (toBase(inv.currentValue, inv.currency, fx) / allocTotal) * 100 : 0;
+              const spark = (inv.history ?? []).map((p) => p.value);
               return (
                 <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.03]">
-                  <div className="w-9 h-9 rounded-xl bg-invest/15 border border-invest/20 flex items-center justify-center text-invest font-bold text-xs">
-                    {inv.ticker ?? inv.name.slice(0, 2).toUpperCase()}
+                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.03] group">
+                  <div className="w-9 h-9 rounded-xl bg-invest/15 border border-invest/20 flex items-center justify-center text-invest font-bold text-[11px] shrink-0">
+                    {(inv.ticker ?? inv.name.slice(0, 3)).toUpperCase().slice(0, 4)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge color="#eab308">{inv.kind}</Badge>{ic !== cur && <Badge color="#3b82f6">{ic}</Badge>}</div>
-                    <div className="text-xs text-white/40">{inv.units} units · {formatMoney(inv.costBasis, ic)} invested</div>
+                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge color="#eab308">{inv.kind}</Badge></div>
+                    <div className="text-xs text-white/40 tabular-nums">{inv.units} @ {formatMoney(price, ic)}{q ? <span className={cx('ml-1.5', q.changePct >= 0 ? 'text-income' : 'text-expense')}>{q.changePct >= 0 ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%</span> : null}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold tabular-nums">{formatMoney(inv.currentValue, ic)}</div>
-                    <div className={`text-xs ${gain >= 0 ? 'text-income' : 'text-expense'}`}>{gain >= 0 ? '+' : ''}{formatMoney(gain, ic)} ({gp >= 0 ? '+' : ''}{gp.toFixed(1)}%)</div>
+                  <Sparkline points={spark} up={gain >= 0} />
+                  <div className="text-right shrink-0 w-28">
+                    <div className="metric-value font-semibold">{formatMoney(inv.currentValue, ic)}</div>
+                    <div className={cx('text-xs metric-value', gain >= 0 ? 'text-income' : 'text-expense')}>{gain >= 0 ? '+' : ''}{gp.toFixed(1)}% · {share.toFixed(0)}%</div>
                   </div>
-                  <button onClick={() => deleteInvestment(inv.id)} className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => setEditInv(inv)} className="text-white/25 hover:text-white p-1" aria-label="Edit holding"><Pencil size={15} /></button>
+                    <button onClick={() => deleteInvestment(inv.id)} className="text-white/25 hover:text-expense p-1" aria-label="Delete holding"><Trash2 size={15} /></button>
+                  </div>
                 </motion.div>
               );
             })}
@@ -113,14 +194,15 @@ export default function Investments() {
         </Card>
       )}
 
-      <AddInvestmentModal open={open} onClose={() => setOpen(false)}
-        onSave={(inv) => { addInvestment(inv); setOpen(false); }} />
+      <InvestmentModal open={open || !!editInv} existing={editInv ?? undefined}
+        onClose={() => { setOpen(false); setEditInv(null); }}
+        onSave={(inv) => { if (editInv) updateInvestment(editInv.id, inv); else addInvestment(inv); setOpen(false); setEditInv(null); }} />
     </Page>
   );
 }
 
 const CURRENCIES: CurrencyCode[] = ['RON', 'EUR', 'USD', 'GBP'];
-function AddInvestmentModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (i: Omit<Investment, 'id'>) => void }) {
+function InvestmentModal({ open, onClose, onSave, existing }: { open: boolean; onClose: () => void; onSave: (i: Omit<Investment, 'id'>) => void; existing?: Investment }) {
   const base = useStore((s) => s.settings.currency);
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
@@ -129,12 +211,20 @@ function AddInvestmentModal({ open, onClose, onSave }: { open: boolean; onClose:
   const [units, setUnits] = useState('');
   const [cost, setCost] = useState('');
   const [value, setValue] = useState('');
+  useEffect(() => {
+    if (existing) {
+      setName(existing.name); setTicker(existing.ticker ?? ''); setKind(existing.kind);
+      setCurrency((existing.currency ?? base) as CurrencyCode); setUnits(String(existing.units));
+      setCost(String(existing.costBasis)); setValue(String(existing.currentValue));
+    } else { setName(''); setTicker(''); setKind('Stock'); setCurrency(base); setUnits(''); setCost(''); setValue(''); }
+  }, [existing, open, base]);
+  const live = LIVE_KINDS.has(kind);
   return (
-    <Modal open={open} onClose={onClose} title="Add holding">
+    <Modal open={open} onClose={onClose} title={existing ? 'Edit holding' : 'Add holding'}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Apple Inc." /></div>
-          <div><Label>Ticker (optional)</Label><Input value={ticker} onChange={(e) => setTicker(e.target.value)} placeholder="AAPL" /></div>
+          <div><Label>Ticker {live ? '(for live price)' : '(optional)'}</Label><Input value={ticker} onChange={(e) => setTicker(e.target.value)} placeholder={kind === 'Crypto' ? 'BTC' : 'AAPL'} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Type</Label><Select value={kind} onChange={(e) => setKind(e.target.value as InvestmentKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select></div>
@@ -145,11 +235,12 @@ function AddInvestmentModal({ open, onClose, onSave }: { open: boolean; onClose:
           <div><Label>Invested</Label><Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" /></div>
           <div><Label>Current value</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0.00" /></div>
         </div>
+        {live && <p className="text-[11px] text-white/40">With a ticker set, tap Refresh on the Investments page to update the value from the live price × units.</p>}
         <Button className="w-full" disabled={!name || !value} onClick={() => onSave({
           name, ticker: ticker || undefined, kind, currency, units: Number(units) || 1,
           costBasis: Number(cost) || 0, currentValue: Number(value) || 0,
-          history: [{ date: '2026-07-01', value: Number(value) || 0 }],
-        })}>Add holding</Button>
+          history: existing?.history ?? [{ date: new Date().toISOString().slice(0, 10), value: Number(value) || 0 }],
+        })}>{existing ? 'Save changes' : 'Add holding'}</Button>
       </div>
     </Modal>
   );

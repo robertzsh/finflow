@@ -33,6 +33,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId, addTransaction } = useStore();
   const privacy = useStore((s) => s.privacy);
   const [editBill, setEditBill] = useState<Transaction | null>(null);
+  const [showAllBills, setShowAllBills] = useState(false);
   const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
@@ -69,8 +70,9 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const recurringUpcoming = (() => {
     const up = upcomingOccurrences(transactions, 45, REF, categories);
     const seen = new Set<string>(); const out: typeof up = [];
-    for (const u of up) { const k = billKey(u.base); if (!seen.has(k)) { seen.add(k); out.push(u); } }
-    return out.slice(0, 14); // show every recurring bill (both people's), not an arbitrary few
+    // Bills = expenses only. Income (Salary/Bonuri) is managed in Settings, not here.
+    for (const u of up) { if (u.base.type !== 'expense') continue; const k = billKey(u.base); if (!seen.has(k)) { seen.add(k); out.push(u); } }
+    return out;
   })();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
   // Log a projected bill as paid: create a real transaction for that occurrence,
@@ -287,30 +289,40 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               })}
             </div>
           )}
-          {recurringUpcoming.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-white/10">
-              <div className="metric-label mb-1">Upcoming</div>
-              <div className="divide-y divide-white/5">
-                {recurringUpcoming.map((u) => {
-                  const c = categories.find((x) => x.id === u.base.categoryId);
-                  const paid = paidBillKeys.has(billKey(u.base));
-                  const days = Math.round((parseISO(u.date).getTime() - startOfToday) / 86400000);
-                  const status: BillStatus = paid ? 'paid' : days <= 5 ? 'due-soon' : 'upcoming';
-                  const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
-                  const mIdx = members.findIndex((m) => m.id === u.base.createdBy);
-                  const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: palette[mIdx % palette.length] } : undefined;
-                  // foreign-currency bills project at today's rate (so they move with the market)
-                  const amount = privacy ? u.amount : liveAmount(u.base, settings.fxRates);
-                  const orig = u.base.origCurrency ? `${u.base.origAmount} ${currencySymbol(u.base.origCurrency)}` : undefined;
-                  return (
-                    <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
-                      name={u.base.merchant || c?.name || '—'} amount={amount} currency={cur} date={u.date} status={status} who={who} orig={orig}
-                      onEdit={() => setEditBill(u.base)} onMarkPaid={paid ? undefined : () => markBillPaid(u.base, u.date)} />
-                  );
-                })}
+          {recurringUpcoming.length > 0 && (() => {
+            const COLLAPSED = 5;
+            const shown = showAllBills ? recurringUpcoming : recurringUpcoming.slice(0, COLLAPSED);
+            const hidden = recurringUpcoming.length - shown.length;
+            return (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="metric-label mb-1">Upcoming</div>
+                <div className="divide-y divide-white/5">
+                  {shown.map((u) => {
+                    const c = categories.find((x) => x.id === u.base.categoryId);
+                    const paid = paidBillKeys.has(billKey(u.base));
+                    const days = Math.round((parseISO(u.date).getTime() - startOfToday) / 86400000);
+                    const status: BillStatus = paid ? 'paid' : days <= 5 ? 'due-soon' : 'upcoming';
+                    const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
+                    const mIdx = members.findIndex((m) => m.id === u.base.createdBy);
+                    const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: palette[mIdx % palette.length] } : undefined;
+                    // foreign-currency bills project at today's rate (so they move with the market)
+                    const amount = privacy ? u.amount : liveAmount(u.base, settings.fxRates);
+                    const orig = u.base.origCurrency ? `${u.base.origAmount} ${currencySymbol(u.base.origCurrency)}` : undefined;
+                    return (
+                      <BillRow key={`${u.base.id}-${u.date}`} icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji}
+                        name={u.base.merchant || c?.name || '—'} amount={amount} currency={cur} date={u.date} status={status} who={who} orig={orig}
+                        onEdit={() => setEditBill(u.base)} onMarkPaid={paid ? undefined : () => markBillPaid(u.base, u.date)} />
+                    );
+                  })}
+                </div>
+                {recurringUpcoming.length > COLLAPSED && (
+                  <button onClick={() => setShowAllBills((v) => !v)} className="mt-2 text-xs text-blue-400 hover:underline">
+                    {showAllBills ? 'Show less' : `Show all ${recurringUpcoming.length} (${hidden} more)`}
+                  </button>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
           <p className="text-[11px] text-white/40 mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 — each person carries half (e.g. rent).</p>
         </Card>
       )}

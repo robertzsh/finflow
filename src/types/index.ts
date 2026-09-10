@@ -101,6 +101,7 @@ export interface Settings {
   sessionTimeoutMin: number;
   name: string;
   onboarded: boolean;
+  finnhubKey?: string;         // user's free Finnhub API key for live stock/ETF quotes
 }
 
 export interface AppData {
