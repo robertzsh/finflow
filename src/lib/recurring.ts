@@ -28,7 +28,9 @@ function recurringTemplates(txs: Transaction[], categories: Category[]): { t: Tr
   const sub = subscriptionLikeIds(categories);
   const seen = new Map<string, { t: Transaction; freq: RecurringFrequency }>();
   for (const t of txs) {
-    if (t.type !== 'expense' && !(t.recurring && t.frequency)) continue; // income can still be a flagged recurring
+    // Bills only. Income (Salary/Bonuri) is handled by standing-income, never here —
+    // otherwise a recurring salary gets auto-posted twice and inflates monthly income.
+    if (t.type !== 'expense') continue;
     const isRecur = (t.recurring && t.frequency) || sub.has(t.categoryId);
     if (!isRecur) continue;
     const freq = (t.frequency ?? 'monthly') as RecurringFrequency;
