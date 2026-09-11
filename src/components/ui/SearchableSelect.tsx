@@ -45,7 +45,7 @@ export function SearchableSelect({ value, options, onChange, placeholder = 'Sele
         <ChevronDown size={16} className="text-white/40 shrink-0" />
       </button>
       {open && (
-        <div className="glass absolute z-50 mt-1 w-full rounded-xl overflow-hidden shadow-xl">
+        <div className="popover absolute z-50 mt-1 w-full rounded-xl overflow-hidden">
           <div className="flex items-center gap-2 px-3 border-b border-white/10">
             <Search size={14} className="text-white/40 shrink-0" />
             <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchLabel}

@@ -92,6 +92,19 @@ html.light .glass {
   box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 10px 28px -8px rgba(15,23,42,0.10);
 }
 
+/* Popover surface — OPAQUE (unlike .glass) so floating menus over a form are readable. */
+.popover {
+  background: #141b2b;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 12px 32px -8px rgba(0,0,0,0.55);
+}
+html.light .popover {
+  background: #ffffff;
+  border-color: rgba(15,23,42,0.10);
+  box-shadow: 0 12px 32px -10px rgba(15,23,42,0.22);
+}
+html.pink .popover { background: #2a1420; border-color: rgba(255,255,255,0.12); }
+
 .glass-hover { transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease; }
 .glass-hover:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.16); background: rgba(255,255,255,0.06); }
 html.light .glass-hover:hover {

@@ -10,6 +10,7 @@ import { Input, Label, Select } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MarketWatch } from '@/components/MarketWatch';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
 import { investmentTotals, investmentAllocation, investmentHistory, toBase } from '@/lib/finance';
 import { formatMoney, cx } from '@/lib/format';
@@ -140,6 +141,8 @@ export default function Investments() {
           </div>
         </Card>
       )}
+
+      <MarketWatch />
 
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
         <Card className="p-5">
