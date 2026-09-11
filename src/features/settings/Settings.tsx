@@ -101,6 +101,14 @@ export default function Settings() {
               </div>
             </div>
             <div>
+              <Label>Live stock prices — Finnhub API key</Label>
+              <input type="password" key={settings.finnhubKey ?? ''} defaultValue={settings.finnhubKey ?? ''}
+                onBlur={(e) => { const v = e.target.value.trim(); if (v !== (settings.finnhubKey ?? '')) { updateSettings({ finnhubKey: v || undefined }); flash(v ? 'Finnhub key saved' : 'Finnhub key removed'); } }}
+                placeholder="Paste your free Finnhub key"
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-sm outline-none focus:border-blue-400/50" />
+              <p className="text-xs text-white/40 mt-1.5">Free key from <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">finnhub.io</a> · powers live stock/ETF quotes in Investments. Crypto is already live (no key). Stored on this device only.</p>
+            </div>
+            <div>
               <Label>Appearance</Label>
               <div className="grid grid-cols-3 gap-2">
                 <button onClick={() => updateSettings({ theme: 'dark' })}
