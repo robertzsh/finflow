@@ -45,20 +45,20 @@ export function SearchableSelect({ value, options, onChange, placeholder = 'Sele
         <ChevronDown size={16} className="text-white/40 shrink-0" />
       </button>
       {open && (
-        <div className="popover absolute z-50 mt-1 w-full rounded-xl overflow-hidden">
-          <div className="flex items-center gap-2 px-3 border-b border-white/10">
+        <div className="popover absolute z-50 mt-1.5 w-full rounded-2xl overflow-hidden p-1.5">
+          <div className="flex items-center gap-2 px-2.5 rounded-xl bg-white/[0.06]">
             <Search size={14} className="text-white/40 shrink-0" />
             <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchLabel}
               aria-label={searchLabel}
-              className="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-white/30" />
+              className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-white/30" />
           </div>
-          <div role="listbox" className="max-h-56 overflow-y-auto p-1">
+          <div role="listbox" className="max-h-60 overflow-y-auto mt-1.5 space-y-0.5">
             {filtered.length === 0 && <div className="px-3 py-3 text-xs text-white/40">No matches.</div>}
             {filtered.map((o) => (
               <button key={o.value} type="button" role="option" aria-selected={o.value === value}
                 onClick={() => { onChange(o.value); setOpen(false); }}
-                className={cx('w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-left hover:bg-white/10', o.value === value && 'bg-white/10')}>
-                {o.emoji && <span className="shrink-0">{o.emoji}</span>}
+                className={cx('w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-left transition-colors hover:bg-white/[0.07]', o.value === value && 'bg-blue-500/15 text-blue-100')}>
+                {o.emoji && <span className="shrink-0 text-base leading-none">{o.emoji}</span>}
                 <span className="truncate">{o.label}</span>
               </button>
             ))}

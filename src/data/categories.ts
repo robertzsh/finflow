@@ -29,7 +29,15 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'boltfood', name: 'Bolt Food', kind: 'expense', icon: 'Bike', color: '#22c55e', emoji: '🛵', parent: 'delivery' },
   { id: 'glovo', name: 'Glovo', kind: 'expense', icon: 'Bike', color: '#eab308', emoji: '🛵', parent: 'delivery' },
   { id: 'shopping', name: 'Shopping', kind: 'expense', icon: 'ShoppingBag', color: '#ec4899', emoji: '🛍️' },
-  { id: 'ikea', name: 'Ikea', kind: 'expense', icon: 'Sofa', color: '#0058a3', emoji: '🛋️' },
+  // Furniture / home — stores roll up under Furniture
+  { id: 'furniture', name: 'Furniture', kind: 'expense', icon: 'Sofa', color: '#0058a3', emoji: '🛋️' },
+  { id: 'ikea', name: 'Ikea', kind: 'expense', icon: 'Sofa', color: '#0058a3', emoji: '🛋️', parent: 'furniture' },
+  { id: 'jysk', name: 'JYSK', kind: 'expense', icon: 'Sofa', color: '#1f3a6e', emoji: '🛏️', parent: 'furniture' },
+  { id: 'pepco', name: 'Pepco', kind: 'expense', icon: 'ShoppingBag', color: '#e2001a', emoji: '🏬', parent: 'furniture' },
+  // Ridesharing — Bolt / Uber roll up under Ridesharing
+  { id: 'ridesharing', name: 'Ridesharing', kind: 'expense', icon: 'Car', color: '#22c55e', emoji: '🚗' },
+  { id: 'bolt', name: 'Bolt', kind: 'expense', icon: 'Car', color: '#22c55e', emoji: '🚗', parent: 'ridesharing' },
+  { id: 'uber', name: 'Uber', kind: 'expense', icon: 'Car', color: '#111827', emoji: '🚕', parent: 'ridesharing' },
   { id: 'manipedi', name: 'Mani + Pedi', kind: 'expense', icon: 'Sparkles', color: '#f472b6', emoji: '💅' },
   // Cosmetics stores roll up under Cosmetics, each tracked separately
   { id: 'cosmetics', name: 'Cosmetics', kind: 'expense', icon: 'Sparkles', color: '#ec4899', emoji: '💄' },
