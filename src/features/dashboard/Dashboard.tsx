@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount, memberCategoryBreakdown,
 } from '@/lib/finance';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
@@ -174,6 +174,21 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
           return { m, b, net, savePct, share, color: palette[i % palette.length], you: m.id === userId };
         });
+        // What drives the spending gap: per-category difference between the two people.
+        // Shared costs are split 50/50 so they cancel out — leaving the personal spending.
+        let gap: { name: string; emoji?: string; delta: number }[] = [];
+        let gapWinner: typeof cols[number] | null = null;
+        if (cols.length === 2) {
+          const [A, B] = cols;
+          const brkA = new Map(memberCategoryBreakdown(transactions, REF, A.m.id, memberIds, categories).items.map((x) => [x.id, x]));
+          const brkB = new Map(memberCategoryBreakdown(transactions, REF, B.m.id, memberIds, categories).items.map((x) => [x.id, x]));
+          const ids = new Set([...brkA.keys(), ...brkB.keys()]);
+          gap = [...ids].map((id) => {
+            const a = brkA.get(id); const b = brkB.get(id); const meta = a ?? b;
+            return { name: meta?.name ?? 'Other', emoji: meta?.emoji, delta: (a?.value ?? 0) - (b?.value ?? 0) };
+          }).filter((r) => Math.abs(r.delta) >= 0.5).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
+          gapWinner = A.b.expense >= B.b.expense ? A : B;
+        }
         const gridStyle = { gridTemplateColumns: `minmax(84px,auto) repeat(${cols.length}, minmax(0,1fr))` } as React.CSSProperties;
         const MetricRow = ({ label, render }: { label: string; render: (c: typeof cols[number]) => React.ReactNode }) => (
           <>
@@ -210,6 +225,30 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                 </div>
               ))}
             </div>
+
+            {gap.length > 0 && gapWinner && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="metric-label">What drives the gap</span>
+                  <span className="text-xs text-white/50"><span className="font-medium" style={{ color: gapWinner.color }}>{gapWinner.m.name}</span> spent {formatMoney(Math.abs(cols[0].b.expense - cols[1].b.expense), cur)} more</span>
+                </div>
+                <div className="space-y-1">
+                  {gap.slice(0, 6).map((r) => {
+                    const higher = r.delta > 0 ? cols[0] : cols[1];
+                    const pct = Math.min(100, (Math.abs(r.delta) / Math.abs(gap[0].delta)) * 100);
+                    return (
+                      <div key={r.name} className="flex items-center gap-2 text-sm">
+                        <span className="truncate w-32 sm:w-40">{r.emoji ? `${r.emoji} ` : ''}{r.name}</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: higher.color }} /></div>
+                        <span className="tabular-nums text-xs w-28 text-right" style={{ color: higher.color }}>{higher.m.name} +{formatMoney(Math.abs(r.delta), cur)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-white/40 mt-2">Shared costs split evenly, so this is the personal spending that separates you.</p>
+              </div>
+            )}
+
             <p className="text-xs text-white/40 mt-4">Combined income <span className="text-white/70 font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
           </Card>
         );

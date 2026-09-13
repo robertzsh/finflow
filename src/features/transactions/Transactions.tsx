@@ -97,7 +97,7 @@ export default function Transactions() {
       {/* Controls */}
       <Card className="p-3 mb-4">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] rounded-xl bg-white/5 border border-white/10 px-3">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] rounded-xl bg-white/[0.06] px-3 transition-colors focus-within:bg-white/[0.09]">
             <Search size={16} className="text-white/40" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search merchants, notes, categories, amounts…"
               className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-white/30" />

@@ -45,7 +45,7 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
           <motion.div initial={{ y: -20, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }}
             className="glass relative z-10 w-full max-w-xl rounded-2xl overflow-hidden">
-            <div className="flex items-center gap-3 px-4 border-b border-white/10">
+            <div className="flex items-center gap-3 px-4 border-b border-white/[0.06]">
               <Search size={18} className="text-white/40" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search or jump to…"
                 className="flex-1 bg-transparent py-4 text-sm outline-none placeholder:text-white/30" />
