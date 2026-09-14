@@ -95,8 +95,8 @@ html.light .glass {
 /* Popover surface — OPAQUE (unlike .glass) so floating menus over a form are readable. */
 .popover {
   background: #141b2b;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 12px 32px -8px rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.04); /* barely-there edge; depth comes from the shadow */
+  box-shadow: 0 16px 40px -10px rgba(0,0,0,0.6);
 }
 html.light .popover {
   background: #ffffff;

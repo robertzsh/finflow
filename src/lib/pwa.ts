@@ -7,19 +7,28 @@ export function registerSW(onUpdate: (reg: ServiceWorkerRegistration) => void) {
   if (registered || !('serviceWorker' in navigator)) return;
   registered = true;
 
+    // Notify at most once per waiting worker, so re-checks (focus/hourly) don't
+    // keep re-firing the toast after the user has already seen or dismissed it.
+    let notifiedFor: ServiceWorker | null = null;
+    const notify = (reg: ServiceWorkerRegistration) => {
+      if (!reg.waiting || reg.waiting === notifiedFor) return;
+      notifiedFor = reg.waiting;
+      onUpdate(reg);
+    };
+
   const start = async () => {
     try {
       const reg = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
 
       // A newer worker was already installed in a previous session and is waiting.
-      if (reg.waiting && navigator.serviceWorker.controller) onUpdate(reg);
+      if (reg.waiting && navigator.serviceWorker.controller) notify(reg);
 
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', () => {
           // "installed" + an existing controller means this is an update, not a first install.
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) onUpdate(reg);
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) notify(reg);
         });
       });
 
@@ -42,4 +51,8 @@ export function registerSW(onUpdate: (reg: ServiceWorkerRegistration) => void) {
 export function applyUpdate(reg: ServiceWorkerRegistration) {
   updating = true;
   reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
+  // Fallback: some browsers (notably iOS standalone PWAs) don't fire controllerchange
+  // reliably, leaving the toast stuck. Force a reload shortly after so the update
+  // always lands and the toast can't reappear for a version already applied.
+  setTimeout(() => { try { window.location.reload(); } catch { /* */ } }, 1500);
 }
