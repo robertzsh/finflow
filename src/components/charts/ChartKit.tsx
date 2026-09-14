@@ -120,8 +120,8 @@ export function DonutChart({ data, height = 260, centerLabel, centerValue }:
       </ResponsiveContainer>
       {showCenter && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center">
-          <span className="text-xs text-white/50 truncate max-w-full">{shown ? shown.name : centerLabel}</span>
-          <span className="font-bold truncate max-w-full">{shown ? formatMoney(shown.value, currency, { compact: shown.value > 9999 }) : centerValue}</span>
+          <span className="text-[11px] uppercase tracking-wide text-white/45 truncate max-w-full">{shown ? shown.name : centerLabel}</span>
+          <span className="text-lg font-bold tabular-nums truncate max-w-full">{shown ? formatMoney(shown.value, currency, { compact: true }) : centerValue}</span>
         </div>
       )}
     </div>

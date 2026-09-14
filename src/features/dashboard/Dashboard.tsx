@@ -34,6 +34,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const privacy = useStore((s) => s.privacy);
   const [editBill, setEditBill] = useState<Transaction | null>(null);
   const [showAllBills, setShowAllBills] = useState(false);
+  const [showAllCats, setShowAllCats] = useState(false);
   const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
@@ -380,32 +381,47 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               action={<Button onClick={onQuickAdd}><Plus size={16} /> Add expense</Button>} />
           ) : (
             <>
-              <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: expenseTotal > 9999 })} /></div>
+              <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: true })} /></div>
               <div className="mt-1 flex items-center justify-between text-xs text-white/45">
-                <span>Spent {formatMoney(expenseTotal, cur)} of {formatMoney(monthIncome, cur, { compact: monthIncome > 9999 })}</span>
+                <span>{formatMoney(expenseTotal, cur, { compact: true })} of {formatMoney(monthIncome, cur, { compact: true })} income</span>
                 <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
               </div>
-              <div className="mt-3 space-y-1.5 flex-1">
-                {data.byCat.slice(0, 12).map((c) => {
-                  const cat = categories.find((x) => x.id === c.id);
-                  const pct = (c.value / allocDenom) * 100;
-                  return (
-                    <div key={c.id} className="flex items-center gap-2 text-sm">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                      <span className="text-white/70 truncate flex-1">{cat?.emoji ? `${cat.emoji} ` : ''}{c.name}</span>
-                      {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
-                      <span className="tabular-nums text-white/50 text-xs w-9 text-right">{pct.toFixed(0)}%</span>
-                      <span className="tabular-nums font-medium w-24 text-right">{formatMoney(c.value, cur)}</span>
+              {(() => {
+                const CATS = 6;
+                const rows = showAllCats ? data.byCat : data.byCat.slice(0, CATS);
+                return (
+                  <div className="mt-3 flex-1">
+                    <div className="space-y-0.5">
+                      {rows.map((c) => {
+                        const cat = categories.find((x) => x.id === c.id);
+                        const pct = (c.value / allocDenom) * 100;
+                        return (
+                          <div key={c.id} className="flex items-center gap-2.5 py-1.5 text-sm">
+                            {cat?.emoji
+                              ? <span className="text-base leading-none shrink-0 w-5 text-center">{cat.emoji}</span>
+                              : <span className="w-2.5 h-2.5 rounded-full shrink-0 mx-[5px]" style={{ background: c.color }} />}
+                            <span className="text-white/80 truncate flex-1">{c.name}</span>
+                            {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
+                            <span className="tabular-nums text-white/40 text-xs w-8 text-right">{pct.toFixed(0)}%</span>
+                            <span className="tabular-nums font-medium w-20 text-right">{formatMoney(c.value, cur, { compact: c.value > 99999 })}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                    {data.byCat.length > CATS && (
+                      <button onClick={() => setShowAllCats((v) => !v)} className="mt-1.5 text-xs text-blue-400 hover:underline">
+                        {showAllCats ? 'Show less' : `Show all ${data.byCat.length}`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               {availableBal > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income" />
+                <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income mx-[5px]" />
                   <span className="text-sm font-medium flex-1">Available to spend</span>
-                  <span className="tabular-nums text-white/50 text-xs w-9 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
-                  <span className="tabular-nums font-semibold text-income w-24 text-right">{formatMoney(availableBal, cur)}</span>
+                  <span className="tabular-nums text-white/50 text-xs w-8 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
+                  <span className="tabular-nums font-semibold text-income w-20 text-right">{formatMoney(availableBal, cur, { compact: availableBal > 99999 })}</span>
                 </div>
               )}
             </>
