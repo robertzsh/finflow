@@ -122,8 +122,12 @@ html.light .glass-hover:hover {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Focus ring for accessibility */
+/* Focus ring for accessibility — for buttons/links/etc. Text fields (inputs, search
+   boxes, textareas, selects) show focus via their own border/fill instead, so the
+   harsh blue outline box doesn't wrap every search field. */
 :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 6px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+input:focus, textarea:focus, select:focus { outline: none; }
 
 /* Charts aren't interactive controls — never draw a focus box when a slice is tapped. */
 .recharts-wrapper, .recharts-surface, .recharts-sector, .recharts-pie, .recharts-pie-sector,
