@@ -67,6 +67,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'emag', name: 'eMAG', kind: 'expense', icon: 'Laptop', color: '#0ea5e9', emoji: '💻', parent: 'electronics' },
   { id: 'pcgarage', name: 'PC Garage', kind: 'expense', icon: 'Laptop', color: '#22c55e', emoji: '💻', parent: 'electronics' },
   { id: 'flanco', name: 'Flanco', kind: 'expense', icon: 'Laptop', color: '#a855f7', emoji: '💻', parent: 'electronics' },
+  { id: 'gifts-exp', name: 'Gifts', kind: 'expense', icon: 'Gift', color: '#f472b6', emoji: '🎁' },
   { id: 'family', name: 'Family', kind: 'expense', icon: 'Users', color: '#fbbf24', emoji: '👨‍👩‍👧' },
   { id: 'pets', name: 'Pets', kind: 'expense', icon: 'PawPrint', color: '#facc15', emoji: '🐾' },
   { id: 'taxes', name: 'Taxes', kind: 'expense', icon: 'Landmark', color: '#dc2626', emoji: '🏛️' },
