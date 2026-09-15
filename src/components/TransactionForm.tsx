@@ -53,8 +53,14 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
   const currentCat = categories.find((c) => c.id === catId);
   const topId = currentCat?.parent ?? catId ?? '';       // the top-level category currently chosen
   const topCat = categories.find((c) => c.id === topId);
-  const topCats = cats.filter((c) => !c.parent);          // only top-level categories in the main menu
+  const topCats = cats.filter((c) => !c.parent);          // top-level categories
   const subCats = categories.filter((c) => c.parent === topId && c.kind === type);
+  // Searchable list: every category of this type — parents AND their sub-categories —
+  // so you can type "Uber", "Ikea", "Bolt"… and pick it directly. Subs show their parent.
+  const catOptions = topCats.flatMap((p) => [
+    { value: p.id, label: p.name, emoji: p.emoji },
+    ...cats.filter((c) => c.parent === p.id).map((s) => ({ value: s.id, label: `${s.name} · ${p.name}`, emoji: s.emoji })),
+  ]);
 
   const onValid = (v: FormValues) => {
     if (submitting) return; // guard against rapid double-submit → duplicate rows
@@ -134,7 +140,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
           <Label>Category</Label>
           <SearchableSelect ariaLabel="Category" searchLabel="Search categories…" placeholder="Select…"
             value={topId}
-            options={topCats.map((c) => ({ value: c.id, label: c.name, emoji: c.emoji }))}
+            options={catOptions}
             onChange={(v) => setValue('categoryId', v, { shouldValidate: true })} />
           {errors.categoryId && <p className="text-xs text-expense mt-1">{errors.categoryId.message}</p>}
         </div>
