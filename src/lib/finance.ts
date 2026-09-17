@@ -107,6 +107,13 @@ export function accountBalance(txs: Transaction[], starting = 0) {
   return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);
 }
 
+/** All-time income & expense totals — used to explain how the balance is composed. */
+export function lifetimeTotals(txs: Transaction[]) {
+  let income = 0, expense = 0;
+  for (const t of txs) { if (t.type === 'income') income += t.amount; else expense += t.amount; }
+  return { income: r2(income), expense: r2(expense) };
+}
+
 export function cashFlowSeries(txs: Transaction[], months = 8, opening = 0) {
   const now = new Date();
   const out: { month: string; income: number; expense: number; net: number; balance: number }[] = [];

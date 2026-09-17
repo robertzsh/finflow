@@ -8,14 +8,14 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Field';
 import { ComparisonBars, DonutChart } from '@/components/charts/ChartKit';
-import { monthStats, spendingByCategory, cashFlowSeries } from '@/lib/finance';
+import { monthStats, spendingByCategory, cashFlowSeries, lifetimeTotals, accountBalance } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
 import { exportCSV, exportXLSX, exportPDF, exportMonthlyReportPDF } from '@/lib/export';
 import { buildMonthlyReport } from '@/lib/report';
 import { FileBarChart } from 'lucide-react';
 
 const REF = new Date();
-type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings';
+type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings' | 'balance';
 
 export default function Reports() {
   const { transactions, categories, settings, cloud, authed, members } = useStore();
@@ -45,9 +45,12 @@ export default function Reports() {
     return [...map.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 12);
   }, [scoped]);
 
+  const life = useMemo(() => lifetimeTotals(transactions), [transactions]);
+  const currentBalance = accountBalance(transactions, opening);
+
   const title = {
     monthly: 'Monthly report', yearly: 'Yearly report', category: 'Category report',
-    merchant: 'Merchant report', cashflow: 'Cash flow report', savings: 'Savings report',
+    merchant: 'Merchant report', cashflow: 'Cash flow report', savings: 'Savings report', balance: 'Balance breakdown',
   }[report];
 
   return (
@@ -72,6 +75,7 @@ export default function Reports() {
           <option value="merchant">Merchant report</option>
           <option value="cashflow">Cash flow report</option>
           <option value="savings">Savings report</option>
+          <option value="balance">Balance breakdown</option>
         </Select>
         {(report === 'monthly' || report === 'category' || report === 'merchant') && (
           <Select value={monthSel} onChange={(e) => setMonthSel(e.target.value)} className="!w-auto">
@@ -80,12 +84,43 @@ export default function Reports() {
         )}
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-3 mb-4">
-        <Card className="p-4"><p className="text-xs text-white/50">Income</p><p className="text-xl font-bold text-income mt-1">{formatMoney(stats.income, cur)}</p></Card>
-        <Card className="p-4"><p className="text-xs text-white/50">Expenses</p><p className="text-xl font-bold text-expense mt-1">{formatMoney(stats.expense, cur)}</p></Card>
-        <Card className="p-4"><p className="text-xs text-white/50">Net</p><p className={`text-xl font-bold mt-1 ${stats.net >= 0 ? 'text-income' : 'text-expense'}`}>{formatMoney(stats.net, cur, { sign: true })}</p></Card>
-        <Card className="p-4"><p className="text-xs text-white/50">Savings rate</p><p className="text-xl font-bold text-savings mt-1">{stats.savingsRate.toFixed(0)}%</p></Card>
-      </div>
+      {report !== 'balance' && (
+        <div className="grid sm:grid-cols-4 gap-3 mb-4">
+          <Card className="p-4"><p className="text-xs text-white/50">Income</p><p className="text-xl font-bold text-income mt-1">{formatMoney(stats.income, cur)}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Expenses</p><p className="text-xl font-bold text-expense mt-1">{formatMoney(stats.expense, cur)}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Net</p><p className={`text-xl font-bold mt-1 ${stats.net >= 0 ? 'text-income' : 'text-expense'}`}>{formatMoney(stats.net, cur, { sign: true })}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Savings rate</p><p className="text-xl font-bold text-savings mt-1">{stats.savingsRate.toFixed(0)}%</p></Card>
+        </div>
+      )}
+
+      {report === 'balance' && (
+        <Card className="p-5 mb-4">
+          <SectionCardHeader title="How your balance is calculated" hint="Starting balances, plus every income, minus every expense, all-time" />
+          <div className="space-y-2 text-sm max-w-xl">
+            {(cloud && authed ? members : [{ id: 'me', name: settings.name || 'You', openingBalance: settings.openingBalance }]).map((m) => (
+              <div key={m.id} className="flex items-center justify-between text-white/60">
+                <span>Starting balance · {m.name}</span>
+                <span className="tabular-nums">{formatMoney(m.openingBalance, cur)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between font-medium border-t border-white/10 pt-2">
+              <span>Total starting balance</span><span className="tabular-nums">{formatMoney(opening, cur)}</span>
+            </div>
+            <div className="flex items-center justify-between text-income">
+              <span>+ All income logged</span><span className="tabular-nums">{formatMoney(life.income, cur)}</span>
+            </div>
+            <div className="flex items-center justify-between text-expense">
+              <span>− All expenses logged</span><span className="tabular-nums">−{formatMoney(life.expense, cur)}</span>
+            </div>
+            <div className="flex items-center justify-between text-lg font-bold border-t border-white/10 pt-2 mt-1">
+              <span>Current balance</span><span className="tabular-nums">{formatMoney(currentBalance, cur)}</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-white/40 mt-3">
+            If this looks off, check each person's <span className="text-white/70">starting balance</span> in Settings, or delete any duplicate income/expense in Transactions. Every transaction ever logged affects this figure — not just this month.
+          </p>
+        </Card>
+      )}
 
       {(report === 'monthly' || report === 'cashflow' || report === 'savings' || report === 'yearly') && (
         <Card className="p-5 mb-4"><SectionCardHeader title="Income vs expenses" hint="Last 8 months" /><ComparisonBars data={cf} /></Card>
