@@ -99,7 +99,7 @@ export default function Investments() {
             <RefreshCw size={16} className={pricesState === 'loading' ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
           </Button>}
           <Button variant="ghost" onClick={() => csvRef.current?.click()}><Upload size={16} /><span className="hidden sm:inline">Import</span></Button>
-          <Button onClick={() => setOpen(true)}><Plus size={16} /> Add</Button>
+          <Button aria-label="Add holding" onClick={() => setOpen(true)}><Plus size={16} /> Add</Button>
           <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={onCSV} />
         </div>} />
 

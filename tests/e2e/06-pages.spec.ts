@@ -11,18 +11,19 @@ test.describe('Investments / Reports / Budgets / category search', () => {
     await expect(page.getByText('Markets').first()).toBeVisible();          // live-quotes watchlist
     await expect(page.getByText(/portfolio value/i).first()).toBeVisible();
 
-    await page.getByRole('button', { name: /^add$/i }).first().click();
+    await page.getByRole('button', { name: /add holding/i }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(/add holding/i)).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: /add holding/i })).toBeVisible();
+    await expect(dialog.getByPlaceholder(/apple inc/i)).toBeVisible(); // the Name field
   });
 
   test('reports → Balance breakdown explains the current balance', async ({ page }) => {
     await openApp(page);
     await page.getByRole('link', { name: /reports/i }).first().click();
     await expect(page.getByRole('heading', { name: /report/i }).first()).toBeVisible();
-    // switch the report-type dropdown to the balance view
-    await page.locator('select').first().selectOption('balance');
+    // switch the report-type dropdown (the one that offers the balance view) to it
+    await page.locator('select', { has: page.locator('option[value="balance"]') }).selectOption('balance');
     await expect(page.getByText(/how your balance is calculated/i)).toBeVisible();
     await expect(page.getByText(/current balance/i)).toBeVisible();
     await expect(page.getByText(/all income logged/i)).toBeVisible();
@@ -41,7 +42,7 @@ test.describe('Investments / Reports / Budgets / category search', () => {
     await page.getByRole('button', { name: /add transaction/i }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('combobox', { name: 'Category', exact: true }).click();
+    await dialog.getByRole('combobox', { name: 'Category', exact: true }).first().click();
     await dialog.getByRole('textbox', { name: /search categories/i }).fill('lidl');
     await expect(dialog.getByRole('listbox').getByRole('option', { name: /lidl/i }).first()).toBeVisible();
   });
