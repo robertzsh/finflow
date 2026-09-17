@@ -17,3 +17,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+// If a stale-chunk reload just happened and the app is now running fine, clear the
+// guard so a FUTURE deploy can auto-recover too. A deploy that keeps failing within
+// this window keeps the guard set, so it can never reload-loop.
+setTimeout(() => { try { sessionStorage.removeItem('ff-chunk-reloaded'); } catch { /* */ } }, 8000);
