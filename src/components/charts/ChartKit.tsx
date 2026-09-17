@@ -8,6 +8,10 @@ import { formatMoney } from '@/lib/format';
 
 function useCur() { return useStore((s) => s.settings.currency); }
 
+// Short numeric axis ticks ("16K", "1.5K", "500") — no currency word, so long labels
+// like "16 K RON" don't get clipped. The tooltip still shows the full currency amount.
+const axisTick = (v: number) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+
 // Theme-aware chart palette. Pink swaps green/red/blue for teal/coral/berry, and
 // the tooltip flips to a light card on light/pink so its text stays readable.
 function useChartTheme() {
@@ -51,14 +55,14 @@ export function CashFlowChart({ data }: { data: { month: string; income: number;
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="gInc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.income} stopOpacity={0.5} /><stop offset="100%" stopColor={c.income} stopOpacity={0} /></linearGradient>
           <linearGradient id="gExp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.expense} stopOpacity={0.45} /><stop offset="100%" stopColor={c.expense} stopOpacity={0} /></linearGradient>
         </defs>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} />
         <Area type="monotone" dataKey="income" stroke={c.income} strokeWidth={2} fill="url(#gInc)" />
         <Area type="monotone" dataKey="expense" stroke={c.expense} strokeWidth={2} fill="url(#gExp)" />
@@ -72,11 +76,11 @@ export function BalanceLine({ data }: { data: { month: string; balance: number }
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <defs><linearGradient id="gBal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.savings} stopOpacity={0.5} /><stop offset="100%" stopColor={c.savings} stopOpacity={0} /></linearGradient></defs>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} />
         <Area type="monotone" dataKey="balance" stroke={c.savings} strokeWidth={2.5} fill="url(#gBal)" />
       </AreaChart>
@@ -89,10 +93,10 @@ export function SpendSaveBars({ data, height = 260 }: { data: { month: string; s
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }} barGap={3}>
+      <BarChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barGap={3}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
         <Legend wrapperStyle={{ fontSize: 11, color: c.axis }} />
         <Bar dataKey="spending" name="Spending" fill={c.expense} radius={[4, 4, 0, 0]} />
@@ -133,10 +137,10 @@ export function ComparisonBars({ data, height = 260 }: { data: { month: string; 
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }} barGap={4}>
+      <BarChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barGap={4}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
         <Bar dataKey="income" fill={c.income} radius={[5, 5, 0, 0]} />
         <Bar dataKey="expense" fill={c.expense} radius={[5, 5, 0, 0]} />
@@ -150,11 +154,11 @@ export function SavingsArea({ data, height = 220 }: { data: { month: string; sav
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <defs><linearGradient id="gSav" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c.savings} stopOpacity={0.55} /><stop offset="100%" stopColor={c.savings} stopOpacity={0} /></linearGradient></defs>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} />
         <Area type="monotone" dataKey="savings" stroke={c.savings} strokeWidth={2.5} fill="url(#gSav)" />
       </AreaChart>
@@ -167,10 +171,10 @@ export function InvestHistory({ data }: { data: { month: string; value: number }
   const c = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v, currency, { compact: true })} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
         <Tooltip content={<TT currency={currency} />} />
         <Line type="monotone" dataKey="value" stroke={c.invest} strokeWidth={2.5} dot={false} />
       </LineChart>
