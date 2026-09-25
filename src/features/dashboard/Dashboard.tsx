@@ -34,7 +34,6 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const privacy = useStore((s) => s.privacy);
   const [editBill, setEditBill] = useState<Transaction | null>(null);
   const [showAllBills, setShowAllBills] = useState(false);
-  const [showAllCats, setShowAllCats] = useState(false);
   const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
@@ -367,14 +366,14 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         </Card>
       )}
 
-      {/* Charts row 1 — items-start so expanding the category list doesn't stretch the chart */}
-      <div className="grid lg:grid-cols-3 gap-4 section-gap items-start">
-        <Card className="p-5 lg:col-span-2 self-start" delay={0.1}>
+      {/* Charts row 1 — both cards share a fixed height on desktop; the category list
+          scrolls internally so it never stretches the row or leaves a gap. */}
+      <div className="grid lg:grid-cols-3 gap-4 section-gap">
+        <Card className="p-5 lg:col-span-2 flex flex-col lg:h-[440px]" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
-          {/* fixed height so the chart never stretches when the category list expands */}
-          <div className="h-[300px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
+          <div className="flex-1 min-h-[220px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
-        <Card className="p-5 flex flex-col" delay={0.15}>
+        <Card className="p-5 flex flex-col lg:h-[440px]" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
           {expenseTotal === 0 ? (
             <EmptyState icon="PieChart" title="No expenses this month"
@@ -387,36 +386,25 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                 <span>{formatMoney(expenseTotal, cur, { compact: true })} of {formatMoney(monthIncome, cur, { compact: true })} income</span>
                 <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
               </div>
-              {(() => {
-                const CATS = 6;
-                const rows = showAllCats ? data.byCat : data.byCat.slice(0, CATS);
-                return (
-                  <div className="mt-3 flex-1">
-                    <div className="space-y-0.5">
-                      {rows.map((c) => {
-                        const cat = categories.find((x) => x.id === c.id);
-                        const pct = (c.value / allocDenom) * 100;
-                        return (
-                          <div key={c.id} className="flex items-center gap-2.5 py-1.5 text-sm">
-                            {cat?.emoji
-                              ? <span className="text-base leading-none shrink-0 w-5 text-center">{cat.emoji}</span>
-                              : <span className="w-2.5 h-2.5 rounded-full shrink-0 mx-[5px]" style={{ background: c.color }} />}
-                            <span className="text-white/80 truncate flex-1">{c.name}</span>
-                            {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
-                            <span className="tabular-nums text-white/40 text-xs w-8 text-right">{pct.toFixed(0)}%</span>
-                            <span className="tabular-nums font-medium w-20 text-right">{formatMoney(c.value, cur, { compact: c.value > 99999 })}</span>
-                          </div>
-                        );
-                      })}
+              {/* All categories in a scroll area — the card height stays fixed, so the
+                  row never grows and the chart on the left never stretches. */}
+              <div className="mt-3 flex-1 min-h-0 overflow-y-auto -mr-1 pr-1 space-y-0.5">
+                {data.byCat.map((c) => {
+                  const cat = categories.find((x) => x.id === c.id);
+                  const pct = (c.value / allocDenom) * 100;
+                  return (
+                    <div key={c.id} className="flex items-center gap-2.5 py-1.5 text-sm">
+                      {cat?.emoji
+                        ? <span className="text-base leading-none shrink-0 w-5 text-center">{cat.emoji}</span>
+                        : <span className="w-2.5 h-2.5 rounded-full shrink-0 mx-[5px]" style={{ background: c.color }} />}
+                      <span className="text-white/80 truncate flex-1">{c.name}</span>
+                      {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
+                      <span className="tabular-nums text-white/40 text-xs w-8 text-right">{pct.toFixed(0)}%</span>
+                      <span className="tabular-nums font-medium w-20 text-right">{formatMoney(c.value, cur, { compact: c.value > 99999 })}</span>
                     </div>
-                    {data.byCat.length > CATS && (
-                      <button onClick={() => setShowAllCats((v) => !v)} className="mt-1.5 text-xs text-blue-400 hover:underline">
-                        {showAllCats ? 'Show less' : `Show all ${data.byCat.length}`}
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+                  );
+                })}
+              </div>
               {availableBal > 0 && (
                 <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income mx-[5px]" />
