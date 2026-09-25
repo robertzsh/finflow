@@ -367,11 +367,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         </Card>
       )}
 
-      {/* Charts row 1 */}
-      <div className="grid lg:grid-cols-3 gap-4 section-gap">
-        <Card className="p-5 lg:col-span-2 flex flex-col" delay={0.1}>
+      {/* Charts row 1 — items-start so expanding the category list doesn't stretch the chart */}
+      <div className="grid lg:grid-cols-3 gap-4 section-gap items-start">
+        <Card className="p-5 lg:col-span-2 self-start" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
-          <div className="flex-1 min-h-[260px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
+          {/* fixed height so the chart never stretches when the category list expands */}
+          <div className="h-[300px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
         <Card className="p-5 flex flex-col" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
