@@ -369,11 +369,11 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       {/* Charts row 1 — both cards share a fixed height on desktop; the category list
           scrolls internally so it never stretches the row or leaves a gap. */}
       <div className="grid lg:grid-cols-3 gap-4 section-gap">
-        <Card className="p-5 lg:col-span-2 flex flex-col lg:h-[440px]" delay={0.1}>
+        <Card className="p-5 lg:col-span-2 flex flex-col lg:h-[500px]" delay={0.1}>
           <SectionCardHeader title="Savings & spending" hint="Money spent vs put aside, last 12 months" />
           <div className="flex-1 min-h-[220px] mt-1"><SpendSaveBars data={data.spendSave} height="100%" /></div>
         </Card>
-        <Card className="p-5 flex flex-col lg:h-[440px]" delay={0.15}>
+        <Card className="p-5 flex flex-col lg:h-[500px]" delay={0.15}>
           <SectionCardHeader title="Spending by category" hint="Share of this month's income" />
           {expenseTotal === 0 ? (
             <EmptyState icon="PieChart" title="No expenses this month"
@@ -381,7 +381,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               action={<Button onClick={onQuickAdd}><Plus size={16} /> Add expense</Button>} />
           ) : (
             <>
-              <div className="flex-none"><DonutChart data={spendDonut} height={200} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: true })} /></div>
+              <div className="flex-none"><DonutChart data={spendDonut} height={150} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: true })} /></div>
               <div className="mt-1 flex items-center justify-between text-xs text-white/45">
                 <span>{formatMoney(expenseTotal, cur, { compact: true })} of {formatMoney(monthIncome, cur, { compact: true })} income</span>
                 <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
