@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, TrendingUp, TrendingDown, Upload, RefreshCw, Pencil, KeyRound } from 'lucide-react';
+import { Plus, Trash2, Upload, RefreshCw, Pencil, KeyRound } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
@@ -11,8 +11,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MarketWatch } from '@/components/MarketWatch';
+import { PortfolioCard } from '@/components/PortfolioCard';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
-import { investmentTotals, investmentAllocation, investmentHistory, toBase } from '@/lib/finance';
+import { investmentAllocation, investmentHistory, toBase } from '@/lib/finance';
 import { formatMoney, cx } from '@/lib/format';
 import { parseInvestmentsCSV } from '@/lib/export';
 import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
@@ -58,21 +59,10 @@ export default function Investments() {
     e.target.value = '';
   }
 
-  const totals = useMemo(() => investmentTotals(investments, fx), [investments, fx]);
+  // Portfolio value / P&L now live in <PortfolioCard/>; here we keep allocation + history.
   const alloc = useMemo(() => investmentAllocation(investments, fx), [investments, fx]);
   const history = useMemo(() => investmentHistory(investments, fx), [investments, fx]);
   const allocTotal = alloc.reduce((a, b) => a + b.value, 0);
-
-  // Portfolio day change: value-weighted from each live holding's % (base currency).
-  const dayChange = useMemo(() => {
-    let base = 0, delta = 0;
-    for (const i of investments) {
-      const q = quotes[i.id]; if (!q) continue;
-      const v = toBase(i.currentValue, i.currency, fx);
-      base += v; delta += v * (q.changePct / 100);
-    }
-    return { abs: delta, pct: base > 0 ? (delta / base) * 100 : 0, has: base > 0 };
-  }, [investments, quotes, fx]);
 
   const hasLive = investments.some((i) => LIVE_KINDS.has(i.kind) && i.ticker);
   const needsKey = investments.some((i) => (i.kind === 'Stock' || i.kind === 'ETF') && i.ticker) && !settings.finnhubKey;
@@ -105,30 +95,8 @@ export default function Investments() {
 
       {msg && <div className="mb-4 rounded-xl bg-invest/15 border border-invest/30 text-invest px-4 py-2.5 text-sm">{msg}</div>}
 
-      {/* Portfolio summary — value, all-time P/L, today */}
-      <Card className="p-5 mb-4">
-        <p className="metric-label">Portfolio value</p>
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-2 mt-1">
-          <p className="metric-value text-3xl font-bold">{formatMoney(totals.value, cur)}</p>
-          <div className="flex items-center gap-4 pb-1">
-            <div>
-              <div className={cx('metric-value font-semibold flex items-center gap-1', totals.gain >= 0 ? 'text-income' : 'text-expense')}>
-                {totals.gain >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                {formatMoney(totals.gain, cur, { sign: true })} ({totals.gainPct >= 0 ? '+' : ''}{totals.gainPct.toFixed(1)}%)
-              </div>
-              <div className="text-[11px] text-white/40">all time</div>
-            </div>
-            {dayChange.has && (
-              <div>
-                <div className={cx('metric-value font-semibold', dayChange.abs >= 0 ? 'text-income' : 'text-expense')}>
-                  {dayChange.abs >= 0 ? '+' : ''}{formatMoney(dayChange.abs, cur)} ({dayChange.pct >= 0 ? '+' : ''}{dayChange.pct.toFixed(2)}%)
-                </div>
-                <div className="text-[11px] text-white/40">today</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
+      {/* Hero portfolio card (terminal/mono style) */}
+      <PortfolioCard />
 
       {needsKey && (
         <Card className="p-4 mb-4">
