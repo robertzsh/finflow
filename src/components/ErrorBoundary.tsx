@@ -3,24 +3,42 @@ import { Component, type ReactNode } from 'react';
 interface Props { children: ReactNode }
 interface State { error: Error | null }
 
-// A lazily-loaded chunk failed to load — almost always because a new version was
-// deployed and the old hashed file this tab referenced no longer exists. Reloading
-// pulls the fresh build. Guarded so a genuinely-broken deploy can't reload-loop.
+// A lazily-loaded chunk failed to load / resolved to a stale module — almost always
+// because a new version was deployed and the old cached file this tab referenced is
+// broken. The "_result.default" / "reading 'default'" shapes are React.lazy reading a
+// module whose default export is missing (a mismatched chunk).
 const isChunkLoadError = (msg = '') =>
-  /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|Load failed/i.test(msg);
+  /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|_result\.default|reading 'default'|reading "default"|Load failed/i.test(msg);
 
-function reloadOnceForStaleChunk(): boolean {
+// Hard reset: drop the service-worker + all caches, then reload. This is what actually
+// fixes a *persistent* crash where the SW keeps serving a bad cached chunk — a plain
+// reload would just re-serve it. Guarded so it can't loop.
+async function hardReset() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k).catch(() => {})));
+    }
+  } catch { /* ignore */ }
+  window.location.reload();
+}
+
+function recoverOnceFromStaleChunk(): boolean {
   try {
     if (sessionStorage.getItem('ff-chunk-reloaded')) return false; // already tried this session
     sessionStorage.setItem('ff-chunk-reloaded', '1');
-    window.location.reload();
-    return true;
-  } catch { return false; }
+  } catch { /* */ }
+  hardReset();
+  return true;
 }
 
 // Also catch the failure before React does: Vite fires this when a dynamic import 404s.
 if (typeof window !== 'undefined') {
-  window.addEventListener('vite:preloadError', (e) => { e.preventDefault(); reloadOnceForStaleChunk(); });
+  window.addEventListener('vite:preloadError', (e) => { e.preventDefault(); recoverOnceFromStaleChunk(); });
 }
 
 /** Catches render/runtime errors anywhere below it and shows a friendly recovery
@@ -34,8 +52,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: unknown) {
-    // Stale chunk after a deploy → auto-reload once instead of showing the error card.
-    if (isChunkLoadError(error?.message) && reloadOnceForStaleChunk()) return;
+    // Stale chunk after a deploy → hard-reset + reload once instead of the error card.
+    if (isChunkLoadError(error?.message) && recoverOnceFromStaleChunk()) return;
     // Surfaced for logging / future error-monitoring (e.g. Sentry) integration.
     console.error('App crashed:', error, info);
   }
@@ -55,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
             The app hit an unexpected error. Your data is safe — reloading usually fixes it.
           </p>
           <div className="flex gap-2 justify-center">
-            <button onClick={() => window.location.reload()}
+            <button onClick={() => hardReset()}
               className="rounded-xl bg-gradient-to-r from-emerald-500 to-blue-500 text-white text-sm font-semibold px-4 py-2 hover:opacity-90">
               Reload
             </button>
