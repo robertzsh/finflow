@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Users, User, History, Pencil } from 'lucide-react';
 import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
@@ -300,26 +300,35 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
 
 function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal | null; onClose: () => void; onContribute: (baseAmount: number) => void; cur: CurrencyCode; fx: Record<string, number> }) {
   const [amt, setAmt] = useState('');
+  // The currency you actually paid in — defaults to the goal's own currency.
+  const [inCur, setInCur] = useState<CurrencyCode>(goal?.currency ?? cur);
+  useEffect(() => { setInCur(goal?.currency ?? cur); setAmt(''); }, [goal, cur]);
   if (!goal) return null;
   const gc = goal.currency ?? cur;
-  const rate = fx[gc] ?? 1;                       // lei per 1 unit of goal currency
-  const baseAmount = parseAmount(amt) || 0;       // entered in base currency (lei)
-  const inGoal = baseAmount / rate;               // converted to the goal's currency
-  const presets = [200, 500, 1000, 2500];
+  const goalRate = fx[gc] ?? 1;                    // lei per 1 unit of the goal's currency
+  const raw = parseAmount(amt) || 0;               // amount as typed, in `inCur`
+  const baseAmount = raw * (fx[inCur] ?? 1);        // → base currency (lei)
+  const inGoal = baseAmount / goalRate;            // → the goal's currency
+  const presets = [100, 500, 1000, 2500];
   return (
     <Modal open={!!goal} onClose={onClose} title={`Add money to ${goal.name}`}>
       <div className="space-y-4">
-        <p className="text-sm text-white/50">Move money from your savings into this goal. Currently {formatMoney(goal.saved, gc)} of {formatMoney(goal.target, gc)}.</p>
+        <p className="text-sm text-white/50">Move money into this goal. Currently {formatMoney(goal.saved, gc)} of {formatMoney(goal.target, gc)}.</p>
         <div>
-          <Label>Amount from your savings ({currencySymbol(cur)})</Label>
-          <Input type="text" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0,00" autoFocus />
-          {gc !== cur && baseAmount > 0 && (
-            <p className="text-xs text-white/50 mt-1.5">≈ <span className="text-goal font-medium">{formatMoney(inGoal, gc)}</span> toward the goal (at {rate} {cur}/{gc})</p>
+          <Label>Amount you're adding</Label>
+          <div className="flex gap-2">
+            <Input type="text" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0,00" autoFocus className="flex-1" />
+            <Select aria-label="Contribution currency" value={inCur} onChange={(e) => setInCur(e.target.value as CurrencyCode)} className="!w-24">
+              {GOAL_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </div>
+          {inCur !== gc && raw > 0 && (
+            <p className="text-xs text-white/50 mt-1.5">≈ <span className="text-goal font-medium">{formatMoney(inGoal, gc)}</span> toward the goal (at {fx[inCur]} {cur}/{inCur})</p>
           )}
         </div>
-        <div className="flex gap-2">{presets.map((v) => <button key={v} onClick={() => setAmt(String(v))} className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-2 text-sm">{currencySymbol(cur)}{v}</button>)}</div>
-        <Button className="w-full" disabled={baseAmount <= 0} onClick={() => onContribute(baseAmount)}>Add {baseAmount > 0 ? formatMoney(baseAmount, cur) : 'money'}</Button>
-        <p className="text-[11px] text-white/40">This is recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact.</p>
+        <div className="flex gap-2">{presets.map((v) => <button key={v} type="button" onClick={() => setAmt(String(v))} className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-2 text-sm">{currencySymbol(inCur)}{v}</button>)}</div>
+        <Button className="w-full" disabled={baseAmount <= 0} onClick={() => onContribute(baseAmount)}>Add {raw > 0 ? formatMoney(raw, inCur) : 'money'}</Button>
+        <p className="text-[11px] text-white/40">Recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact. Foreign amounts convert at today's rate.</p>
       </div>
     </Modal>
   );
