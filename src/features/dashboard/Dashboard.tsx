@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore';
 import { exportMonthlyReportPDF } from '@/lib/export';
 import { buildMonthlyReport } from '@/lib/report';
 import { Page } from '@/components/PageTransition';
-import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
+import { SectionCardHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -130,10 +130,33 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     setReportDone(true);
   }
 
+  const hour = REF.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const partnerName = members.find((m) => m.id !== userId)?.name ?? 'your partner';
+  const heroNet = data.stats.net;
+  const hasActivity = data.stats.income > 0 || data.stats.expense > 0;
+
   return (
     <Page>
-      <PageHeader title={`Hi ${settings.name} 👋`} subtitle={`${format(REF, 'MMMM yyyy')} · ${isHousehold ? 'family totals (both of you)' : 'monthly totals reset on the 1st'}`}
-        action={<Button onClick={onQuickAdd}><Plus size={16} /> Add transaction</Button>} />
+      {/* Editorial hero — the month's story in one sentence, key figure inline */}
+      <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        className="flex flex-wrap items-end justify-between gap-4 mb-5 sm:mb-7">
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-white/45">{format(REF, 'MMMM yyyy')} · {isHousehold ? `you and ${partnerName}` : 'your money'}</p>
+          <h1 className="font-display text-[1.7rem] sm:text-4xl leading-[1.15] tracking-tight mt-1.5 max-w-[24ch]">
+            {greeting}, {settings.name}.{' '}
+            {!hasActivity
+              ? <span className="text-white/55">A fresh month — add a transaction to begin.</span>
+              : heroNet >= 0
+                ? <>You’ve set aside <span className="text-income">{M(formatMoney(heroNet, cur))}</span> this month.</>
+                : <>You’re <span className="text-expense">{M(formatMoney(Math.abs(heroNet), cur))}</span> over so far.</>}
+          </h1>
+          {hasActivity && data.stats.income > 0 && !privacy && (
+            <p className="text-sm text-white/45 mt-2">That’s {savingsRate.toFixed(0)}% of {formatMoney(data.stats.income, cur)} that came in{isHousehold ? ', across both of you' : ''}.</p>
+          )}
+        </div>
+        <Button onClick={onQuickAdd} className="shrink-0"><Plus size={16} /> Add transaction</Button>
+      </motion.header>
 
       {showReportPrompt && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
