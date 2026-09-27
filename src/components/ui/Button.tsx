@@ -7,7 +7,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 const V: Record<Variant, string> = {
-  primary: 'bg-gradient-to-r from-emerald-500 to-blue-500 text-white hover:opacity-90 shadow-lg shadow-blue-500/20',
+  primary: 'bg-brand text-[#1a1206] font-bold hover:bg-[#e8bd6b] shadow-lg shadow-brand/25',
   ghost: 'bg-white/5 hover:bg-white/10 text-white/80 border border-white/10',
   subtle: 'bg-white/5 hover:bg-white/10 text-white/70',
   danger: 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20',

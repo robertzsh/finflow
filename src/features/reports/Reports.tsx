@@ -152,7 +152,7 @@ export default function Reports() {
                 <span className="text-white/30 w-5">{i + 1}</span>
                 <span className="flex-1">{m.name}</span>
                 <div className="w-32 h-2 rounded-full bg-white/10 overflow-hidden hidden sm:block">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style={{ width: `${(m.value / byMerchant[0].value) * 100}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#e0b15a] to-[#c88a50]" style={{ width: `${(m.value / byMerchant[0].value) * 100}%` }} />
                 </div>
                 <span className="tabular-nums font-medium w-20 text-right">{formatMoney(m.value, cur)}</span>
               </div>

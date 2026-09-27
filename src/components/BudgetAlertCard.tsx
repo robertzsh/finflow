@@ -47,7 +47,7 @@ export function BudgetAlertCard() {
           <PiggyBank size={18} className="text-emerald-300" />
           <h3 className="font-bold">Budgets</h3>
         </div>
-        <button onClick={() => nav('/budgets')} className="text-xs text-blue-400 hover:underline">Manage</button>
+        <button onClick={() => nav('/budgets')} className="text-xs text-brand hover:underline">Manage</button>
       </div>
 
       {over.length > 0 && (

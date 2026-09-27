@@ -355,7 +355,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   })}
                 </div>
                 {recurringUpcoming.length > COLLAPSED && (
-                  <button onClick={() => setShowAllBills((v) => !v)} className="mt-2 text-xs text-blue-400 hover:underline">
+                  <button onClick={() => setShowAllBills((v) => !v)} className="mt-2 text-xs text-brand hover:underline">
                     {showAllBills ? 'Show less' : `Show all ${recurringUpcoming.length} (${hidden} more)`}
                   </button>
                 )}

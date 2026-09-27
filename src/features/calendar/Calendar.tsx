@@ -101,7 +101,7 @@ export default function Calendar() {
               return (
                 <button key={key} onClick={() => setSelected(key)}
                   className={`min-h-[52px] sm:min-h-[74px] rounded-lg p-1 sm:p-1.5 border text-left transition ${isSel ? 'border-blue-400 bg-blue-500/15' : today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'opacity-30'}`}>
-                  <div className={`text-[11px] sm:text-xs mb-1 ${today ? 'text-blue-400 font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
+                  <div className={`text-[11px] sm:text-xs mb-1 ${today ? 'text-brand font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
                   {/* Mobile: compact dots. sm+: labelled chips */}
                   <div className="flex flex-wrap gap-0.5 sm:hidden">
                     {items.slice(0, 4).map((e, i) => {

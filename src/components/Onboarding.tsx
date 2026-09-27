@@ -26,7 +26,7 @@ export function Onboarding() {
         <AnimatePresence mode="wait">
           {!last ? (
             <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-              <div className="mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-500 p-4 w-fit">
+              <div className="mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-4 w-fit">
                 {(() => { const I = SLIDES[step].icon; return <I size={26} className="text-white" />; })()}
               </div>
               <h1 className="text-xl font-extrabold text-center">{SLIDES[step].title}</h1>

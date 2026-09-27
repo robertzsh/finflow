@@ -101,7 +101,7 @@ export default function Investments() {
       {needsKey && (
         <Card className="p-4 mb-4">
           <div className="flex items-center gap-2 mb-2"><KeyRound size={16} className="text-invest" /><span className="text-sm font-medium">Live stock & ETF prices</span></div>
-          <p className="text-xs text-white/50 mb-3">Add a free <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Finnhub</a> API key to pull live stock/ETF quotes. Crypto is already live (free, no key).</p>
+          <p className="text-xs text-white/50 mb-3">Add a free <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-brand hover:underline">Finnhub</a> API key to pull live stock/ETF quotes. Crypto is already live (free, no key).</p>
           <div className="flex gap-2">
             <Input type={showKey ? 'text' : 'password'} value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Finnhub API key" className="flex-1" />
             <Button variant="ghost" onClick={() => setShowKey((v) => !v)}>{showKey ? 'Hide' : 'Show'}</Button>

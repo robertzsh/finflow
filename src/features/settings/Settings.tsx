@@ -106,7 +106,7 @@ export default function Settings() {
                 onBlur={(e) => { const v = e.target.value.trim(); if (v !== (settings.finnhubKey ?? '')) { updateSettings({ finnhubKey: v || undefined }); flash(v ? 'Finnhub key saved' : 'Finnhub key removed'); } }}
                 placeholder="Paste your free Finnhub key"
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-sm outline-none focus:border-blue-400/50" />
-              <p className="text-xs text-white/40 mt-1.5">Free key from <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">finnhub.io</a> · powers live stock/ETF quotes in Investments. Crypto is already live (no key). Stored on this device only.</p>
+              <p className="text-xs text-white/40 mt-1.5">Free key from <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-brand hover:underline">finnhub.io</a> · powers live stock/ETF quotes in Investments. Crypto is already live (no key). Stored on this device only.</p>
             </div>
             <div>
               <Label>Appearance</Label>
@@ -317,7 +317,7 @@ function RemindersCard() {
               </div>
             </div>
             <button onClick={toggle} disabled={busy || status === 'loading'} aria-label="Toggle daily reminders"
-              className={`relative w-12 h-7 rounded-full transition shrink-0 ${status === 'on' ? 'bg-gradient-to-r from-emerald-500 to-blue-500' : 'bg-white/10'} disabled:opacity-50`}>
+              className={`relative w-12 h-7 rounded-full transition shrink-0 ${status === 'on' ? 'bg-gradient-to-r from-[#e0b15a] to-[#c88a50]' : 'bg-white/10'} disabled:opacity-50`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${status === 'on' ? 'left-6' : 'left-1'}`} />
             </button>
           </div>

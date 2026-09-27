@@ -74,7 +74,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </p>
           <div className="flex gap-2 justify-center">
             <button onClick={() => hardReset()}
-              className="rounded-xl bg-gradient-to-r from-emerald-500 to-blue-500 text-white text-sm font-semibold px-4 py-2 hover:opacity-90">
+              className="rounded-xl bg-gradient-to-r from-[#e0b15a] to-[#c88a50] text-white text-sm font-semibold px-4 py-2 hover:opacity-90">
               Reload
             </button>
             <button onClick={() => { this.setState({ error: null }); }}

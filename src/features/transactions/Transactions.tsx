@@ -136,7 +136,7 @@ export default function Transactions() {
                 <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                 <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
-              {activeFilters > 0 && <button onClick={clearFilters} className="text-xs text-blue-400 mt-2">Clear all filters</button>}
+              {activeFilters > 0 && <button onClick={clearFilters} className="text-xs text-brand mt-2">Clear all filters</button>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -182,7 +182,7 @@ export default function Transactions() {
                   return (
                     <div key={t.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition ${sel ? 'bg-blue-500/5' : ''}`}>
                       <button onClick={() => toggle(t.id)} aria-label={sel ? 'Deselect transaction' : 'Select transaction'} className="text-white/40 hover:text-white shrink-0">
-                        {sel ? <CheckSquare size={16} className="text-blue-400" /> : <Square size={16} />}
+                        {sel ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
                       </button>
                       <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} emoji={c?.emoji} />
                       <div className="min-w-0 flex-1">

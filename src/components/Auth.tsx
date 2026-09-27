@@ -30,7 +30,7 @@ export function Auth() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
         className="glass rounded-3xl p-8 w-full max-w-md">
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 p-2 shadow-glow"><Sparkles size={18} className="text-white" /></div>
+          <div className="rounded-xl bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-2 shadow-glow"><Sparkles size={18} className="text-white" /></div>
           <div>
             <div className="font-extrabold tracking-tight leading-none">FinFlow</div>
             <div className="text-[10px] text-white/40 tracking-wider uppercase">Family finances</div>

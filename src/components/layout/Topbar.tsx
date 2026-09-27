@@ -16,7 +16,7 @@ export function Topbar({ onQuickAdd, onSearch }: { onQuickAdd: () => void; onSea
   return (
     <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 pt-[max(0.4rem,env(safe-area-inset-top))] mb-1 chrome-glass border-b border-white/5 flex items-center gap-2.5 sm:gap-3">
       <div className="lg:hidden flex items-center gap-2 font-extrabold">
-        <span className="rounded-lg bg-gradient-to-br from-emerald-500 to-blue-500 px-2 py-1 text-xs text-white">FF</span>
+        <span className="rounded-lg bg-gradient-to-br from-[#e0b15a] to-[#c88a50] px-2 py-1 text-xs text-white">FF</span>
       </div>
       <button onClick={onSearch}
         className="hidden sm:flex items-center gap-2 flex-1 max-w-md rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-sm text-white/40 hover:bg-white/[0.07] transition">

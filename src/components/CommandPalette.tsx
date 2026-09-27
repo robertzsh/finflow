@@ -53,7 +53,7 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-2">
               <button onClick={onQuickAdd} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-white/10 text-left">
-                <span className="rounded-lg bg-gradient-to-br from-emerald-500 to-blue-500 p-1.5"><Plus size={15} /></span>
+                <span className="rounded-lg bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-1.5"><Plus size={15} /></span>
                 Add new transaction
               </button>
               {results.length > 0 && <div className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Transactions</div>}

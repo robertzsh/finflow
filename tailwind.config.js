@@ -10,13 +10,16 @@ export default {
         savings: { DEFAULT: '#3b82f6', soft: 'rgba(59,130,246,0.15)' },
         invest: { DEFAULT: '#eab308', soft: 'rgba(234,179,8,0.15)' },
         goal: { DEFAULT: '#a855f7', soft: 'rgba(168,85,247,0.15)' },
+        brand: { DEFAULT: '#e0b15a', soft: 'rgba(224,177,90,0.15)' },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         glass: '0 8px 32px rgba(0,0,0,0.37)',
-        glow: '0 0 40px rgba(59,130,246,0.15)',
+        glow: '0 0 40px rgba(224,177,90,0.15)',
       },
       backdropBlur: { xs: '2px' },
       keyframes: {
