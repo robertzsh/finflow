@@ -47,6 +47,14 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  /* App chrome shouldn't text-select on double/triple click (that "highlighted value"
+     look). Form fields and anything opted-in with .selectable stay selectable. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, select, [contenteditable], .selectable {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Fraunces carries the personality on headings; body/UI stays Plex Sans. */
