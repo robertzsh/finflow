@@ -12,7 +12,7 @@ import { ProgressRing } from '@/components/ui/Progress';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatMoney, currencySymbol, parseAmount } from '@/lib/format';
+import { formatMoney, currencySymbol, parseAmount, cx } from '@/lib/format';
 import { toBase } from '@/lib/finance';
 import type { Goal, CurrencyCode } from '@/types';
 
@@ -249,6 +249,7 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
   const live = useStore((s) => (goal ? s.goals.find((g) => g.id === goal.id) : undefined));
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editVal, setEditVal] = useState('');
+  const [hovIdx, setHovIdx] = useState<number | null>(null);
   if (!goal) return null;
   const g = live ?? goal;
   const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
@@ -283,8 +284,10 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
                   const idx = all.indexOf(c);               // stable index into the stored array
                   const hasTime = c.date.length > 10;
                   const editing = editIdx === idx;
+                  const showActions = hovIdx === idx || editing;
                   return (
-                    <div key={idx} className="group flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                    <div key={idx} onMouseEnter={() => setHovIdx(idx)} onMouseLeave={() => setHovIdx((h) => (h === idx ? null : h))}
+                      className="flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-2">
                       <span className="text-white/60 flex-1 truncate">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
                       {editing ? (
                         <>
@@ -298,7 +301,7 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
                       ) : (
                         <>
                           <span className="font-medium text-white/80 tabular-nums">+{formatMoney(toGoal(c.amount), gc)}</span>
-                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className={cx('flex items-center transition-opacity', showActions ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
                             <button onClick={() => { setEditIdx(idx); setEditVal(String(Math.round(toGoal(c.amount) * 100) / 100)); }} className="text-white/30 hover:text-white p-1" aria-label="Edit contribution"><Pencil size={13} /></button>
                             <button onClick={() => removeContribution(g.id, idx)} className="text-white/30 hover:text-expense p-1" aria-label="Delete contribution"><Trash2 size={13} /></button>
                           </div>
