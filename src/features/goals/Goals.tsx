@@ -265,7 +265,7 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
   const saveEdit = (idx: number) => { const v = parseAmount(editVal); if (v > 0) updateContribution(g.id, idx, v); setEditIdx(null); };
   return (
     <Modal open={!!goal} onClose={onClose} title={`${g.name} — contribution history`}>
-      <div className="space-y-4">
+      <div className="space-y-4" onMouseLeave={() => setHovIdx(null)}>
         <p className="text-sm text-white/50">
           Saved so far: <span className="text-goal font-semibold">{formatMoney(g.saved, gc)}</span>
           {all.length > 0 && <> · {all.length} logged contribution{all.length > 1 ? 's' : ''}</>}
@@ -286,7 +286,7 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
                   const editing = editIdx === idx;
                   const showActions = hovIdx === idx || editing;
                   return (
-                    <div key={idx} onMouseEnter={() => setHovIdx(idx)} onMouseLeave={() => setHovIdx((h) => (h === idx ? null : h))}
+                    <div key={idx} onMouseEnter={() => setHovIdx(idx)} onMouseMove={() => { if (hovIdx !== idx) setHovIdx(idx); }}
                       className="flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-2">
                       <span className="text-white/60 flex-1 truncate">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
                       {editing ? (
