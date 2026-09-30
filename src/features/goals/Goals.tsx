@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Users, User, History, Pencil } from 'lucide-react';
+import { Plus, Trash2, Users, User, History, Pencil, Check, X } from 'lucide-react';
 import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
@@ -243,22 +243,30 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
 
 function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClose: () => void; cur: CurrencyCode; fx: Record<string, number> }) {
   const members = useStore((s) => s.members);
+  const updateContribution = useStore((s) => s.updateContribution);
+  const removeContribution = useStore((s) => s.removeContribution);
+  // Read the live goal so edits/removals reflect immediately (the prop is a snapshot).
+  const live = useStore((s) => (goal ? s.goals.find((g) => g.id === goal.id) : undefined));
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editVal, setEditVal] = useState('');
   if (!goal) return null;
+  const g = live ?? goal;
   const nameOf = (id?: string) => members.find((m) => m.id === id)?.name;
-  const gc = (goal.currency as CurrencyCode) ?? cur;
+  const gc = (g.currency as CurrencyCode) ?? cur;
   const rate = fx[gc] ?? 1;                      // lei per 1 unit of goal currency
   const toGoal = (baseAmt: number) => baseAmt / rate; // stored contributions are in base lei
-  const all = goal.contributions ?? [];
+  const all = g.contributions ?? [];
   const groups = new Map<string, typeof all>();
   for (const c of all) { const k = c.date.slice(0, 7); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(c); }
   const months = [...groups.keys()].sort().reverse();
   const trackedGoal = all.reduce((a, c) => a + toGoal(c.amount), 0);
-  const opening = goal.saved - trackedGoal;      // amount saved before/outside tracked contributions
+  const opening = g.saved - trackedGoal;      // amount saved before/outside tracked contributions
+  const saveEdit = (idx: number) => { const v = parseAmount(editVal); if (v > 0) updateContribution(g.id, idx, v); setEditIdx(null); };
   return (
-    <Modal open={!!goal} onClose={onClose} title={`${goal.name} — contribution history`}>
+    <Modal open={!!goal} onClose={onClose} title={`${g.name} — contribution history`}>
       <div className="space-y-4">
         <p className="text-sm text-white/50">
-          Saved so far: <span className="text-goal font-semibold">{formatMoney(goal.saved, gc)}</span>
+          Saved so far: <span className="text-goal font-semibold">{formatMoney(g.saved, gc)}</span>
           {all.length > 0 && <> · {all.length} logged contribution{all.length > 1 ? 's' : ''}</>}
         </p>
         {months.map((mk) => {
@@ -271,12 +279,31 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
                 <span className="text-sm text-goal font-semibold">+{formatMoney(monthTotal, gc)}</span>
               </div>
               <div className="space-y-1.5">
-                {list.map((c, i) => {
+                {list.map((c) => {
+                  const idx = all.indexOf(c);               // stable index into the stored array
                   const hasTime = c.date.length > 10;
+                  const editing = editIdx === idx;
                   return (
-                    <div key={i} className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/60">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
-                      <span className="font-medium text-white/80">+{formatMoney(toGoal(c.amount), gc)}</span>
+                    <div key={idx} className="group flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/60 flex-1 truncate">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
+                      {editing ? (
+                        <>
+                          <Input type="text" inputMode="decimal" value={editVal} onChange={(e) => setEditVal(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(idx); if (e.key === 'Escape') setEditIdx(null); }}
+                            aria-label="Contribution amount" className="!w-28 !py-1 text-right" autoFocus />
+                          <span className="text-white/40">{gc}</span>
+                          <button onClick={() => saveEdit(idx)} className="text-income hover:opacity-80 p-1" aria-label="Save"><Check size={14} /></button>
+                          <button onClick={() => setEditIdx(null)} className="text-white/40 hover:text-white p-1" aria-label="Cancel"><X size={14} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-white/80 tabular-nums">+{formatMoney(toGoal(c.amount), gc)}</span>
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setEditIdx(idx); setEditVal(String(Math.round(toGoal(c.amount) * 100) / 100)); }} className="text-white/30 hover:text-white p-1" aria-label="Edit contribution"><Pencil size={13} /></button>
+                            <button onClick={() => removeContribution(g.id, idx)} className="text-white/30 hover:text-expense p-1" aria-label="Delete contribution"><Trash2 size={13} /></button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}

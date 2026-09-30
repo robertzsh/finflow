@@ -91,6 +91,8 @@ interface StoreState extends AppData {
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   contributeGoal: (id: string, baseAmount: number, by?: string) => void;
+  updateContribution: (goalId: string, index: number, newGoalAmount: number) => void;
+  removeContribution: (goalId: string, index: number) => void;
 
   addInvestment: (i: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, patch: Partial<Investment>) => void;
@@ -642,6 +644,35 @@ export const useStore = create<StoreState>((set, get) => {
       const contribution = { date: new Date().toISOString(), amount: baseAmount, by: by ?? (s.userId ?? undefined) };
       set((st) => ({ goals: st.goals.map((x) => (x.id === id ? { ...x, saved: Math.min(x.target, x.saved + inGoalCurrency), contributions: [...(x.contributions ?? []), contribution] } : x)) }));
       get().persist(); const updated = get().goals.find((x) => x.id === id); if (updated) push('goals', updated);
+    },
+    // Edit a logged contribution's amount (given in the goal's own currency), keeping the
+    // untracked "opening" portion intact by adjusting `saved` by the delta.
+    updateContribution: (goalId, index, newGoalAmount) => {
+      const s = get();
+      const g = s.goals.find((x) => x.id === goalId);
+      const contribs = g?.contributions ?? [];
+      const old = contribs[index];
+      if (!g || !old || !(newGoalAmount > 0)) return;
+      const rate = s.settings.fxRates[(g.currency ?? s.settings.currency)] ?? 1;
+      const oldInGoal = old.amount / rate;
+      const newBase = Math.round(newGoalAmount * rate * 100) / 100;
+      const next = contribs.map((c, i) => (i === index ? { ...c, amount: newBase } : c));
+      const saved = Math.max(0, Math.round((g.saved - oldInGoal + newGoalAmount) * 100) / 100);
+      set((st) => ({ goals: st.goals.map((x) => (x.id === goalId ? { ...x, contributions: next, saved } : x)) }));
+      get().persist(); const up = get().goals.find((x) => x.id === goalId); if (up) push('goals', up);
+    },
+    removeContribution: (goalId, index) => {
+      const s = get();
+      const g = s.goals.find((x) => x.id === goalId);
+      const contribs = g?.contributions ?? [];
+      const old = contribs[index];
+      if (!g || !old) return;
+      const rate = s.settings.fxRates[(g.currency ?? s.settings.currency)] ?? 1;
+      const oldInGoal = old.amount / rate;
+      const next = contribs.filter((_, i) => i !== index);
+      const saved = Math.max(0, Math.round((g.saved - oldInGoal) * 100) / 100);
+      set((st) => ({ goals: st.goals.map((x) => (x.id === goalId ? { ...x, contributions: next, saved } : x)) }));
+      get().persist(); const up = get().goals.find((x) => x.id === goalId); if (up) push('goals', up);
     },
 
     addInvestment: (i) => {
