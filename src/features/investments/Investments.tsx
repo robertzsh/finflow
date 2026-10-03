@@ -14,7 +14,7 @@ import { MarketWatch } from '@/components/MarketWatch';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { DonutChart, InvestHistory, LegendList } from '@/components/charts/ChartKit';
 import { investmentAllocation, investmentHistory, toBase } from '@/lib/finance';
-import { formatMoney, cx } from '@/lib/format';
+import { formatMoney, cx, localDateKey } from '@/lib/format';
 import { parseInvestmentsCSV } from '@/lib/export';
 import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
 
@@ -210,7 +210,7 @@ function InvestmentModal({ open, onClose, onSave, existing }: { open: boolean; o
         <Button className="w-full" disabled={!name || !value} onClick={() => onSave({
           name, ticker: ticker || undefined, kind, currency, units: Number(units) || 1,
           costBasis: Number(cost) || 0, currentValue: Number(value) || 0,
-          history: existing?.history ?? [{ date: new Date().toISOString().slice(0, 10), value: Number(value) || 0 }],
+          history: existing?.history ?? [{ date: localDateKey(), value: Number(value) || 0 }],
         })}>{existing ? 'Save changes' : 'Add holding'}</Button>
       </div>
     </Modal>

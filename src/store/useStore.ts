@@ -9,7 +9,7 @@ import { CLOUD_ENABLED } from '@/lib/config';
 import * as cloud from '@/lib/cloud';
 import { fetchFxRates, snapshotRates, rateForDate } from '@/lib/rates';
 import { fetchCryptoPrices, fetchStockQuote } from '@/lib/prices';
-import { setMoneyPrivacy } from '@/lib/format';
+import { setMoneyPrivacy, localDateKey, localMonthKey } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
 
 const SKIP_KEY = 'ff_skipped_recur';
@@ -193,7 +193,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (t !== get().settings.theme) set((s) => ({ settings: { ...s.settings, theme: t } }));
   };
 
-  const monthKeyNow = () => new Date().toISOString().slice(0, 7);
+  const monthKeyNow = () => localMonthKey();
   const incomeOwner = () => (get().cloud && get().authed ? get().userId : 'local');
   const siId = (kind: string, owner: string, mk: string) => `si-${kind}-${owner}-${mk}`;
 
@@ -532,7 +532,7 @@ export const useStore = create<StoreState>((set, get) => {
       const mapped: Transaction[] = list.map((p) => ({
         id: uid('tx'), type: p.type ?? 'expense', amount: p.amount ?? 0,
         categoryId: p.categoryId ?? 'misc', merchant: p.merchant ?? 'Imported',
-        method: p.method ?? 'Card', date: p.date ?? new Date().toISOString().slice(0, 10),
+        method: p.method ?? 'Card', date: p.date ?? localDateKey(),
         notes: p.notes ?? '', recurring: p.recurring ?? false, frequency: p.frequency,
         createdAt: now, createdBy: get().userId ?? undefined,
       }));
@@ -623,7 +623,7 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     addGoal: (g) => {
-      const goal: Goal = { ...g, id: uid('gl'), createdAt: new Date().toISOString().slice(0, 10) };
+      const goal: Goal = { ...g, id: uid('gl'), createdAt: localDateKey() };
       set((s) => ({ goals: [...s.goals, goal] }));
       get().persist(); push('goals', goal);
     },
@@ -694,7 +694,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (!invs.length) return;
       set({ pricesState: 'loading' });
       const quotes: Record<string, { changePct: number; price: number }> = {};
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
       const updates = new Map<string, { currentValue: number }>();
       try {
         // Crypto — batch per currency (CoinGecko, free).
@@ -737,7 +737,7 @@ export const useStore = create<StoreState>((set, get) => {
     importInvestments: (list) => {
       const valid = new Set(['RON', 'EUR', 'USD', 'GBP']);
       const base = get().settings.currency;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
       const mapped: Investment[] = list.map((h) => ({
         id: uid('iv'), name: h.name, ticker: h.ticker, kind: (h.kind as any) ?? 'Stock',
         currency: (valid.has(h.currency) ? h.currency : base) as any,

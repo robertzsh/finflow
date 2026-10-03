@@ -1,4 +1,11 @@
+import { format } from 'date-fns';
 import type { CurrencyCode } from '@/types';
+
+/** Calendar date / month in the device's local time zone ("2026-10-01" / "2026-10").
+ *  Never use toISOString().slice() for this: that's UTC, so just after local midnight
+ *  in Romania (UTC+2/+3) it still returns yesterday — or last month on the 1st. */
+export const localDateKey = (d: Date = new Date()) => format(d, 'yyyy-MM-dd');
+export const localMonthKey = (d: Date = new Date()) => format(d, 'yyyy-MM');
 
 const SYMBOL: Record<CurrencyCode, string> = { RON: 'lei', GBP: '£', USD: '$', EUR: '€' };
 

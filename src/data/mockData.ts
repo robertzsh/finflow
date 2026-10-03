@@ -2,6 +2,7 @@ import type {
   Transaction, Budget, Goal, Investment, Settings, PaymentMethod, InvestmentPoint,
 } from '@/types';
 import { DEFAULT_CATEGORIES } from './categories';
+import { localDateKey } from '@/lib/format';
 
 // ---- deterministic PRNG so mock data is stable across reloads ----
 let seed = 20260728;
@@ -48,7 +49,7 @@ const RECURRING: Recur[] = [
   { categoryId: 'transport', merchant: 'STB Abonament', amount: 80, day: 4, freq: 'monthly', method: 'Card' },
 ];
 
-function iso(d: Date) { return d.toISOString().slice(0, 10); }
+const iso = localDateKey;
 
 export function generateTransactions(months = 8): Transaction[] {
   const txs: Transaction[] = [];

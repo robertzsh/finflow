@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
-import { parseAmount, formatMoney } from '@/lib/format';
+import { parseAmount, formatMoney, localDateKey } from '@/lib/format';
 import { rateForDate } from '@/lib/rates';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
 
@@ -42,7 +42,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly', variableAmount: existing.variableAmount ?? false,
     } : {
       type: 'expense', amount: undefined as unknown as number, categoryId: '',
-      method: 'Card', date: defaultDate || new Date().toISOString().slice(0, 10), notes: '', recurring: false, frequency: 'monthly', variableAmount: false,
+      method: 'Card', date: defaultDate || localDateKey(), notes: '', recurring: false, frequency: 'monthly', variableAmount: false,
     },
   });
 

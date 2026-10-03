@@ -1,4 +1,5 @@
 import type { FxRates, CurrencyCode } from '@/types';
+import { localDateKey } from '@/lib/format';
 
 // ---------------------------------------------------------------------------
 // Historical FX: we snapshot the daily rates we fetch, keyed by date, so a
@@ -14,7 +15,7 @@ export function loadFxHistory(): FxHistory {
   try { return JSON.parse(localStorage.getItem(FX_HISTORY_KEY) || '{}'); } catch { return {}; }
 }
 
-export function snapshotRates(rates: FxRates, date = new Date().toISOString().slice(0, 10)) {
+export function snapshotRates(rates: FxRates, date = localDateKey()) {
   try {
     const h = loadFxHistory();
     h[date] = { ...rates };
