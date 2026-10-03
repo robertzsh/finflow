@@ -11,6 +11,7 @@ import { fetchFxRates, snapshotRates, rateForDate } from '@/lib/rates';
 import { fetchCryptoPrices, fetchStockQuote } from '@/lib/prices';
 import { setMoneyPrivacy, localDateKey, localMonthKey } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
+import { hasPendingWrite, type OutboxOp, type SyncState } from './sync';
 
 const SKIP_KEY = 'ff_skipped_recur';
 const loadSkipped = (): string[] => { try { return JSON.parse(localStorage.getItem(SKIP_KEY) || '[]'); } catch { return []; } };
@@ -114,22 +115,7 @@ interface StoreState extends AppData {
 let unsubRealtime: (() => void) | null = null;
 let flushing = false;
 
-export type OutboxOp = {
-  id: string;
-  kind: 'upsert' | 'upsertMany' | 'remove' | 'opening' | 'income' | 'profileName' | 'household';
-  table?: cloud.Table;
-  obj?: any;
-  objs?: any[];
-  ids?: string[];
-  uid?: string;
-  amount?: number;
-  salary?: number;
-  vouchers?: number;
-  name?: string;
-  householdId?: string;
-  patch?: { currency?: string; fxRates?: Record<string, number> };
-};
-export type SyncState = 'idle' | 'pending' | 'error';
+export type { OutboxOp, SyncState };
 
 export const useStore = create<StoreState>((set, get) => {
   // --- Offline-safe write outbox -------------------------------------------
@@ -423,6 +409,8 @@ export const useStore = create<StoreState>((set, get) => {
 
       if (unsubRealtime) unsubRealtime();
       unsubRealtime = cloud.subscribe(profile.householdId, ({ table, type, obj }) => {
+        // Our own unsent write for this row is newer than the event — keep what's on screen.
+        if (obj?.id && hasPendingWrite(get().outbox, table, obj.id)) return;
         set((st: any) => {
           const list = (st[table] as any[]) ?? [];
           let next: any[];
