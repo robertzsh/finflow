@@ -12,20 +12,21 @@ import { monthStats, spendingByCategory, cashFlowSeries, lifetimeTotals, account
 import { formatMoney } from '@/lib/format';
 import { exportCSV, exportXLSX, exportPDF, exportMonthlyReportPDF } from '@/lib/export';
 import { buildMonthlyReport } from '@/lib/report';
+import { useToday } from '@/hooks/useToday';
 import { FileBarChart } from 'lucide-react';
 
-const REF = new Date();
 type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings' | 'balance';
 
 export default function Reports() {
   const { transactions, categories, settings, cloud, authed, members } = useStore();
+  const REF = useToday();
   const cur = settings.currency;
   const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
   const [report, setReport] = useState<ReportType>('monthly');
   const [monthSel, setMonthSel] = useState(format(REF, 'yyyy-MM'));
 
   const monthOptions = useMemo(() =>
-    Array.from({ length: 8 }, (_, i) => format(startOfMonth(subMonths(REF, i)), 'yyyy-MM')), []);
+    Array.from({ length: 8 }, (_, i) => format(startOfMonth(subMonths(REF, i)), 'yyyy-MM')), [REF]);
 
   const refDate = parseISO(`${monthSel}-01`);
 

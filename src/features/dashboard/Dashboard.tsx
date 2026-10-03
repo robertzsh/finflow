@@ -26,12 +26,12 @@ import { rateForDate } from '@/lib/rates';
 import type { Transaction } from '@/types';
 import { formatMoney, accentHex, currencySymbol } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
-
-const REF = new Date();
+import { useToday } from '@/hooks/useToday';
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId, addTransaction } = useStore();
   const privacy = useStore((s) => s.privacy);
+  const REF = useToday();
   const [editBill, setEditBill] = useState<Transaction | null>(null);
   const [showAllBills, setShowAllBills] = useState(false);
   const theme = useStore((s) => s.settings.theme);
@@ -58,7 +58,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const catPayers = categoryPayers(transactions, categories, REF);
     const recurring = recurringSummary(transactions, memberIds, categories, settings.fxRates);
     return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
-  }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members]);
+  }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members, REF]);
   const memberIds = members.map((m) => m.id);
 
   // Next occurrence of each recurring bill (dedup by merchant+category), with a
@@ -116,18 +116,19 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const lastMonthKey = format(lastMonthRef, 'yyyy-MM');
   const lastMonthLabel = format(lastMonthRef, 'MMMM yyyy');
   const hadLastMonth = transactions.some((t) => isSameMonth(parseISO(t.date), lastMonthRef));
-  const [reportDone, setReportDone] = useState(() => {
-    try { return localStorage.getItem('finflow-report-month') === lastMonthKey; } catch { return false; }
+  // Remember WHICH month was handled (not a boolean), so the prompt reappears when a new month starts while the app is open.
+  const [reportDoneKey, setReportDoneKey] = useState(() => {
+    try { return localStorage.getItem('finflow-report-month'); } catch { return null; }
   });
-  const showReportPrompt = hadLastMonth && !reportDone;
+  const showReportPrompt = hadLastMonth && reportDoneKey !== lastMonthKey;
   function downloadLastMonth() {
     exportMonthlyReportPDF(buildMonthlyReport(lastMonthRef, { transactions, categories, currency: cur, opening, members }));
     try { localStorage.setItem('finflow-report-month', lastMonthKey); } catch { /* ignore */ }
-    setReportDone(true);
+    setReportDoneKey(lastMonthKey);
   }
   function dismissReport() {
     try { localStorage.setItem('finflow-report-month', lastMonthKey); } catch { /* ignore */ }
-    setReportDone(true);
+    setReportDoneKey(lastMonthKey);
   }
 
   const hour = REF.getHours();

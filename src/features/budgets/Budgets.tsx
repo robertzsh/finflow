@@ -13,17 +13,17 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { budgetProgress } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
-
-const REF = new Date();
+import { useToday } from '@/hooks/useToday';
 
 export default function Budgets() {
   const { budgets, transactions, categories, settings, setBudget, removeBudget } = useStore();
+  const REF = useToday();
   const cur = settings.currency;
   const [addOpen, setAddOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState('');
 
-  const progress = useMemo(() => budgetProgress(budgets, transactions, categories, REF), [budgets, transactions, categories]);
+  const progress = useMemo(() => budgetProgress(budgets, transactions, categories, REF), [budgets, transactions, categories, REF]);
 
   const totalBudget = progress.reduce((a, p) => a + p.budget.amount, 0);
   const totalSpent = progress.reduce((a, p) => a + p.spent, 0);
