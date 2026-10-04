@@ -21,6 +21,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'profi', name: 'Profi', kind: 'expense', icon: 'Store', color: '#ec4899', emoji: '🏪', parent: 'groceries' },
   { id: 'carrefour', name: 'Carrefour', kind: 'expense', icon: 'Store', color: '#3b82f6', emoji: '🏪', parent: 'groceries' },
   { id: 'megaimage', name: 'Mega Image', kind: 'expense', icon: 'Store', color: '#22c55e', emoji: '🏪', parent: 'groceries' },
+  { id: 'auchan', name: 'Auchan', kind: 'expense', icon: 'Store', color: '#e2001a', emoji: '🏪', parent: 'groceries' },
   { id: 'restaurants', name: 'Restaurants', kind: 'expense', icon: 'Utensils', color: '#f43f5e', emoji: '🍽️' },
   { id: 'coffee', name: 'Coffee', kind: 'expense', icon: 'Coffee', color: '#e11d48', emoji: '☕' },
   // Food delivery apps roll up under Food delivery, each tracked separately
@@ -51,6 +52,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'transport', name: 'Public Transport', kind: 'expense', icon: 'TrainFront', color: '#f97316', emoji: '🚆' },
   { id: 'entertainment', name: 'Entertainment', kind: 'expense', icon: 'Clapperboard', color: '#e879f9', emoji: '🎬' },
   { id: 'gym', name: 'Gym', kind: 'expense', icon: 'Dumbbell', color: '#c026d3', emoji: '🏋️' },
+  { id: 'bike', name: 'Bike', kind: 'expense', icon: 'Bike', color: '#0ea5e9', emoji: '🚲' },
   { id: 'subscriptions', name: 'Subscriptions', kind: 'expense', icon: 'RefreshCw', color: '#d946ef', emoji: '🔁' },
   // Individual subscriptions roll up under Subscriptions
   { id: 'netflix', name: 'Netflix', kind: 'expense', icon: 'Clapperboard', color: '#e50914', emoji: '🎬', parent: 'subscriptions' },
