@@ -71,7 +71,16 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const up = upcomingOccurrences(transactions, 45, REF, categories);
     const seen = new Set<string>(); const out: typeof up = [];
     // Bills = expenses only. Income (Salary/Bonuri) is managed in Settings, not here.
-    for (const u of up) { if (u.base.type !== 'expense') continue; const k = billKey(u.base); if (!seen.has(k)) { seen.add(k); out.push(u); } }
+    // Show only what's still due *this* month: skip bills already paid this month
+    // (so a bill drops off the moment it's paid, instead of jumping to next month's
+    // occurrence) and skip occurrences that fall in a future month.
+    for (const u of up) {
+      if (u.base.type !== 'expense') continue;
+      if (!isSameMonth(parseISO(u.date), REF)) continue;
+      const k = billKey(u.base);
+      if (paidBillKeys.has(k)) continue;
+      if (!seen.has(k)) { seen.add(k); out.push(u); }
+    }
     return out;
   })();
   const startOfToday = new Date().setHours(0, 0, 0, 0);
