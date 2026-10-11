@@ -21,6 +21,7 @@ import { currencySymbol } from '@/lib/format';
 const Dashboard = lazy(() => import('@/features/dashboard/Dashboard'));
 const Transactions = lazy(() => import('@/features/transactions/Transactions'));
 const Goals = lazy(() => import('@/features/goals/Goals'));
+const Savings = lazy(() => import('@/features/savings/Savings'));
 const Budgets = lazy(() => import('@/features/budgets/Budgets'));
 const Investments = lazy(() => import('@/features/investments/Investments'));
 const Calendar = lazy(() => import('@/features/calendar/Calendar'));
@@ -62,6 +63,15 @@ export default function App() {
     }
   }, [ready, cloud, authed, txCount, runRecurringPosting]);
 
+  // Same for savings auto-save rules (idempotent per pot + month).
+  const runAutoSave = useStore((s) => s.runAutoSave);
+  const potCount = useStore((s) => s.savingsPots.length);
+  useEffect(() => {
+    if (ready && (!cloud || authed)) {
+      try { runAutoSave(); } catch (e) { console.warn('auto-save skipped', e); }
+    }
+  }, [ready, cloud, authed, potCount, runAutoSave]);
+
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
   useIdleLock();
@@ -97,6 +107,7 @@ export default function App() {
             <Route path="/" element={<Dashboard onQuickAdd={() => setQuickAdd(true)} />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/savings" element={<Savings />} />
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/investments" element={<Investments />} />
             <Route path="/calendar" element={<Calendar />} />

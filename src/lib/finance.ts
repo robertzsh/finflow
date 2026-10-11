@@ -102,9 +102,10 @@ export function memberCategoryBreakdown(txs: Transaction[], ref: Date, memberId:
   };
 }
 
-/** Running account balance = opening balance + all net flows (income − expenses). */
-export function accountBalance(txs: Transaction[], starting = 0) {
-  return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting);
+/** Running account balance = opening balance + all net flows (income − expenses)
+ *  − money moved into savings pots (`transferred`, see lib/savings.ts → transferredOut). */
+export function accountBalance(txs: Transaction[], starting = 0, transferred = 0) {
+  return txs.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), starting) - transferred;
 }
 
 /** All-time income & expense totals — used to explain how the balance is composed. */

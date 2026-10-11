@@ -18,7 +18,7 @@ import type { AppData, CurrencyCode, Category } from '@/types';
 
 export default function Settings() {
   const store = useStore();
-  const { settings, categories, updateSettings, restore, resetAll, addCategory, updateCategory, deleteCategory, importTransactions, transactions, budgets, goals, investments } = store;
+  const { settings, categories, updateSettings, restore, resetAll, addCategory, updateCategory, deleteCategory, importTransactions, transactions, budgets, goals, investments, savingsPots } = store;
   const fileRef = useRef<HTMLInputElement>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const [catOpen, setCatOpen] = useState(false);
@@ -29,7 +29,7 @@ export default function Settings() {
   function flash(t: string) { setMsg(t); setTimeout(() => setMsg(''), 2500); }
 
   function backup() {
-    exportJSON({ transactions, categories, budgets, goals, investments, settings } as AppData, 'finflow-backup');
+    exportJSON({ transactions, categories, budgets, goals, investments, savingsPots, settings } as AppData, 'finflow-backup');
     flash('Backup downloaded');
   }
   function onRestore(e: React.ChangeEvent<HTMLInputElement>) {

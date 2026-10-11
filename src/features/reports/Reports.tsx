@@ -12,13 +12,14 @@ import { monthStats, spendingByCategory, cashFlowSeries, lifetimeTotals, account
 import { formatMoney } from '@/lib/format';
 import { exportCSV, exportXLSX, exportPDF, exportMonthlyReportPDF } from '@/lib/export';
 import { buildMonthlyReport } from '@/lib/report';
+import { transferredOut } from '@/lib/savings';
 import { useToday } from '@/hooks/useToday';
 import { FileBarChart } from 'lucide-react';
 
 type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings' | 'balance';
 
 export default function Reports() {
-  const { transactions, categories, settings, cloud, authed, members } = useStore();
+  const { transactions, categories, settings, cloud, authed, members, savingsPots } = useStore();
   const REF = useToday();
   const cur = settings.currency;
   const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
@@ -47,7 +48,8 @@ export default function Reports() {
   }, [scoped]);
 
   const life = useMemo(() => lifetimeTotals(transactions), [transactions]);
-  const currentBalance = accountBalance(transactions, opening);
+  const transferred = useMemo(() => transferredOut(savingsPots), [savingsPots]);
+  const currentBalance = accountBalance(transactions, opening, transferred);
 
   const title = {
     monthly: 'Monthly report', yearly: 'Yearly report', category: 'Category report',
@@ -62,7 +64,7 @@ export default function Reports() {
             <Button variant="ghost" onClick={() => exportCSV(scoped, categories, report)}><FileDown size={16} /> CSV</Button>
             <Button variant="ghost" onClick={() => exportXLSX(scoped, categories, report)}><FileSpreadsheet size={16} /> Excel</Button>
             <Button variant="ghost" onClick={() => exportPDF(scoped, categories, title, `${monthSel} · FinFlow`)}><FileText size={16} /> PDF</Button>
-            <Button onClick={() => exportMonthlyReportPDF(buildMonthlyReport(refDate, { transactions, categories, currency: cur, opening, members }))}>
+            <Button onClick={() => exportMonthlyReportPDF(buildMonthlyReport(refDate, { transactions, categories, currency: cur, opening, members, transferred }))}>
               <FileBarChart size={16} /> Full month report
             </Button>
           </div>
@@ -113,6 +115,11 @@ export default function Reports() {
             <div className="flex items-center justify-between text-expense">
               <span>− All expenses logged</span><span className="tabular-nums">−{formatMoney(life.expense, cur)}</span>
             </div>
+            {transferred !== 0 && (
+              <div className="flex items-center justify-between text-savings">
+                <span>{transferred > 0 ? '−' : '+'} Net moved to Economii</span><span className="tabular-nums">{transferred > 0 ? '−' : ''}{formatMoney(Math.abs(transferred), cur)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between text-lg font-bold border-t border-white/10 pt-2 mt-1">
               <span>Current balance</span><span className="tabular-nums">{formatMoney(currentBalance, cur)}</span>
             </div>

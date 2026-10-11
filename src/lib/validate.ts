@@ -8,6 +8,7 @@ const cat = z.object({ id: z.string(), name: z.string() }).passthrough();
 const goal = z.object({ id: z.string(), name: z.string(), target: z.number(), saved: z.number() }).passthrough();
 const budget = z.object({ categoryId: z.string(), amount: z.number() }).passthrough();
 const inv = z.object({ id: z.string() }).passthrough();
+const pot = z.object({ id: z.string(), name: z.string(), startBalance: z.number(), movements: z.array(z.object({ id: z.string(), date: z.string(), amount: z.number(), base: z.number() }).passthrough()) }).passthrough();
 
 export const AppDataSchema = z.object({
   transactions: z.array(tx),
@@ -15,6 +16,7 @@ export const AppDataSchema = z.object({
   budgets: z.array(budget).optional().default([]),
   goals: z.array(goal).optional().default([]),
   investments: z.array(inv).optional().default([]),
+  savingsPots: z.array(pot).optional().default([]),
   settings: z.object({}).passthrough(),
 }).passthrough();
 

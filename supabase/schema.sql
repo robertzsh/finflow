@@ -21,6 +21,7 @@ create table if not exists profiles (
   opening_balance numeric not null default 0,
   salary          numeric not null default 0,
   vouchers        numeric not null default 0,
+  savings_target  numeric not null default 0,
   created_at      timestamptz not null default now()
 );
 
@@ -86,6 +87,14 @@ create table if not exists investments (
   units numeric, cost_basis numeric, current_value numeric, history jsonb default '[]'
 );
 
+create table if not exists savings_pots (
+  id text primary key default gen_random_uuid()::text,
+  household_id uuid not null references households(id) on delete cascade,
+  name text not null, icon text, color text, currency text, owner text,
+  start_balance numeric not null default 0, movements jsonb not null default '[]',
+  auto_save jsonb, created_at date, created_by text
+);
+
 -- ---------------------------------------------------------------------------
 -- 3. Row-Level Security — a user only ever sees their household's rows
 -- ---------------------------------------------------------------------------
@@ -96,6 +105,7 @@ alter table transactions enable row level security;
 alter table budgets      enable row level security;
 alter table goals        enable row level security;
 alter table investments  enable row level security;
+alter table savings_pots enable row level security;
 
 -- profiles: you can read/update your own; read others in your household
 create policy "own profile"      on profiles for all using (id = auth.uid()) with check (id = auth.uid());
@@ -109,7 +119,7 @@ create policy "update household" on households for update using (id = current_ho
 do $$
 declare t text;
 begin
-  foreach t in array array['categories','transactions','budgets','goals','investments'] loop
+  foreach t in array array['categories','transactions','budgets','goals','investments','savings_pots'] loop
     execute format('create policy "hh read %1$s"   on %1$s for select using (household_id = current_household());', t);
     execute format('create policy "hh write %1$s"  on %1$s for insert with check (household_id = current_household());', t);
     execute format('create policy "hh update %1$s" on %1$s for update using (household_id = current_household());', t);
@@ -120,7 +130,7 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- 4. Realtime (so both partners see changes live)
 -- ---------------------------------------------------------------------------
-alter publication supabase_realtime add table transactions, budgets, goals, investments, categories;
+alter publication supabase_realtime add table transactions, budgets, goals, investments, categories, savings_pots;
 
 -- ---------------------------------------------------------------------------
 -- 5. Join a household by invite code (used by the "join" screen)
@@ -148,4 +158,4 @@ alter default privileges in schema public grant select, insert, update, delete o
 -- Hardening: users may only edit their own display name, never re-point their
 -- household_id directly (joining goes through the secure join_household() function).
 revoke update on profiles from authenticated;
-grant update (name, opening_balance, salary, vouchers) on profiles to authenticated;
+grant update (name, opening_balance, salary, vouchers, savings_target) on profiles to authenticated;

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import type { AppData, Transaction, Category, Budget, Goal, Investment, Settings } from '@/types';
+import type { AppData, Transaction, Category, Budget, Goal, Investment, Settings, SavingsPot, SavingsMovement, CurrencyCode } from '@/types';
 import { DEFAULT_CATEGORIES } from '@/data/categories';
 import {
-  generateTransactions, defaultBudgets, defaultGoals, defaultInvestments, DEFAULT_SETTINGS,
+  generateTransactions, defaultBudgets, defaultGoals, defaultInvestments, defaultSavingsPots, DEFAULT_SETTINGS,
 } from '@/data/mockData';
 import { loadData, saveData, clearData } from '@/lib/db';
 import { CLOUD_ENABLED } from '@/lib/config';
@@ -11,6 +11,7 @@ import { fetchFxRates, snapshotRates, rateForDate } from '@/lib/rates';
 import { fetchCryptoPrices, fetchStockQuote } from '@/lib/prices';
 import { setMoneyPrivacy, localDateKey, localMonthKey } from '@/lib/format';
 import { dueOccurrences } from '@/lib/recurring';
+import { dueAutoSaves } from '@/lib/savings';
 import { hasPendingWrite, type OutboxOp, type SyncState } from './sync';
 
 const SKIP_KEY = 'ff_skipped_recur';
@@ -26,12 +27,13 @@ function seedData(): AppData {
     budgets: defaultBudgets(),
     goals: defaultGoals(),
     investments: defaultInvestments(),
+    savingsPots: defaultSavingsPots(),
     settings: { ...DEFAULT_SETTINGS },
   };
 }
 
 function emptyData(): AppData {
-  return { transactions: [], categories: DEFAULT_CATEGORIES, budgets: [], goals: [], investments: [], settings: { ...DEFAULT_SETTINGS, openingBalance: 0, onboarded: true } };
+  return { transactions: [], categories: DEFAULT_CATEGORIES, budgets: [], goals: [], investments: [], savingsPots: [], settings: { ...DEFAULT_SETTINGS, openingBalance: 0, onboarded: true } };
 }
 
 interface StoreState extends AppData {
@@ -66,6 +68,7 @@ interface StoreState extends AppData {
   refreshMembers: () => Promise<void>;
   setMyOpeningBalance: (amount: number) => Promise<void>;
   setMyIncome: (salary: number, vouchers: number) => Promise<void>;
+  setMySavingsTarget: (amount: number) => Promise<void>;
   ensureStandingIncome: () => void;
 
   addTransaction: (t: Omit<Transaction, 'id' | 'createdAt'>) => void;
@@ -94,6 +97,15 @@ interface StoreState extends AppData {
   contributeGoal: (id: string, baseAmount: number, by?: string) => void;
   updateContribution: (goalId: string, index: number, newGoalAmount: number) => void;
   removeContribution: (goalId: string, index: number) => void;
+
+  addPot: (p: Omit<SavingsPot, 'id' | 'createdAt' | 'createdBy' | 'movements'>) => void;
+  updatePot: (id: string, patch: Partial<SavingsPot>) => void;
+  deletePot: (id: string) => void;
+  /** Move money into (+) or out of (−) a pot. `amount` is signed, typed in `currency`. */
+  addMovement: (potId: string, m: { amount: number; currency: CurrencyCode; date: string; note?: string }) => void;
+  updateMovement: (potId: string, movementId: string, newPotAmount: number) => void;
+  removeMovement: (potId: string, movementId: string) => void;
+  runAutoSave: () => void;
 
   addInvestment: (i: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, patch: Partial<Investment>) => void;
@@ -156,7 +168,7 @@ export const useStore = create<StoreState>((set, get) => {
           else if (op.kind === 'upsertMany') ok = await cloud.upsertMany(op.table!, op.objs ?? [], s.householdId, s.userId);
           else if (op.kind === 'remove') ok = await cloud.remove(op.table!, op.ids ?? []);
           else if (op.kind === 'opening') ok = await cloud.setOpeningBalance(op.uid!, op.amount ?? 0);
-          else if (op.kind === 'income') ok = await cloud.setIncome(op.uid!, { salary: op.salary, vouchers: op.vouchers });
+          else if (op.kind === 'income') ok = await cloud.setIncome(op.uid!, { salary: op.salary, vouchers: op.vouchers, savingsTarget: op.savingsTarget });
           else if (op.kind === 'profileName') ok = await cloud.setProfileName(op.uid!, op.name ?? '');
           else if (op.kind === 'household') ok = await cloud.setHouseholdSettings(op.householdId!, op.patch ?? {});
         } catch { ok = false; }
@@ -311,7 +323,7 @@ export const useStore = create<StoreState>((set, get) => {
         const saved = await loadData();
         if (saved) {
           const settings = { ...DEFAULT_SETTINGS, ...saved.settings, fxRates: { ...DEFAULT_SETTINGS.fxRates, ...saved.settings.fxRates } };
-          set({ ...saved, settings, ready: true, authReady: true, locked: !!settings.pinEnabled });
+          set({ ...saved, savingsPots: saved.savingsPots ?? [], settings, ready: true, authReady: true, locked: !!settings.pinEnabled });
         } else {
           const seeded = seedData();
           await saveData(seeded);
@@ -381,6 +393,7 @@ export const useStore = create<StoreState>((set, get) => {
         // per-person figures come from the profile
         salary: me?.salary ?? 0,
         vouchers: me?.vouchers ?? 0,
+        savingsTarget: me?.savingsTarget ?? 0,
         name: profile.name || DEFAULT_SETTINGS.name,
         onboarded: true,
       };
@@ -390,6 +403,7 @@ export const useStore = create<StoreState>((set, get) => {
         budgets: data.budgets,
         goals: data.goals,
         investments: data.investments,
+        savingsPots: data.savingsPots,
         settings,
         userId,
         householdId: profile.householdId,
@@ -454,6 +468,17 @@ export const useStore = create<StoreState>((set, get) => {
     },
     ensureStandingIncome,
 
+    setMySavingsTarget: async (amount) => {
+      set((st) => ({ settings: { ...st.settings, savingsTarget: amount } }));
+      get().persist();
+      const s = get();
+      if (s.cloud && s.authed && s.userId) {
+        const ok = await cloud.setIncome(s.userId, { savingsTarget: amount });
+        if (ok) await get().refreshMembers();
+        else enqueue({ id: uid('ob'), kind: 'income', uid: s.userId, savingsTarget: amount });
+      }
+    },
+
     signIn: async (email, password) => {
       try {
         set({ authError: '' });
@@ -486,9 +511,9 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     persist: () => {
-      const { transactions, categories, budgets, goals, investments, settings } = get();
+      const { transactions, categories, budgets, goals, investments, savingsPots, settings } = get();
       // In cloud mode we still cache locally for instant reloads / offline read.
-      saveData({ transactions, categories, budgets, goals, investments, settings });
+      saveData({ transactions, categories, budgets, goals, investments, savingsPots, settings });
     },
 
     addTransaction: (t) => {
@@ -663,6 +688,61 @@ export const useStore = create<StoreState>((set, get) => {
       get().persist(); const up = get().goals.find((x) => x.id === goalId); if (up) push('goals', up);
     },
 
+    addPot: (p) => {
+      const pot: SavingsPot = { ...p, id: uid('sp'), movements: [], createdAt: localDateKey(), createdBy: get().userId ?? undefined };
+      set((s) => ({ savingsPots: [...s.savingsPots, pot] }));
+      get().persist(); push('savings_pots', pot);
+    },
+    updatePot: (id, patch) => {
+      set((s) => ({ savingsPots: s.savingsPots.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+      get().persist(); const p = get().savingsPots.find((x) => x.id === id); if (p) push('savings_pots', p);
+    },
+    deletePot: (id) => {
+      set((s) => ({ savingsPots: s.savingsPots.filter((p) => p.id !== id) }));
+      get().persist(); del('savings_pots', [id]);
+    },
+    addMovement: (potId, m) => {
+      const s = get();
+      const p = s.savingsPots.find((x) => x.id === potId);
+      if (!p || !m.amount) return;
+      const fx = s.settings.fxRates;
+      const potCur = p.currency ?? s.settings.currency;
+      // Convert at the rate for the movement's date: typed currency → lei → pot currency.
+      const base = Math.round(m.amount * rateForDate(m.date, m.currency, fx) * 100) / 100;
+      const amount = Math.round((base / rateForDate(m.date, potCur, fx)) * 100) / 100;
+      const mv: SavingsMovement = { id: uid('mv'), date: m.date, amount, base, by: s.userId ?? undefined, note: m.note || undefined };
+      get().updatePot(potId, { movements: [...p.movements, mv] });
+    },
+    updateMovement: (potId, movementId, newPotAmount) => {
+      const s = get();
+      const p = s.savingsPots.find((x) => x.id === potId);
+      const old = p?.movements.find((m) => m.id === movementId);
+      if (!p || !old || !newPotAmount) return;
+      // keep the original rate: scale the lei value by the same factor as the pot amount
+      const rate = old.amount ? old.base / old.amount : rateForDate(old.date, p.currency ?? s.settings.currency, s.settings.fxRates);
+      const next = p.movements.map((m) => (m.id === movementId ? { ...m, amount: newPotAmount, base: Math.round(newPotAmount * rate * 100) / 100 } : m));
+      get().updatePot(potId, { movements: next });
+    },
+    removeMovement: (potId, movementId) => {
+      const p = get().savingsPots.find((x) => x.id === potId);
+      if (p) get().updatePot(potId, { movements: p.movements.filter((m) => m.id !== movementId) });
+    },
+    runAutoSave: () => {
+      const s = get();
+      const local = !(s.cloud && s.authed);
+      const due = dueAutoSaves(s.savingsPots, new Date(), {
+        userId: local ? null : s.userId,
+        salaryOf: (id) => (local || !id ? s.settings.salary : (s.members.find((m) => m.id === id)?.salary ?? 0)),
+        rates: s.settings.fxRates,
+      });
+      if (!due.length) return;
+      const byPot = new Map<string, SavingsMovement[]>();
+      for (const d of due) byPot.set(d.potId, [...(byPot.get(d.potId) ?? []), d.movement]);
+      set((st) => ({ savingsPots: st.savingsPots.map((p) => (byPot.has(p.id) ? { ...p, movements: [...p.movements, ...byPot.get(p.id)!] } : p)) }));
+      get().persist();
+      pushMany('savings_pots', get().savingsPots.filter((p) => byPot.has(p.id)));
+    },
+
     addInvestment: (i) => {
       const inv: Investment = { ...i, id: uid('iv') };
       set((s) => ({ investments: [...s.investments, inv] }));
@@ -770,7 +850,7 @@ export const useStore = create<StoreState>((set, get) => {
       return false;
     },
     restore: (data) => {
-      set({ ...data });
+      set({ ...data, savingsPots: data.savingsPots ?? [] });
       get().persist();
       applyTheme(data.settings.theme);
       // push a full restore up to the cloud
@@ -781,6 +861,7 @@ export const useStore = create<StoreState>((set, get) => {
         pushMany('budgets', data.budgets);
         pushMany('goals', data.goals);
         pushMany('investments', data.investments);
+        pushMany('savings_pots', data.savingsPots ?? []);
       }
     },
     resetAll: async () => {
@@ -791,6 +872,7 @@ export const useStore = create<StoreState>((set, get) => {
         await cloud.remove('budgets', s.budgets.map((r) => r.id));
         await cloud.remove('goals', s.goals.map((r) => r.id));
         await cloud.remove('investments', s.investments.map((r) => r.id));
+        await cloud.remove('savings_pots', s.savingsPots.map((r) => r.id));
         set({ ...emptyData() });
         get().persist();
         return;

@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import type {
-  Transaction, Budget, Goal, Investment, Category, InvestmentPoint,
+  Transaction, Budget, Goal, Investment, Category, InvestmentPoint, SavingsPot,
 } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -49,13 +49,32 @@ const catToRow = (c: Category, h: string) => {
   return row;
 };
 
-export type Table = 'transactions' | 'budgets' | 'goals' | 'investments' | 'categories';
+const rowToPot = (r: any): SavingsPot => ({
+  id: r.id, name: r.name, icon: r.icon, color: r.color, currency: r.currency ?? undefined, owner: r.owner ?? undefined,
+  startBalance: Number(r.start_balance ?? 0), movements: (r.movements ?? []) as any, autoSave: r.auto_save ?? undefined,
+  createdAt: r.created_at ?? '', createdBy: r.created_by ?? undefined,
+});
+const potToRow = (p: SavingsPot, h: string, uid: string) => {
+  const row: Record<string, any> = {
+    id: p.id, household_id: h, name: p.name, icon: p.icon, color: p.color, currency: p.currency ?? null, owner: p.owner ?? null,
+    start_balance: p.startBalance, movements: p.movements, created_at: p.createdAt || null, created_by: p.createdBy ?? uid,
+  };
+  if (p.autoSave != null) row.auto_save = p.autoSave;
+  return row;
+};
+
+export type Table = 'transactions' | 'budgets' | 'goals' | 'investments' | 'categories' | 'savings_pots';
 const TO_ROW: Record<Table, (o: any, h: string, uid: string) => any> = {
   transactions: (o, h, uid) => txToRow(o, h, uid),
   budgets: (o, h) => budgetToRow(o, h),
   goals: (o, h) => goalToRow(o, h),
   investments: (o, h) => invToRow(o, h),
   categories: (o, h) => catToRow(o, h),
+  savings_pots: (o, h, uid) => potToRow(o, h, uid),
+};
+
+const MAPPERS: Record<Table, (r: any) => any> = {
+  transactions: rowToTx, budgets: rowToBudget, goals: rowToGoal, investments: rowToInv, categories: rowToCat, savings_pots: rowToPot,
 };
 
 // ---------------------------------------------------------------------------
@@ -112,7 +131,7 @@ export async function getPushPref(endpoint: string): Promise<PushPref | null> {
 // ---------------------------------------------------------------------------
 // Profile / household
 // ---------------------------------------------------------------------------
-export interface Member { id: string; name: string; openingBalance: number; salary: number; vouchers: number }
+export interface Member { id: string; name: string; openingBalance: number; salary: number; vouchers: number; savingsTarget: number }
 export async function getProfile(uid: string) {
   const { data, error } = await supabase!.from('profiles').select('name, household_id').eq('id', uid).single();
   if (error) throw error;
@@ -124,10 +143,11 @@ export async function setOpeningBalance(uid: string, amount: number): Promise<bo
     return !error;
   } catch { return false; }
 }
-export async function setIncome(uid: string, patch: { salary?: number; vouchers?: number }): Promise<boolean> {
+export async function setIncome(uid: string, patch: { salary?: number; vouchers?: number; savingsTarget?: number }): Promise<boolean> {
   const row: any = {};
   if (patch.salary !== undefined) row.salary = patch.salary;
   if (patch.vouchers !== undefined) row.vouchers = patch.vouchers;
+  if (patch.savingsTarget !== undefined) row.savings_target = patch.savingsTarget;
   if (!Object.keys(row).length) return true;
   try {
     const { error } = await supabase!.from('profiles').update(row).eq('id', uid);
@@ -155,9 +175,12 @@ export async function setHouseholdSettings(householdId: string, patch: { currenc
   } catch { return false; }
 }
 export async function getMembers(householdId: string): Promise<Member[]> {
-  const { data, error } = await supabase!.from('profiles').select('id, name, opening_balance, salary, vouchers').eq('household_id', householdId);
+  const cols = 'id, name, opening_balance, salary, vouchers';
+  let { data, error }: { data: any[] | null; error: any } = await supabase!.from('profiles').select(`${cols}, savings_target`).eq('household_id', householdId);
+  // savings_target comes from a later migration — fall back if the DB doesn't have it yet
+  if (error && isMissingColumn(error.message)) ({ data, error } = await supabase!.from('profiles').select(cols).eq('household_id', householdId));
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({ id: r.id, name: r.name ?? 'Member', openingBalance: Number(r.opening_balance ?? 0), salary: Number(r.salary ?? 0), vouchers: Number(r.vouchers ?? 0) }));
+  return (data ?? []).map((r: any) => ({ id: r.id, name: r.name ?? 'Member', openingBalance: Number(r.opening_balance ?? 0), salary: Number(r.salary ?? 0), vouchers: Number(r.vouchers ?? 0), savingsTarget: Number(r.savings_target ?? 0) }));
 }
 export async function joinHousehold(code: string) {
   const { data, error } = await supabase!.rpc('join_household', { code: code.trim() });
@@ -175,12 +198,13 @@ export async function setProfileName(uid: string, name: string): Promise<boolean
 // Data: bulk fetch + single-row upsert/delete
 // ---------------------------------------------------------------------------
 export async function fetchAll(householdId: string) {
-  const [tx, bg, gl, iv, ct] = await Promise.all([
+  const [tx, bg, gl, iv, ct, sp] = await Promise.all([
     supabase!.from('transactions').select('*').eq('household_id', householdId).order('date', { ascending: false }),
     supabase!.from('budgets').select('*').eq('household_id', householdId),
     supabase!.from('goals').select('*').eq('household_id', householdId),
     supabase!.from('investments').select('*').eq('household_id', householdId),
     supabase!.from('categories').select('*').eq('household_id', householdId),
+    supabase!.from('savings_pots').select('*').eq('household_id', householdId), // empty if the migration hasn't run
   ]);
   return {
     transactions: (tx.data ?? []).map(rowToTx),
@@ -188,12 +212,13 @@ export async function fetchAll(householdId: string) {
     goals: (gl.data ?? []).map(rowToGoal),
     investments: (iv.data ?? []).map(rowToInv),
     categories: (ct.data ?? []).map(rowToCat),
+    savingsPots: (sp.data ?? []).map(rowToPot),
   };
 }
 
 export async function fetchTable(table: Table, householdId: string) {
   const { data } = await supabase!.from(table).select('*').eq('household_id', householdId);
-  const map = { transactions: rowToTx, budgets: rowToBudget, goals: rowToGoal, investments: rowToInv, categories: rowToCat }[table];
+  const map = MAPPERS[table];
   return (data ?? []).map(map as any);
 }
 
@@ -206,6 +231,7 @@ const OPTIONAL_COLS: Partial<Record<Table, string[]>> = {
   goals: ['currency', 'owner', 'contributions'],
   investments: ['currency'],
   categories: ['custom', 'emoji', 'parent', 'recurring'],
+  savings_pots: ['auto_save', 'created_by'],
 };
 function isMissingColumn(msg?: string) {
   return !!msg && (/column/i.test(msg) && /(schema cache|does not exist|not found)/i.test(msg));
@@ -260,14 +286,11 @@ export async function seedIfEmpty(householdId: string, uid: string, categories: 
 // Realtime: notify when any household table changes
 // ---------------------------------------------------------------------------
 export type ChangeEvent = { table: Table; type: 'INSERT' | 'UPDATE' | 'DELETE'; obj: any };
-const MAPPERS: Record<Table, (r: any) => any> = {
-  transactions: rowToTx, budgets: rowToBudget, goals: rowToGoal, investments: rowToInv, categories: rowToCat,
-};
 
 // Apply changes incrementally (never a full-table replace), so a locally-added row
 // can't be wiped by an in-flight refresh. Each partner's change is merged by id.
 export function subscribe(householdId: string, onEvent: (e: ChangeEvent) => void) {
-  const tables: Table[] = ['transactions', 'budgets', 'goals', 'investments', 'categories'];
+  const tables: Table[] = ['transactions', 'budgets', 'goals', 'investments', 'categories', 'savings_pots'];
   const channel = supabase!.channel(`hh-${householdId}`);
   for (const t of tables) {
     channel.on('postgres_changes',

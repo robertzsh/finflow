@@ -1,5 +1,5 @@
 import type {
-  Transaction, Budget, Goal, Investment, Settings, PaymentMethod, InvestmentPoint,
+  Transaction, Budget, Goal, Investment, Settings, PaymentMethod, InvestmentPoint, SavingsPot, SavingsMovement,
 } from '@/types';
 import { DEFAULT_CATEGORIES } from './categories';
 import { localDateKey } from '@/lib/format';
@@ -159,6 +159,20 @@ export function defaultGoals(): Goal[] {
     { id: uid('gl'), name: 'Vacanță — Japonia', target: 4500, saved: 2900, monthlyContribution: 300, color: '#8b5cf6', icon: 'Plane', createdAt: '2026-03-01', currency: 'EUR' },
     { id: uid('gl'), name: 'Avans casă', target: 200000, saved: 72500, monthlyContribution: 4000, color: '#7c3aed', icon: 'Home', createdAt: '2025-06-01' },
     { id: uid('gl'), name: 'PC nou', target: 12500, saved: 8250, monthlyContribution: 1000, color: '#d8b4fe', icon: 'Monitor', createdAt: '2026-05-01' },
+  ];
+}
+
+/** Two pots with a few months of deposits (dates relative to today). */
+export function defaultSavingsPots(): SavingsPot[] {
+  const today = new Date();
+  const monthDate = (back: number, day: number) => localDateKey(new Date(today.getFullYear(), today.getMonth() - back, day));
+  const deposits = (amounts: number[], day: number, rate = 1): SavingsMovement[] =>
+    amounts.map((a, i) => ({ id: uid('mv'), date: monthDate(amounts.length - i, day), amount: a, base: Math.round(a * rate * 100) / 100 }));
+  return [
+    { id: uid('sp'), name: 'Cont economii ING', icon: 'PiggyBank', color: '#3b82f6', startBalance: 12000, createdAt: monthDate(6, 1),
+      movements: deposits([1500, 1500, 2000, 1500, -800, 1500], 5), autoSave: { mode: 'fixed', value: 1500, day: 5, enabled: false } },
+    { id: uid('sp'), name: 'Revolut Vault', icon: 'Gem', color: '#14b8a6', currency: 'EUR', startBalance: 400, createdAt: monthDate(4, 1),
+      movements: deposits([100, 150, 100, 200], 15, 5) },
   ];
 }
 

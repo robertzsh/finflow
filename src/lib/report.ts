@@ -11,14 +11,15 @@ interface Args {
   currency: CurrencyCode;
   opening: number;
   members?: Member[];
+  transferred?: number; // lei moved into savings pots (lowers the balance, not an expense)
 }
 
 /** Assemble everything an end-of-month report needs for a given month. */
-export function buildMonthlyReport(ref: Date, { transactions, categories, currency, opening, members }: Args): MonthlyReport {
+export function buildMonthlyReport(ref: Date, { transactions, categories, currency, opening, members, transferred = 0 }: Args): MonthlyReport {
   const stats = monthStats(transactions, ref);
   const byCat = spendingByCategory(transactions, categories, ref).slice(0, 8);
   const txs = transactions.filter((t) => isSameMonth(parseISO(t.date), ref)).sort((a, b) => (a.date < b.date ? -1 : 1));
-  const balance = accountBalance(transactions, opening);
+  const balance = accountBalance(transactions, opening, transferred);
   const money = (n: number) => formatMoney(n, currency);
 
   const summary = [

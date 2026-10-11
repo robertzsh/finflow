@@ -17,6 +17,7 @@ import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
   investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount, memberCategoryBreakdown,
 } from '@/lib/finance';
+import { transferredOut, savedInMonth } from '@/lib/savings';
 import { buildInsights } from '@/lib/insights';
 import { BillsDueCard } from '@/components/BillsDueCard';
 import { BillRow, type BillStatus } from '@/components/ui/BillRow';
@@ -29,7 +30,7 @@ import { startOfMonth, subMonths } from 'date-fns';
 import { useToday } from '@/hooks/useToday';
 
 export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
-  const { transactions, categories, budgets, goals, investments, settings, cloud, authed, members, userId, addTransaction } = useStore();
+  const { transactions, categories, budgets, goals, investments, savingsPots, settings, cloud, authed, members, userId, addTransaction } = useStore();
   const privacy = useStore((s) => s.privacy);
   const REF = useToday();
   const [editBill, setEditBill] = useState<Transaction | null>(null);
@@ -43,7 +44,9 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const data = useMemo(() => {
     const stats = monthStats(transactions, REF);
     const prev = monthStats(transactions, startOfMonth(subMonths(REF, 1)));
-    const balance = accountBalance(transactions, opening);
+    const transferred = transferredOut(savingsPots);
+    const balance = accountBalance(transactions, opening, transferred);
+    const movedToSavings = savedInMonth(savingsPots, REF);
     const cf = cashFlowSeries(transactions, 12, opening);
     const spendSave = cf.map((r) => ({ month: r.month, spending: r.expense, savings: r.net }));
     const byCat = spendingByCategory(transactions, categories, REF);
@@ -57,8 +60,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
     const groceriesByStore = subCategoryBreakdown(transactions, categories, REF, 'groceries');
     const catPayers = categoryPayers(transactions, categories, REF);
     const recurring = recurringSummary(transactions, memberIds, categories, settings.fxRates);
-    return { stats, prev, balance, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
-  }, [transactions, categories, budgets, goals, investments, settings.fxRates, opening, members, REF]);
+    return { stats, prev, balance, transferred, movedToSavings, cf, spendSave, byCat, bySource, sav, alloc, invTotals, insights, byMember, groceriesByStore, catPayers, recurring };
+  }, [transactions, categories, budgets, goals, investments, savingsPots, settings.fxRates, opening, members, REF]);
   const memberIds = members.map((m) => m.id);
 
   // Next occurrence of each recurring bill (dedup by merchant+category), with a
@@ -131,7 +134,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   });
   const showReportPrompt = hadLastMonth && reportDoneKey !== lastMonthKey;
   function downloadLastMonth() {
-    exportMonthlyReportPDF(buildMonthlyReport(lastMonthRef, { transactions, categories, currency: cur, opening, members }));
+    exportMonthlyReportPDF(buildMonthlyReport(lastMonthRef, { transactions, categories, currency: cur, opening, members, transferred: data.transferred }));
     try { localStorage.setItem('finflow-report-month', lastMonthKey); } catch { /* ignore */ }
     setReportDoneKey(lastMonthKey);
   }
@@ -192,7 +195,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           note={data.stats.expense > 0 ? undefined : 'No expenses yet'} emphasis delay={0.1} />
         <StatCard label="Saved this month" value={data.stats.income > 0 || data.stats.expense > 0 ? M(formatMoney(data.stats.net, cur, { sign: true })) : '—'}
           icon={data.stats.net >= 0 ? 'PiggyBank' : 'TrendingDown'} accent={data.stats.net >= 0 ? 'savings' : 'expense'}
-          note={privacy ? undefined : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}% savings rate` : 'Nothing set aside yet')} emphasis delay={0.15} />
+          note={privacy ? undefined : data.movedToSavings > 0 ? `${formatMoney(data.movedToSavings, cur)} moved to Economii` : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}% savings rate` : 'Nothing set aside yet')} emphasis delay={0.15} />
         <StatCard label="Savings rate" value={privacy ? '••••' : (data.stats.income > 0 ? `${savingsRate.toFixed(0)}%` : '—')} icon="Percent" accent="savings"
           note="put aside vs income" delay={0.2} />
       </div>

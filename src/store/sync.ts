@@ -13,6 +13,7 @@ export type OutboxOp = {
   amount?: number;
   salary?: number;
   vouchers?: number;
+  savingsTarget?: number;
   name?: string;
   householdId?: string;
   patch?: { currency?: string; fxRates?: Record<string, number> };

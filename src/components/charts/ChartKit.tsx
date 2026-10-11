@@ -106,6 +106,25 @@ export function SpendSaveBars({ data, height = 260 }: { data: { month: string; s
   );
 }
 
+/** Net moved into savings per month — positive months in the savings tone, net withdrawals in red. */
+export function SavedPerMonthBars({ data, height = 240 }: { data: { month: string; net: number }[]; height?: number | string }) {
+  const currency = useCur();
+  const c = useChartTheme();
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid stroke={c.grid} vertical={false} />
+        <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
+        <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+        <Bar dataKey="net" name="Saved" radius={[4, 4, 0, 0]}>
+          {data.map((d, i) => <Cell key={i} fill={d.net >= 0 ? c.savings : c.expense} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function DonutChart({ data, height = 260, centerLabel, centerValue }:
   { data: { name: string; value: number; color: string }[]; height?: number | string; centerLabel?: string; centerValue?: string }) {
   const currency = useCur();

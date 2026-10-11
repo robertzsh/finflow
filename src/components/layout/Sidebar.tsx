@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ArrowLeftRight, Target, Wallet, LineChart, CalendarDays, FileBarChart, Settings, Sparkles, MoreHorizontal,
+  LayoutDashboard, ArrowLeftRight, Target, Wallet, LineChart, CalendarDays, FileBarChart, Settings, Sparkles, MoreHorizontal, PiggyBank,
 } from 'lucide-react';
 import { cx } from '@/lib/format';
 
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/goals', label: 'Goals', icon: Target },
   { to: '/budgets', label: 'Budgets', icon: Wallet },
+  { to: '/savings', label: 'Economii', icon: PiggyBank },
   { to: '/investments', label: 'Investments', icon: LineChart },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/reports', label: 'Reports', icon: FileBarChart },
@@ -54,8 +55,8 @@ export function Sidebar() {
   );
 }
 
-const MOBILE_MAIN = NAV.slice(0, 4);          // Dashboard, Transactions, Budgets, Goals
-const MOBILE_MORE = NAV.slice(4);             // Investments, Calendar, Reports, Settings
+const MOBILE_MAIN = NAV.slice(0, 4);          // Dashboard, Transactions, Goals, Budgets
+const MOBILE_MORE = NAV.slice(4);             // Economii, Investments, Calendar, Reports, Settings
 
 export function MobileNav() {
   const [moreOpen, setMoreOpen] = useState(false);

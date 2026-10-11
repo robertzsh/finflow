@@ -82,6 +82,38 @@ export interface Investment {
   currency?: CurrencyCode; // defaults to the app base currency (RON)
 }
 
+export interface SavingsMovement {
+  id: string;
+  date: string;      // yyyy-mm-dd
+  amount: number;    // signed, in the POT's currency (+ deposit, − withdrawal)
+  base: number;      // signed lei value at the time — what left / returned to the main account
+  by?: string;       // member id who moved it
+  note?: string;
+  autoKey?: string;  // `${potId}|yyyy-mm` — idempotency for auto-save
+}
+
+export interface AutoSaveRule {
+  mode: 'fixed' | 'percent'; // fixed amount in the pot's currency, or % of the owner's salary
+  value: number;
+  day: number;               // day of month (1-28) to move the money
+  enabled: boolean;
+}
+
+/** A place where saved money sits (savings account, vault, cash at home, deposit). */
+export interface SavingsPot {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  currency?: CurrencyCode;   // defaults to the app base currency (RON)
+  owner?: string;            // member id for a personal pot; undefined = joint
+  startBalance: number;      // already there before tracking — does NOT touch the main balance
+  movements: SavingsMovement[];
+  autoSave?: AutoSaveRule;
+  createdAt: string;
+  createdBy?: string;        // member id — decides which device posts a joint pot's auto-save
+}
+
 export type CurrencyCode = 'RON' | 'GBP' | 'USD' | 'EUR';
 
 // How many base-currency units (lei) one unit of the given currency is worth.
@@ -94,6 +126,7 @@ export interface Settings {
   openingBalance: number;      // starting bank balance; income/expenses adjust it
   salary: number;              // fixed monthly salary, auto-added each month
   vouchers: number;            // default monthly vouchers (meal tickets), editable per month
+  savingsTarget?: number;      // monthly savings target (lei) — local mode; cloud keeps it per member
   theme: 'dark' | 'light' | 'pink';
   pinEnabled: boolean;
   pin?: string;
@@ -110,5 +143,6 @@ export interface AppData {
   budgets: Budget[];
   goals: Goal[];
   investments: Investment[];
+  savingsPots: SavingsPot[];
   settings: Settings;
 }
