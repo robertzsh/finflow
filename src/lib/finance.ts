@@ -78,6 +78,30 @@ export function perMemberSpending(txs: Transaction[], ref: Date, memberIds: stri
   return res;
 }
 
+/** The transactions behind one member's monthly "Saved" figure (same attribution as
+ *  perMemberSpending): their own income/expenses at full value, plus an equal share of
+ *  every shared or unattributed one. `net` always equals perMemberSpending's income − expense. */
+export interface MemberLine { tx: Transaction; share: number }
+export function memberMonthBreakdown(txs: Transaction[], ref: Date, memberId: string, memberIds: string[]) {
+  const n = memberIds.length || 1;
+  const income: MemberLine[] = [], own: MemberLine[] = [], shared: MemberLine[] = [];
+  for (const t of txInMonth(txs, ref)) {
+    const mine = t.createdBy === memberId;
+    const isShared = !t.createdBy || !memberIds.includes(t.createdBy);
+    if (!mine && !isShared) continue; // the other member's own transaction
+    const line = { tx: t, share: mine ? t.amount : t.amount / n };
+    if (t.type === 'income') income.push(line);
+    else (mine ? own : shared).push(line);
+  }
+  const byDate = (a: MemberLine, b: MemberLine) => (a.tx.date < b.tx.date ? -1 : a.tx.date > b.tx.date ? 1 : 0);
+  const sum = (l: MemberLine[]) => r2(l.reduce((a, x) => a + x.share, 0));
+  const incomeTotal = sum(income), ownTotal = sum(own), sharedTotal = sum(shared);
+  return {
+    income: income.sort(byDate), own: own.sort(byDate), shared: shared.sort(byDate),
+    incomeTotal, ownTotal, sharedTotal, net: r2(incomeTotal - ownTotal - sharedTotal),
+  };
+}
+
 /** A member's expense breakdown by category this month (their own + split of shared), rolled up to parents. */
 export function memberCategoryBreakdown(txs: Transaction[], ref: Date, memberId: string, memberIds: string[], cats: Category[]) {
   const m = txInMonth(txs, ref).filter((t) => t.type === 'expense');

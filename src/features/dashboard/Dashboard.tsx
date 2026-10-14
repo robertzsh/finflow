@@ -12,10 +12,11 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Modal } from '@/components/ui/Modal';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
 import {
   monthStats, accountBalance, cashFlowSeries, spendingByCategory, incomeBySource, savingsTrend,
-  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount, memberCategoryBreakdown,
+  investmentAllocation, investmentTotals, perMemberSpending, subCategoryBreakdown, categoryPayers, recurringSummary, liveAmount, memberCategoryBreakdown, memberMonthBreakdown,
 } from '@/lib/finance';
 import { transferredOut, savedInMonth } from '@/lib/savings';
 import { buildInsights } from '@/lib/insights';
@@ -25,7 +26,7 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { rateForDate } from '@/lib/rates';
 import type { Transaction } from '@/types';
-import { formatMoney, accentHex, currencySymbol } from '@/lib/format';
+import { formatMoney, accentHex, currencySymbol, cx } from '@/lib/format';
 import { startOfMonth, subMonths } from 'date-fns';
 import { useToday } from '@/hooks/useToday';
 
@@ -35,6 +36,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const REF = useToday();
   const [editBill, setEditBill] = useState<Transaction | null>(null);
   const [showAllBills, setShowAllBills] = useState(false);
+  const [savedFor, setSavedFor] = useState<string | null>(null); // member id whose "Saved" breakdown is open
   const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
@@ -250,7 +252,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
               <MetricRow label="Income" render={(c) => <span className="text-income">{M(formatMoney(c.b.income, cur))}</span>} />
               <MetricRow label="Spent" render={(c) => formatMoney(c.b.expense, cur)} />
-              <MetricRow label="Saved" render={(c) => <span className={c.net >= 0 ? 'text-savings' : 'text-expense'}>{M(formatMoney(c.net, cur, { sign: true }))}</span>} />
+              <MetricRow label="Saved" render={(c) => (
+                <button onClick={() => setSavedFor(c.m.id)} title="See how this is calculated"
+                  className={cx('underline decoration-dotted underline-offset-4 hover:opacity-80', c.net >= 0 ? 'text-savings' : 'text-expense')}>
+                  {M(formatMoney(c.net, cur, { sign: true }))}
+                </button>
+              )} />
               <MetricRow label="Save rate" render={(c) => (privacy ? '••••' : (c.savePct === null ? '—' : `${c.savePct.toFixed(0)}%`))} />
 
               <div className="text-xs text-white/45 pt-3 self-start">Share of spend</div>
@@ -489,6 +496,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
       </div>
 
       {/* Edit a recurring bill straight from the Upcoming list */}
+      {savedFor && (
+        <SavedBreakdownModal memberId={savedFor} onClose={() => setSavedFor(null)} refDate={REF}
+          name={members.find((m) => m.id === savedFor)?.name ?? 'Member'} memberIds={memberIds} />
+      )}
       <TransactionModal open={!!editBill} existing={editBill ?? undefined} onClose={() => setEditBill(null)} />
     </Page>
   );
@@ -529,5 +540,53 @@ function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]
         <p className="text-xs text-white/50 mt-0.5 leading-snug">{ins.detail}</p>
       </div>
     </motion.div>
+  );
+}
+
+/** Line-by-line explanation of one person's monthly "Saved" figure. */
+function SavedBreakdownModal({ memberId, name, memberIds, refDate, onClose }: { memberId: string; name: string; memberIds: string[]; refDate: Date; onClose: () => void }) {
+  const transactions = useStore((s) => s.transactions);
+  const categories = useStore((s) => s.categories);
+  const cur = useStore((s) => s.settings.currency);
+  const b = useMemo(() => memberMonthBreakdown(transactions, refDate, memberId, memberIds), [transactions, refDate, memberId, memberIds]);
+  const catName = (id: string) => { const c = categories.find((x) => x.id === id); return c ? `${c.emoji ? c.emoji + ' ' : ''}${c.name}` : 'Other'; };
+  const Section = ({ title, lines, total, sign, split }: { title: string; lines: typeof b.income; total: number; sign: '+' | '−'; split?: boolean }) => (
+    <div>
+      <div className="flex items-center justify-between text-sm font-semibold mb-1.5">
+        <span>{title} <span className="text-white/40 font-normal">· {lines.length}</span></span>
+        <span className={cx('tabular-nums', sign === '+' ? 'text-income' : 'text-expense')}>{sign}{formatMoney(total, cur)}</span>
+      </div>
+      {lines.length === 0 ? <p className="text-xs text-white/40">None this month.</p> : (
+        <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+          {lines.map(({ tx, share }) => (
+            <div key={tx.id} className="flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-1.5">
+              <span className="text-white/40 w-12 shrink-0">{format(parseISO(tx.date), 'd MMM')}</span>
+              <span className="flex-1 truncate text-white/70">{tx.merchant || catName(tx.categoryId)}<span className="text-white/35"> · {catName(tx.categoryId)}</span></span>
+              {split && <span className="text-white/35 tabular-nums">{formatMoney(tx.amount, cur)} ÷ {memberIds.length} =</span>}
+              <span className="tabular-nums font-medium text-white/80">{formatMoney(share, cur)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <Modal open onClose={onClose} title={`${name} — saved in ${format(refDate, 'MMMM')}`}>
+      <div className="space-y-5">
+        <Section title="Income" lines={b.income} total={b.incomeTotal} sign="+" />
+        <Section title={`${name}'s own expenses`} lines={b.own} total={b.ownTotal} sign="−" />
+        <Section title="Share of shared expenses" lines={b.shared} total={b.sharedTotal} sign="−" split />
+        <div className="flex items-center justify-between border-t border-white/10 pt-3 text-base font-bold">
+          <span>Saved</span>
+          <span className={cx('tabular-nums', b.net >= 0 ? 'text-savings' : 'text-expense')}>{formatMoney(b.net, cur, { sign: true })}</span>
+        </div>
+        <p className="text-[11px] text-white/40">
+          Shared = expenses logged as “Everyone (split)” or with no payer; each person carries an equal part.
+          Expenses logged with {name} as payer count in full for {name}, even if they were for both of you.
+          This is month-to-date: salary counts from the 1st, while bills later in the month aren't included until they're posted.
+          Money moved to Economii or goals isn't spending, so it stays in this figure.
+        </p>
+      </div>
+    </Modal>
   );
 }
