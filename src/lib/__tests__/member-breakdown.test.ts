@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { memberMonthBreakdown, perMemberSpending } from '@/lib/finance';
+import { memberMonthBreakdown, perMemberSpending, memberShareLines, flowSummary } from '@/lib/finance';
 import type { Transaction } from '@/types';
 
 const ref = new Date('2026-10-14');
@@ -31,5 +31,29 @@ describe('memberMonthBreakdown', () => {
   it('net matches the per-person Saved figure on the dashboard', () => {
     const m = perMemberSpending(txs, ref, [R, I]).get(R)!;
     expect(b.net).toBeCloseTo(m.income - m.expense, 2);
+  });
+});
+
+describe('memberShareLines / flowSummary', () => {
+  const oct = txs.filter((t) => t.date.startsWith('2026-10'));
+  it('drops the partner\'s own transactions and halves shared ones', () => {
+    const lines = memberShareLines(oct, R, [R, I]);
+    expect(lines.some((l) => l.tx.createdBy === I)).toBe(false);
+    expect(lines.find((l) => l.tx.amount === 2200)).toMatchObject({ share: 1100, shared: true });
+    expect(lines.find((l) => l.tx.amount === 1500)).toMatchObject({ share: 1500, shared: false });
+  });
+  it('member summaries add up to the household summary', () => {
+    const r = flowSummary(memberShareLines(oct, R, [R, I]));
+    const i = flowSummary(memberShareLines(oct, I, [R, I]));
+    const hh = flowSummary(memberShareLines(oct, null, [R, I]));
+    expect(r.income + i.income).toBeCloseTo(hh.income, 2);
+    expect(r.spent + i.spent).toBeCloseTo(hh.spent, 2);
+    expect(r.saved + i.saved).toBeCloseTo(hh.saved, 2);
+  });
+  it('a member\'s month summary equals the dashboard breakdown', () => {
+    const r = flowSummary(memberShareLines(oct, R, [R, I]));
+    expect(r.saved).toBeCloseTo(memberMonthBreakdown(txs, ref, R, [R, I]).net, 2);
+    expect(r.sharedCount).toBe(3);
+    expect(r.sharedSpent).toBe(1322.56);
   });
 });

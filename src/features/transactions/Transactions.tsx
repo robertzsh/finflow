@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, SlidersHorizontal, ArrowUpDown, Trash2, Pencil, X, CheckSquare, Square, Download } from 'lucide-react';
+import { Search, Plus, SlidersHorizontal, ArrowUpDown, Trash2, Pencil, X, CheckSquare, Square, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -12,18 +12,28 @@ import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { TransactionModal } from '@/components/TransactionModal';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, localMonthKey, cx } from '@/lib/format';
+import { memberShareLines, flowSummary } from '@/lib/finance';
+import { useToday } from '@/hooks/useToday';
 import { exportCSV } from '@/lib/export';
 import type { Transaction } from '@/types';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, subMonths } from 'date-fns';
 
 type SortKey = 'date' | 'amount' | 'merchant';
 
 export default function Transactions() {
-  const { transactions, categories, settings, deleteTransactions, bulkUpdate, cloud, authed, members } = useStore();
+  const { transactions, categories, settings, deleteTransactions, bulkUpdate, cloud, authed, members, userId } = useStore();
+  const REF = useToday();
   const cur = settings.currency;
   const showPayer = cloud && authed && members.length > 1;
   const payerLabel = (id?: string) => id === 'all' ? '👥 Both' : (members.find((m) => m.id === id)?.name ? `👤 ${members.find((m) => m.id === id)!.name}` : '');
+
+  const memberIds = useMemo(() => members.map((m) => m.id), [members]);
+  const thisMonth = localMonthKey(REF);
+  // Last 24 months for the picker (newest first); 'all' = no month limit.
+  const monthOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => localMonthKey(subMonths(REF, i))), [REF]);
+  const [month, setMonth] = useState<string>(thisMonth);
+  const [person, setPerson] = useState<string>('household'); // 'household' or a member id
 
   const [q, setQ] = useState('');
   const [type, setType] = useState<'all' | 'income' | 'expense'>('all');
@@ -52,7 +62,10 @@ export default function Transactions() {
       const matchesMethod = method === 'all' || t.method === method;
       const matchesFrom = !from || t.date >= from;
       const matchesTo = !to || t.date <= to;
-      return matchesQ && matchesType && matchesCat && matchesMethod && matchesFrom && matchesTo;
+      const matchesMonth = month === 'all' || t.date.startsWith(month);
+      // A member view keeps their own + shared transactions and hides the partner's own.
+      const matchesPerson = person === 'household' || t.createdBy === person || !t.createdBy || !memberIds.includes(t.createdBy);
+      return matchesQ && matchesType && matchesCat && matchesMethod && matchesFrom && matchesTo && matchesMonth && matchesPerson;
     });
     list = [...list].sort((a, b) => {
       let r = 0;
@@ -62,7 +75,16 @@ export default function Transactions() {
       return sortDir === 'asc' ? r : -r;
     });
     return list;
-  }, [transactions, categories, q, type, cat, method, from, to, sortKey, sortDir]);
+  }, [transactions, categories, q, type, cat, method, from, to, sortKey, sortDir, month, person, memberIds]);
+
+  // Income / spent / saved for the chosen person: shared transactions count as an equal share
+  // (same rule as the Dashboard's per-person stats), the household view counts everything in full.
+  const memberView = person !== 'household';
+  const shareLines = useMemo(() => memberShareLines(filtered, memberView ? person : null, memberIds), [filtered, memberView, person, memberIds]);
+  const summary = useMemo(() => flowSummary(shareLines), [shareLines]);
+  const shareById = useMemo(() => new Map(shareLines.filter((l) => l.shared).map((l) => [l.tx.id, l.share] as const)), [shareLines]);
+  const monthIdx = monthOptions.indexOf(month);
+  const personName = person === 'household' ? 'Household' : person === userId ? 'You' : (members.find((m) => m.id === person)?.name ?? 'Member');
 
   const grouped = useMemo(() => {
     const map = new Map<string, Transaction[]>();
@@ -83,8 +105,9 @@ export default function Transactions() {
   function toggleAll() {
     setSelected((prev) => prev.size === filtered.length ? new Set() : new Set(filtered.map((t) => t.id)));
   }
-  function clearFilters() { setQ(''); setType('all'); setCat('all'); setMethod('all'); setFrom(''); setTo(''); }
+  function clearFilters() { setQ(''); setType('all'); setCat('all'); setMethod('all'); setFrom(''); setTo(''); setMonth(thisMonth); setPerson('household'); }
   const activeFilters = [type !== 'all', cat !== 'all', method !== 'all', !!from, !!to].filter(Boolean).length;
+  const anyFilter = activeFilters > 0 || month !== thisMonth || person !== 'household';
 
   return (
     <Page>
@@ -93,6 +116,49 @@ export default function Transactions() {
           <Button variant="ghost" onClick={() => exportCSV(filtered, categories, 'transactions')}><Download size={16} /><span className="hidden sm:inline">Export</span></Button>
           <Button onClick={() => setAdding(true)}><Plus size={16} /> Add</Button>
         </div>} />
+
+      {/* Person + month — what the summary below is about */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {showPayer && (
+          <div className="flex rounded-xl bg-white/5 border border-white/10 p-0.5" role="group" aria-label="Person">
+            {[{ id: 'household', label: 'Household' }, ...members.map((m) => ({ id: m.id, label: m.id === userId ? 'You' : m.name }))].map((o) => (
+              <button key={o.id} onClick={() => setPerson(o.id)} aria-pressed={person === o.id}
+                className={cx('rounded-lg px-3 py-1.5 text-sm transition', person === o.id ? 'bg-white/10 text-white font-medium' : 'text-white/55 hover:text-white')}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <button onClick={() => setMonth(monthOptions[monthIdx + 1])} disabled={month === 'all' || monthIdx >= monthOptions.length - 1}
+            aria-label="Previous month" className="rounded-lg p-2 text-white/50 hover:text-white disabled:opacity-30"><ChevronLeft size={16} /></button>
+          <Select aria-label="Month" value={month} onChange={(e) => setMonth(e.target.value)} className="!w-auto !py-1.5">
+            {monthOptions.map((m) => <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>)}
+            <option value="all">All time</option>
+          </Select>
+          <button onClick={() => setMonth(monthOptions[monthIdx - 1])} disabled={month === 'all' || monthIdx <= 0}
+            aria-label="Next month" className="rounded-lg p-2 text-white/50 hover:text-white disabled:opacity-30"><ChevronRight size={16} /></button>
+        </div>
+      </div>
+
+      {/* Summary for the chosen person + period (follows every filter below) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4" aria-label="Summary">
+        {[
+          { label: 'Income', value: formatMoney(summary.income, cur), cls: 'text-income' },
+          { label: 'Spent', value: formatMoney(summary.spent, cur), cls: 'text-expense' },
+          { label: 'Saved', value: formatMoney(summary.saved, cur, { sign: true }), cls: summary.saved >= 0 ? 'text-savings' : 'text-expense' },
+        ].map((x) => (
+          <Card key={x.label} className="px-4 py-2.5 sm:p-4 min-w-0 flex sm:block items-center justify-between gap-3">
+            <p className="text-xs text-white/50">{x.label}</p>
+            <p className={cx('metric-value text-lg sm:text-xl font-bold sm:mt-0.5 truncate tabular-nums', x.cls)}>{x.value}</p>
+          </Card>
+        ))}
+      </div>
+      <p className="text-[11px] text-white/40 -mt-2 mb-4">
+        {personName} · {month === 'all' ? 'all time' : format(parseISO(`${month}-01`), 'MMMM yyyy')}
+        {summary.income > 0 && summary.saved >= 0 && ` · ${summary.savingsRate.toFixed(0)}% of income saved`}
+        {memberView && summary.sharedCount > 0 && ` · incl. ½ of ${summary.sharedCount} shared expense${summary.sharedCount > 1 ? 's' : ''} (${formatMoney(summary.sharedSpent, cur)})`}
+      </p>
 
       {/* Controls */}
       <Card className="p-3 mb-4">
@@ -136,7 +202,7 @@ export default function Transactions() {
                 <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
                 <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
-              {activeFilters > 0 && <button onClick={clearFilters} className="text-xs text-brand mt-2">Clear all filters</button>}
+              {anyFilter && <button onClick={clearFilters} className="text-xs text-brand mt-2">Clear all filters</button>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -197,6 +263,7 @@ export default function Transactions() {
                       </div>
                       <div className={`text-right font-semibold tabular-nums shrink-0 ${t.type === 'income' ? 'text-income' : ''}`}>
                         {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
+                        {shareById.has(t.id) && <div className="text-[10px] font-normal text-white/40">{personName === 'You' ? 'your' : `${personName}'s`} part {formatMoney(shareById.get(t.id)!, cur)}</div>}
                       </div>
                       <button onClick={() => setEditing(t)} aria-label="Edit transaction" className="text-white/30 hover:text-white shrink-0 p-1"><Pencil size={15} /></button>
                     </div>

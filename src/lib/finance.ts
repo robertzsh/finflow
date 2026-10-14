@@ -81,17 +81,40 @@ export function perMemberSpending(txs: Transaction[], ref: Date, memberIds: stri
 /** The transactions behind one member's monthly "Saved" figure (same attribution as
  *  perMemberSpending): their own income/expenses at full value, plus an equal share of
  *  every shared or unattributed one. `net` always equals perMemberSpending's income − expense. */
-export interface MemberLine { tx: Transaction; share: number }
-export function memberMonthBreakdown(txs: Transaction[], ref: Date, memberId: string, memberIds: string[]) {
+export interface MemberLine { tx: Transaction; share: number; shared: boolean }
+
+/** Each transaction's part attributable to one member: their own at full value, an
+ *  equal share of shared/unattributed ones; the other member's own are dropped.
+ *  Without a memberId (household view) every transaction counts in full. */
+export function memberShareLines(txs: Transaction[], memberId: string | null, memberIds: string[]): MemberLine[] {
+  if (!memberId) return txs.map((tx) => ({ tx, share: tx.amount, shared: false }));
   const n = memberIds.length || 1;
-  const income: MemberLine[] = [], own: MemberLine[] = [], shared: MemberLine[] = [];
-  for (const t of txInMonth(txs, ref)) {
+  const out: MemberLine[] = [];
+  for (const t of txs) {
     const mine = t.createdBy === memberId;
     const isShared = !t.createdBy || !memberIds.includes(t.createdBy);
     if (!mine && !isShared) continue; // the other member's own transaction
-    const line = { tx: t, share: mine ? t.amount : t.amount / n };
-    if (t.type === 'income') income.push(line);
-    else (mine ? own : shared).push(line);
+    out.push({ tx: t, share: mine ? t.amount : t.amount / n, shared: !mine });
+  }
+  return out;
+}
+
+/** Income / spent / saved from share lines (see memberShareLines). */
+export function flowSummary(lines: MemberLine[]) {
+  let income = 0, spent = 0, sharedSpent = 0, sharedCount = 0;
+  for (const l of lines) {
+    if (l.tx.type === 'income') income += l.share;
+    else { spent += l.share; if (l.shared) { sharedSpent += l.share; sharedCount++; } }
+  }
+  const saved = income - spent;
+  return { income: r2(income), spent: r2(spent), saved: r2(saved), savingsRate: income > 0 ? (saved / income) * 100 : 0, sharedSpent: r2(sharedSpent), sharedCount };
+}
+
+export function memberMonthBreakdown(txs: Transaction[], ref: Date, memberId: string, memberIds: string[]) {
+  const income: MemberLine[] = [], own: MemberLine[] = [], shared: MemberLine[] = [];
+  for (const line of memberShareLines(txInMonth(txs, ref), memberId, memberIds)) {
+    if (line.tx.type === 'income') income.push(line);
+    else (line.shared ? shared : own).push(line);
   }
   const byDate = (a: MemberLine, b: MemberLine) => (a.tx.date < b.tx.date ? -1 : a.tx.date > b.tx.date ? 1 : 0);
   const sum = (l: MemberLine[]) => r2(l.reduce((a, x) => a + x.share, 0));

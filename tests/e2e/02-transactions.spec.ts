@@ -58,3 +58,22 @@ test.describe('Transactions — create / edit / delete / search / sort', () => {
     await expect(page.getByRole('combobox').first()).toBeVisible(); // sort dropdown
   });
 });
+
+test.describe('Transactions — month picker + Income / Spent / Saved summary', () => {
+  test('defaults to the current month and the summary follows the period', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('link', { name: /transactions/i }).first().click();
+    const month = page.getByRole('combobox', { name: 'Month' });
+    const now = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+    await expect(month.locator('option:checked')).toHaveText(now);
+    const summary = page.getByLabel('Summary');
+    for (const label of ['Income', 'Spent', 'Saved']) await expect(summary.getByText(label, { exact: true })).toBeVisible();
+
+    const spentNow = await summary.locator('p').nth(3).innerText();
+    await month.selectOption('all');
+    await expect(summary.locator('p').nth(3)).not.toHaveText(spentNow); // all-time spending is larger
+    await month.selectOption({ index: 1 });                              // last month
+    await page.getByRole('button', { name: 'Next month' }).click();      // back to this month
+    await expect(summary.locator('p').nth(3)).toHaveText(spentNow);
+  });
+});
