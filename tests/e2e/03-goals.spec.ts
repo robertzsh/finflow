@@ -18,8 +18,8 @@ test.describe('Goals — create, fund, history', () => {
 
     await expect(page.getByRole('heading', { name: 'E2E Test Goal' })).toBeVisible();
 
-    // fund it — scope to the specific goal card (`.glass` = the Card container)
-    const card = page.locator('.glass').filter({ hasText: 'E2E Test Goal' }).first();
+    // fund it — scope to the specific goal card (`.card` = the Card container)
+    const card = page.locator('.card').filter({ hasText: 'E2E Test Goal' }).first();
     await card.getByRole('button', { name: /add money/i }).click();
     const fund = page.getByRole('dialog');
     await fund.getByPlaceholder('0,00').fill('250,50');

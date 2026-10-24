@@ -16,7 +16,7 @@ test.describe('Economii / savings pots', () => {
     await dialog.getByRole('button', { name: /create pot/i }).click();
     await expect(dialog).toBeHidden();
 
-    const card = page.locator('div', { has: page.getByRole('heading', { name: 'E2E Pot' }) }).last();
+    const card = page.locator('.card', { has: page.getByRole('heading', { name: 'E2E Pot' }) }).first();
     await card.getByRole('button', { name: /deposit/i }).click();
     const move = page.getByRole('dialog');
     await move.getByRole('textbox', { name: 'Amount' }).fill('750');

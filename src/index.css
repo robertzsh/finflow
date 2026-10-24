@@ -1,10 +1,10 @@
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #141210;
-  --bg-2: #1c1913;
   /* Spacing scale (8/12/16/24/32). --space-section is the vertical rhythm between
      top-level dashboard sections, defined once here instead of per-card `mt-4`. */
   --space-1: 0.5rem;
@@ -19,16 +19,74 @@
   /* Vertical rhythm between top-level sections — change here to retune the whole page. */
   .section-gap { margin-top: var(--space-section); }
 
-  /* Typography tokens for financial UI (used by StatCard / SectionCardHeader). */
+  /* Typography tokens for financial UI (used by StatCard / SectionCardHeader).
+     .metric-label is the reference's small-caps "SUM" label. */
   .metric-label {
     font-size: 11px; line-height: 1.2; font-weight: 500;
-    letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45);
+    letter-spacing: 0.08em; text-transform: uppercase; color: rgb(var(--ink-muted));
   }
-  html.light .metric-label { color: rgba(51,65,85,0.6); }
   .metric-value { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-  .section-title { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.15rem; line-height: 1.2; letter-spacing: -0.01em; }
-  .section-hint { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
-  html.light .section-hint { color: rgba(51,65,85,0.55); }
+  .section-title { font-family: 'Source Serif 4', Georgia, serif; font-weight: 600; font-size: 1.125rem; line-height: 1.25; letter-spacing: -0.01em; }
+  .section-hint { font-size: 12px; color: rgb(var(--ink-muted)); margin-top: 2px; }
+
+  /* Surfaces — flat, hairline-bordered blocks (Notion), no glass. */
+  .card {
+    background-color: rgb(var(--surface));
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+  }
+  .card-hover { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  @media (hover: hover) {
+    .card-hover:hover { transform: translateY(-1px); border-color: var(--line-strong); box-shadow: var(--shadow-lift); }
+  }
+
+  /* Floating menus, popovers and chart tooltips — opaque so they stay readable. */
+  .menu {
+    background-color: rgb(var(--overlay));
+    border-radius: calc(var(--r-control) + 2px);
+    box-shadow: var(--shadow-popover);
+  }
+
+  /* Native select: theme-coloured chevron. */
+  .field-select {
+    appearance: none;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+  }
+
+  .kbd {
+    display: inline-flex; align-items: center; gap: 1px;
+    border-radius: var(--r-tag); padding: 1px 5px;
+    font-size: 10px; line-height: 14px; font-weight: 500;
+    background: var(--fill); border: 1px solid var(--line); color: rgb(var(--ink-muted));
+  }
+
+  /* The reference's blurred pink "aura": a soft ring of colour on a pale base.
+     Each theme supplies its own --aura-* tones. */
+  .aura-cover {
+    background:
+      radial-gradient(ellipse 40% 150% at 50% 60%, var(--aura-mid) 0%, var(--aura-mid) 42%, var(--aura-ring) 68%, transparent 88%),
+      radial-gradient(ellipse 30% 90% at 88% 10%, var(--aura-glow) 0%, transparent 70%),
+      var(--aura-base);
+  }
+  .aura-orb {
+    border-radius: 9999px;
+    background: radial-gradient(circle at 50% 50%, var(--aura-mid) 0%, var(--aura-mid) 38%, var(--aura-ring) 58%, var(--aura-glow) 66%, transparent 72%);
+  }
+
+  .skeleton {
+    position: relative; overflow: hidden;
+    background: var(--fill); border-radius: var(--r-control);
+  }
+  .skeleton::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, var(--hover), transparent);
+    animation: ff-shimmer 1.6s infinite;
+  }
+  @keyframes ff-shimmer { 100% { transform: translateX(100%); } }
 }
 
 html, body, #root { height: 100%; }
@@ -42,9 +100,10 @@ html, body { overflow-x: clip; max-width: 100%; }
 
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  color: #ede7da;
-  background: var(--bg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
   /* App chrome shouldn't text-select on double/triple click (that "highlighted value"
@@ -57,87 +116,34 @@ input, textarea, select, [contenteditable], .selectable {
   user-select: text;
 }
 
-/* Fraunces carries the personality on headings; body/UI stays Plex Sans. */
-h1, h2, h3, .font-display { font-family: 'Fraunces', Georgia, serif; }
-h1, h2 { letter-spacing: -0.02em; }
+/* Source Serif 4 carries the personality on headings and big figures; UI stays Inter. */
+h1, h2, h3, .font-display { font-family: 'Source Serif 4', Georgia, serif; }
+h1, h2, h3 { color: rgb(var(--ink)); }
+h1, h2 { letter-spacing: -0.015em; }
+::selection { background: rgb(var(--accent) / 0.22); }
 
-.light body, html.light body {
-  color: #334155;
-  background: #f6f8fc;
-  letter-spacing: -0.006em;
-}
-html.light h1, html.light h2, html.light h3 { color: #0f172a; letter-spacing: -0.02em; }
-::selection { background: rgba(59,130,246,0.22); }
-html.light ::selection { background: rgba(59,130,246,0.16); }
+input[type='checkbox'], input[type='radio'], input[type='range'], progress { accent-color: rgb(var(--accent-strong)); }
 
-/* Animated aurora background */
+/* Page background: flat canvas + the theme's optional aurora (none for Pink Aura). */
 .app-bg::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(60vw 60vw at 12% 0%, rgba(224,177,90,0.09), transparent 60%),
-    radial-gradient(50vw 50vw at 88% 12%, rgba(200,120,80,0.07), transparent 60%),
-    radial-gradient(55vw 55vw at 72% 92%, rgba(120,90,60,0.10), transparent 62%),
-    var(--bg);
-}
-html.light .app-bg::before {
-  background:
-    radial-gradient(46vw 46vw at 12% -4%, rgba(16,185,129,0.10), transparent 62%),
-    radial-gradient(42vw 42vw at 92% 6%, rgba(59,130,246,0.10), transparent 60%),
-    radial-gradient(48vw 48vw at 78% 96%, rgba(168,85,247,0.07), transparent 62%),
-    linear-gradient(180deg, #f8fafc 0%, #f4f7fb 100%);
-}
-
-.glass {
-  background: rgba(255,255,255,0.045);
-  border: 1px solid rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-}
-html.light .glass {
-  background: rgba(255,255,255,0.88);
-  border: 1px solid rgba(15,23,42,0.06);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 10px 28px -8px rgba(15,23,42,0.10);
-}
-
-/* Popover surface — OPAQUE (unlike .glass) so floating menus over a form are readable. */
-.popover {
-  background: #141b2b;
-  border: 1px solid rgba(255,255,255,0.04); /* barely-there edge; depth comes from the shadow */
-  box-shadow: 0 16px 40px -10px rgba(0,0,0,0.6);
-}
-html.light .popover {
-  background: #ffffff;
-  border-color: rgba(15,23,42,0.10);
-  box-shadow: 0 12px 32px -10px rgba(15,23,42,0.22);
-}
-html.pink .popover { background: #2a1420; border-color: rgba(255,255,255,0.12); }
-
-.glass-hover { transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease; }
-.glass-hover:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.16); background: rgba(255,255,255,0.06); }
-html.light .glass-hover:hover {
-  transform: translateY(-3px);
-  border-color: rgba(15,23,42,0.09);
-  background: rgba(255,255,255,0.96);
-  box-shadow: 0 2px 4px rgba(15,23,42,0.05), 0 18px 40px -12px rgba(15,23,42,0.16);
+  background: var(--canvas-image), rgb(var(--canvas));
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--active); background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* Focus ring for accessibility — for buttons/links/etc. Text fields (inputs, search
-   boxes, textareas, selects) show focus via their own border/fill instead, so the
-   harsh blue outline box doesn't wrap every search field. */
-:focus-visible { outline: 2px solid #e0b15a; outline-offset: 2px; border-radius: 6px; }
+   boxes, textareas, selects) show focus via their own border + soft ring instead. */
+:focus-visible { outline: 2px solid rgb(var(--focus)); outline-offset: 2px; border-radius: var(--r-control); }
 input:focus-visible, textarea:focus-visible, select:focus-visible,
 input:focus, textarea:focus, select:focus { outline: none; }
 
@@ -148,95 +154,7 @@ input:focus, textarea:focus, select:focus { outline: none; }
 .recharts-surface:focus, .recharts-surface:focus-visible { outline: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-}
-
-/* ---------------------------------------------------------------------------
-   Light theme — the UI is built with white-on-dark utility classes, so we
-   remap the common ones to dark-on-light when html.light is active.
---------------------------------------------------------------------------- */
-html.light .text-white { color: #0f172a !important; }
-/* …but keep white legible on brand/gradient surfaces (primary buttons, logo & avatar badges) */
-html.light .bg-gradient-to-r.text-white,
-html.light .bg-gradient-to-br.text-white,
-html.light .bg-gradient-to-l.text-white,
-html.light [class*="bg-gradient-to"] .text-white { color: #ffffff !important; }
-html.light .text-white\/90 { color: rgba(15,23,42,0.92) !important; }
-html.light .text-white\/80 { color: rgba(15,23,42,0.82) !important; }
-html.light .text-white\/70 { color: rgba(15,23,42,0.72) !important; }
-html.light .text-white\/60 { color: rgba(15,23,42,0.62) !important; }
-html.light .text-white\/55 { color: rgba(15,23,42,0.6) !important; }
-html.light .text-white\/50 { color: rgba(15,23,42,0.55) !important; }
-html.light .text-white\/40 { color: rgba(15,23,42,0.45) !important; }
-html.light .text-white\/30 { color: rgba(15,23,42,0.4) !important; }
-html.light .text-white\/25 { color: rgba(15,23,42,0.35) !important; }
-html.light .placeholder\:text-white\/30::placeholder { color: rgba(15,23,42,0.4) !important; }
-
-html.light .bg-white\/5,
-html.light .bg-white\/\[0\.045\],
-html.light .bg-white\/\[0\.03\],
-html.light .bg-white\/\[0\.02\] { background-color: rgba(15,23,42,0.04) !important; }
-html.light .bg-white\/10,
-html.light .bg-white\/\[0\.07\] { background-color: rgba(15,23,42,0.07) !important; }
-html.light .hover\:bg-white\/10:hover,
-html.light .hover\:bg-white\/\[0\.05\]:hover,
-html.light .hover\:bg-white\/\[0\.06\]:hover,
-html.light .hover\:bg-white\/\[0\.03\]:hover { background-color: rgba(15,23,42,0.06) !important; }
-
-html.light .border-white\/5 { border-color: rgba(15,23,42,0.06) !important; }
-html.light .border-white\/10 { border-color: rgba(15,23,42,0.1) !important; }
-html.light .border-white\/16,
-html.light .border-white\/20 { border-color: rgba(15,23,42,0.16) !important; }
-
-html.light ::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.14); }
-html.light ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.22); }
-
-/* --- Premium light: primitives (buttons, inputs, chips) --------------------- */
-
-/* Ghost / subtle buttons: crisp white surface with a hairline border + micro-shadow */
-html.light .bg-white\/5.border.border-white\/10,
-html.light button.border.border-white\/10 {
-  box-shadow: 0 1px 1px rgba(15,23,42,0.03);
-}
-
-/* Inputs / selects / textareas read as solid white fields on light */
-html.light input,
-html.light select,
-html.light textarea {
-  background-color: #ffffff !important;
-  border-color: rgba(15,23,42,0.12) !important;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.03) inset;
-}
-html.light input:focus,
-html.light select:focus,
-html.light textarea:focus {
-  border-color: rgba(59,130,246,0.55) !important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.14) !important;
-}
-
-/* Primary gradient button: give it a soft branded lift on both themes */
-.bg-gradient-to-r.from-emerald-500 { box-shadow: 0 6px 16px -6px rgba(16,185,129,0.5), 0 2px 6px -2px rgba(59,130,246,0.4); }
-
-html.light .glass.rounded-2xl { border-radius: 16px; }
-
-/* ---------------------------------------------------------------------------
-   Liquid-glass chrome — the sticky top bar and the mobile bottom nav. Highly
-   translucent + blurred so page content is visible scrolling behind them.
-   Distinct from cards (which stay more opaque for readability).
---------------------------------------------------------------------------- */
-.chrome-glass {
-  background: rgba(9,13,22,0.5);
-  backdrop-filter: blur(22px) saturate(165%);
-  -webkit-backdrop-filter: blur(22px) saturate(165%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-}
-html.light .chrome-glass {
-  background: rgba(248,250,252,0.58);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-}
-html.pink .chrome-glass {
-  background: rgba(255,243,249,0.55);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -246,80 +164,3 @@ html.pink .chrome-glass {
 @media (max-width: 640px) {
   input, select, textarea { font-size: 16px !important; }
 }
-
-/* ===========================================================================
-   PINK THEME — a cute, cozy, premium skin. Layers on top of the light theme
-   (html.pink also carries html.light), so it only re-tints surfaces, accents,
-   gradients and type. Toggle in Settings → Appearance → Pink.
-   =========================================================================== */
-html.pink body { background: #fff5f9; color: #4a3a42; }
-html.pink h1, html.pink h2, html.pink h3 {
-  font-family: 'Fraunces', Georgia, serif;
-  color: #3f2e37; letter-spacing: -0.01em; font-weight: 600;
-}
-
-/* Soft blush aurora: pink → lavender → peach blooms over an off-white blush. */
-html.pink .app-bg::before {
-  background:
-    radial-gradient(48vw 48vw at 10% -6%, rgba(244,114,182,0.18), transparent 60%),
-    radial-gradient(44vw 44vw at 95% 2%, rgba(167,139,250,0.15), transparent 60%),
-    radial-gradient(50vw 50vw at 80% 98%, rgba(253,186,158,0.16), transparent 62%),
-    linear-gradient(180deg, #fff7fb 0%, #ffeff6 100%);
-}
-
-/* Cards: white with a warm pink-tinted soft shadow and cozier corners. */
-html.pink .glass {
-  background: rgba(255,255,255,0.9);
-  border: 1px solid rgba(219,39,119,0.08);
-  box-shadow: 0 1px 2px rgba(219,39,119,0.05), 0 12px 30px -10px rgba(236,72,153,0.20);
-}
-html.pink .glass-hover:hover {
-  transform: translateY(-3px);
-  border-color: rgba(219,39,119,0.14);
-  background: rgba(255,255,255,0.97);
-  box-shadow: 0 3px 8px rgba(219,39,119,0.08), 0 22px 46px -12px rgba(236,72,153,0.30);
-}
-html.pink .rounded-2xl { border-radius: 20px; }
-html.pink .rounded-xl { border-radius: 15px; }
-
-/* Brand gradient (primary buttons, logo, toggles, toasts): emerald→blue becomes pink→berry. */
-html.pink .from-emerald-500 {
-  --tw-gradient-from: #f472b6 var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: #db2777 var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
-}
-/* Avatar / accent gradients: purple→blue becomes pink→lavender. */
-html.pink .from-purple-500 {
-  --tw-gradient-from: #f472b6 var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: #a78bfa var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
-}
-html.pink .bg-gradient-to-r.from-emerald-500,
-html.pink .bg-gradient-to-br.from-emerald-500 { box-shadow: 0 8px 20px -6px rgba(236,72,153,0.5); }
-
-/* Retint the "savings" (blue) and "goal" (purple) accents toward pink/berry. */
-html.pink .text-savings { color: #db2777 !important; }
-html.pink .text-goal { color: #be185d !important; }
-html.pink .bg-goal\/15, html.pink .bg-goal\/10 { background-color: rgba(219,39,119,0.12) !important; }
-
-/* Increase / decrease in a girly palette — mint-teal (up) and coral (down)
-   instead of green/red, so money movements feel soft rather than alarming. */
-html.pink .text-income { color: #0891b2 !important; }   /* aqua — increase / money in */
-html.pink .text-expense { color: #f43f5e !important; }  /* rose — decrease / money out */
-html.pink .bg-income\/15, html.pink .bg-income\/10 { background-color: rgba(6,182,212,0.14) !important; }
-html.pink .bg-expense\/15, html.pink .bg-expense\/10 { background-color: rgba(244,63,94,0.14) !important; }
-html.pink .border-income\/30 { border-color: rgba(6,182,212,0.35) !important; }
-html.pink .border-expense\/30 { border-color: rgba(244,63,94,0.35) !important; }
-
-/* Pink focus, selection, scrollbar, inputs. */
-html.pink :focus-visible { outline-color: #ec4899; }
-html.pink ::selection { background: rgba(236,72,153,0.18); }
-html.pink ::-webkit-scrollbar-thumb { background: rgba(236,72,153,0.22); }
-html.pink ::-webkit-scrollbar-thumb:hover { background: rgba(236,72,153,0.34); }
-html.pink input:focus, html.pink select:focus, html.pink textarea:focus {
-  border-color: rgba(236,72,153,0.55) !important;
-  box-shadow: 0 0 0 3px rgba(236,72,153,0.15) !important;
-}
-
-/* Active navigation item gets a pink highlight (react-router sets aria-current). */
-html.pink a[aria-current="page"] { color: #db2777 !important; }

@@ -7,10 +7,15 @@ import { useStore } from '@/store/useStore';
 import { exportMonthlyReportPDF } from '@/lib/export';
 import { buildMonthlyReport } from '@/lib/report';
 import { Page } from '@/components/PageTransition';
-import { SectionCardHeader } from '@/components/layout/PageHeader';
+import { SectionCardHeader, PageIcon } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Callout } from '@/components/ui/Callout';
+import { Aura } from '@/components/ui/Aura';
+import { Sparkle } from '@/components/ui/Sparkle';
+import { ProgressBar } from '@/components/ui/Progress';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { SpendSaveBars, DonutChart, ComparisonBars, SavingsArea, DonutChart as Donut, LegendList } from '@/components/charts/ChartKit';
@@ -26,7 +31,9 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { rateForDate } from '@/lib/rates';
 import type { Transaction } from '@/types';
-import { formatMoney, accentHex, currencySymbol, cx } from '@/lib/format';
+import { formatMoney, accentColor, currencySymbol, cx } from '@/lib/format';
+import { memberColor } from '@/lib/palette';
+import { fadeUp, staggered } from '@/lib/motion';
 import { startOfMonth, subMonths } from 'date-fns';
 import { useToday } from '@/hooks/useToday';
 
@@ -37,7 +44,6 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const [editBill, setEditBill] = useState<Transaction | null>(null);
   const [showAllBills, setShowAllBills] = useState(false);
   const [savedFor, setSavedFor] = useState<string | null>(null); // member id whose "Saved" breakdown is open
-  const theme = useStore((s) => s.settings.theme);
   const M = (s: string) => (privacy ? '••••' : s);
   const cur = settings.currency;
   // In a shared household the opening balance is the sum of every member's balance.
@@ -118,12 +124,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   const availableBal = Math.max(0, monthIncome - expenseTotal);
   const spendDonut = [
     ...data.byCat.slice(0, 8),
-    ...(availableBal > 0 ? [{ id: 'available', name: 'Available', color: '#cbd5e1', value: availableBal }] : []),
+    ...(availableBal > 0 ? [{ id: 'available', name: 'Available', color: 'var(--line-strong)', value: availableBal }] : []),
   ];
 
-  // Income sources are green by default; in the pink theme recolour them to an aqua family.
-  const AQUA = ['#06b6d4', '#22d3ee', '#67e8f9', '#0891b2', '#a5f3fc', '#5eead4'];
-  const bySource = theme === 'pink' ? data.bySource.map((d, i) => ({ ...d, color: AQUA[i % AQUA.length] })) : data.bySource;
+  const bySource = data.bySource;
 
   // End-of-month prompt: once a new month begins, offer last month's full report.
   const lastMonthRef = startOfMonth(subMonths(REF, 1));
@@ -154,35 +158,39 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
   return (
     <Page>
       {/* Editorial hero — the month's story in one sentence, key figure inline */}
-      <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="flex flex-wrap items-end justify-between gap-4 mb-5 sm:mb-7">
+      <motion.header {...fadeUp} className="relative mb-5 sm:mb-7">
+        <Aura variant="orb" drift className="hidden xl:block absolute right-6 top-2 h-48 w-48 opacity-90" />
+        <Sparkle filled size={14} className="hidden xl:block absolute right-52 top-14 text-sparkle" />
+        <Sparkle filled size={9} className="hidden xl:block absolute right-4 top-40 text-sparkle/80" />
+        <PageIcon />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs sm:text-sm text-white/45">{format(REF, 'MMMM yyyy')} · {isHousehold ? `you and ${partnerName}` : 'your money'}</p>
-          <h1 className="font-display text-[1.7rem] sm:text-4xl leading-[1.15] tracking-tight mt-1.5 max-w-[24ch]">
+          <p className="text-xs sm:text-sm text-ink-muted">{format(REF, 'MMMM yyyy')} · {isHousehold ? `you and ${partnerName}` : 'your money'}</p>
+          <h1 className="font-display font-semibold text-[1.7rem] sm:text-[2.35rem] leading-[1.15] mt-1.5 max-w-[24ch]">
             {greeting}, {settings.name}.{' '}
             {!hasActivity
-              ? <span className="text-white/55">A fresh month — add a transaction to begin.</span>
+              ? <span className="text-ink-muted">A fresh month — add a transaction to begin.</span>
               : heroNet >= 0
                 ? <>You’ve set aside <span className="text-income">{M(formatMoney(heroNet, cur))}</span> this month.</>
                 : <>You’re <span className="text-expense">{M(formatMoney(Math.abs(heroNet), cur))}</span> over so far.</>}
           </h1>
           {hasActivity && data.stats.income > 0 && !privacy && (
-            <p className="text-sm text-white/45 mt-2">That’s {savingsRate.toFixed(0)}% of {formatMoney(data.stats.income, cur)} that came in{isHousehold ? ', across both of you' : ''}.</p>
+            <p className="text-sm text-ink-muted mt-2">That’s {savingsRate.toFixed(0)}% of {formatMoney(data.stats.income, cur)} that came in{isHousehold ? ', across both of you' : ''}.</p>
           )}
         </div>
         <Button onClick={onQuickAdd} className="shrink-0"><Plus size={16} /> Add transaction</Button>
+        </div>
       </motion.header>
 
       {showReportPrompt && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl border border-emerald-500/30 p-4 mb-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-xl bg-emerald-500/20 p-2"><FileBarChart size={18} className="text-emerald-400" /></span>
-          <div className="flex-1 min-w-[180px]">
-            <div className="font-semibold text-sm">Your {lastMonthLabel} report is ready</div>
-            <div className="text-xs text-white/50">Transactions, top categories, money set aside and all metrics.</div>
-          </div>
-          <Button onClick={downloadLastMonth}><Download size={16} /> Download PDF</Button>
-          <button onClick={dismissReport} className="text-white/40 hover:text-white text-sm px-2">Dismiss</button>
+        <motion.div {...fadeUp} className="mb-4">
+          <Callout icon={<FileBarChart size={18} />} title={`Your ${lastMonthLabel} report is ready`}
+            action={<>
+              <Button size="sm" onClick={downloadLastMonth}><Download size={15} /> Download PDF</Button>
+              <Button size="sm" variant="subtle" onClick={dismissReport}>Dismiss</Button>
+            </>}>
+            Transactions, top categories, money set aside and all metrics.
+          </Callout>
         </motion.div>
       )}
 
@@ -204,13 +212,12 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 
       {/* Per-member comparison (shared household) — one glance to compare the two of you */}
       {isHousehold && (() => {
-        const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
         const cols = members.map((m, i) => {
           const b = data.byMember.get(m.id) ?? { income: 0, expense: 0 };
           const net = b.income - b.expense;
           const savePct = b.income > 0 ? (net / b.income) * 100 : null;
           const share = data.stats.expense > 0 ? (b.expense / data.stats.expense) * 100 : 0;
-          return { m, b, net, savePct, share, color: palette[i % palette.length], you: m.id === userId };
+          return { m, b, net, savePct, share, color: memberColor(i), you: m.id === userId };
         });
         // What drives the spending gap: per-category difference between the two people.
         // Shared costs are split 50/50 so they cancel out — leaving the personal spending.
@@ -230,7 +237,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
         const gridStyle = { gridTemplateColumns: `minmax(84px,auto) repeat(${cols.length}, minmax(0,1fr))` } as React.CSSProperties;
         const MetricRow = ({ label, render }: { label: string; render: (c: typeof cols[number]) => React.ReactNode }) => (
           <>
-            <div className="text-xs text-white/45 py-2 self-center">{label}</div>
+            <div className="text-xs text-ink-muted py-2 self-center">{label}</div>
             {cols.map((c) => (
               <div key={c.m.id} className="py-2 text-right tabular-nums text-sm font-medium self-center">{render(c)}</div>
             ))}
@@ -242,11 +249,11 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
             <div className="grid gap-x-3 sm:gap-x-6" style={gridStyle}>
               <div />
               {cols.map((c) => (
-                <div key={c.m.id} className="flex items-center justify-end gap-2 pb-2.5 mb-1 border-b border-white/10">
-                  <span className="w-7 h-7 rounded-full grid place-items-center text-white text-xs font-bold shrink-0" style={{ background: c.color }}>
+                <div key={c.m.id} className="flex items-center justify-end gap-2 pb-2.5 mb-1 border-b border-line">
+                  <span className="w-7 h-7 rounded-full grid place-items-center text-on-color text-xs font-bold shrink-0" style={{ background: c.color }}>
                     {(c.m.name || '?').charAt(0).toUpperCase()}
                   </span>
-                  <span className="text-sm font-semibold truncate">{c.m.name}{c.you && <span className="text-white/40 font-normal"> (you)</span>}</span>
+                  <span className="text-sm font-semibold truncate">{c.m.name}{c.you && <span className="text-ink-muted font-normal"> (you)</span>}</span>
                 </div>
               ))}
 
@@ -260,20 +267,20 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               )} />
               <MetricRow label="Save rate" render={(c) => (privacy ? '••••' : (c.savePct === null ? '—' : `${c.savePct.toFixed(0)}%`))} />
 
-              <div className="text-xs text-white/45 pt-3 self-start">Share of spend</div>
+              <div className="text-xs text-ink-muted pt-3 self-start">Share of spend</div>
               {cols.map((c) => (
                 <div key={c.m.id} className="pt-3">
-                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${c.share}%`, background: c.color }} /></div>
-                  <div className="text-[11px] text-white/40 mt-1 text-right tabular-nums">{c.share.toFixed(0)}%</div>
+                  <ProgressBar value={c.share} color={c.color} />
+                  <div className="text-2xs text-ink-muted mt-1 text-right tabular-nums">{c.share.toFixed(0)}%</div>
                 </div>
               ))}
             </div>
 
             {gap.length > 0 && gapWinner && (
-              <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="mt-4 pt-3 border-t border-line">
                 <div className="flex items-baseline justify-between mb-2">
                   <span className="metric-label">What drives the gap</span>
-                  <span className="text-xs text-white/50"><span className="font-medium" style={{ color: gapWinner.color }}>{gapWinner.m.name}</span> spent {formatMoney(Math.abs(cols[0].b.expense - cols[1].b.expense), cur)} more</span>
+                  <span className="text-xs text-ink-muted"><span className="font-medium" style={{ color: gapWinner.color }}>{gapWinner.m.name}</span> spent {formatMoney(Math.abs(cols[0].b.expense - cols[1].b.expense), cur)} more</span>
                 </div>
                 <div className="space-y-1">
                   {gap.slice(0, 6).map((r) => {
@@ -282,17 +289,17 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                     return (
                       <div key={r.name} className="flex items-center gap-2 text-sm">
                         <span className="truncate w-32 sm:w-40">{r.emoji ? `${r.emoji} ` : ''}{r.name}</span>
-                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: higher.color }} /></div>
+                        <div className="flex-1"><ProgressBar value={pct} color={higher.color} /></div>
                         <span className="tabular-nums text-xs w-28 text-right" style={{ color: higher.color }}>{higher.m.name} +{formatMoney(Math.abs(r.delta), cur)}</span>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-white/40 mt-2">Shared costs split evenly, so this is the personal spending that separates you.</p>
+                <p className="text-2xs text-ink-muted mt-2">Shared costs split evenly, so this is the personal spending that separates you.</p>
               </div>
             )}
 
-            <p className="text-xs text-white/40 mt-4">Combined income <span className="text-white/70 font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
+            <p className="text-xs text-ink-muted mt-4">Combined income <span className="text-ink-muted font-medium">{formatMoney(data.stats.income, cur)}</span> · combined spend {formatMoney(data.stats.expense, cur)}</p>
           </Card>
         );
       })()}
@@ -306,12 +313,10 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
               <div key={s.id}>
                 <div className="flex items-center gap-2 text-sm mb-1">
                   <span className="truncate flex-1">{s.emoji ? `${s.emoji} ` : ''}{s.name}</span>
-                  <span className="text-white/40 text-xs">{s.pct.toFixed(0)}%</span>
+                  <span className="text-ink-muted text-xs">{s.pct.toFixed(0)}%</span>
                   <span className="tabular-nums font-medium w-24 text-right">{formatMoney(s.value, cur)}</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.color }} />
-                </div>
+                <ProgressBar value={s.pct} color={s.color} />
               </div>
             ))}
           </div>
@@ -329,26 +334,25 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           {isHousehold ? (
             <div className="grid sm:grid-cols-2 gap-3">
               {members.map((m, i) => {
-                const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
                 const its = data.recurring.perMemberItems.get(m.id) ?? [];
                 return (
-                  <div key={m.id} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+                  <div key={m.id} className="rounded-card bg-surface-2 border border-line p-3">
                     <div className="flex items-center justify-between mb-2.5">
                       <span className="flex items-center gap-2 text-sm font-medium">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: palette[i % palette.length] }}>{(m.name || '?').charAt(0).toUpperCase()}</span>
-                        {m.name}{m.id === userId && <span className="text-white/40 font-normal"> (you)</span>}
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-on-color text-xs font-bold" style={{ background: memberColor(i) }}>{(m.name || '?').charAt(0).toUpperCase()}</span>
+                        {m.name}{m.id === userId && <span className="text-ink-muted font-normal"> (you)</span>}
                       </span>
-                      <span className="font-semibold text-sm">{formatMoney(data.recurring.perMember.get(m.id) ?? 0, cur)}<span className="text-white/40 text-xs">/mo</span></span>
+                      <span className="font-semibold text-sm">{formatMoney(data.recurring.perMember.get(m.id) ?? 0, cur)}<span className="text-ink-muted text-xs">/mo</span></span>
                     </div>
                     <div className="space-y-1.5">
-                      {its.length === 0 && <div className="text-xs text-white/30">No recurring bills yet.</div>}
+                      {its.length === 0 && <div className="text-xs text-ink-faint">No recurring bills yet.</div>}
                       {its.map((it) => {
                         const c = categories.find((x) => x.id === it.categoryId);
                         return (
                           <div key={it.id} className="flex items-center gap-2 text-sm">
                             <span className="truncate flex-1">{c?.emoji ? `${c.emoji} ` : ''}{it.merchant || c?.name}</span>
-                            {it.shared && <span className="text-[10px] text-white/40 px-1.5 py-0.5 rounded-full bg-white/10 shrink-0">½ shared</span>}
-                            <span className="tabular-nums font-medium w-24 text-right">{formatMoney(it.monthly, cur)}<span className="text-white/40 text-[11px]">/mo</span></span>
+                            {it.shared && <Badge tone="gray" className="shrink-0 !text-3xs !leading-4">½ shared</Badge>}
+                            <span className="tabular-nums font-medium w-24 text-right">{formatMoney(it.monthly, cur)}<span className="text-ink-muted text-2xs">/mo</span></span>
                           </div>
                         );
                       })}
@@ -364,8 +368,8 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                 return (
                   <div key={it.id} className="flex items-center gap-2 text-sm">
                     <span className="truncate flex-1">{c?.emoji ? `${c.emoji} ` : ''}{it.merchant || c?.name}</span>
-                    <span className="text-white/40 text-xs capitalize">{it.frequency}</span>
-                    <span className="tabular-nums font-medium w-28 text-right">{formatMoney(it.monthly, cur)}<span className="text-white/40 text-[11px]">/mo</span></span>
+                    <span className="text-ink-muted text-xs capitalize">{it.frequency}</span>
+                    <span className="tabular-nums font-medium w-28 text-right">{formatMoney(it.monthly, cur)}<span className="text-ink-muted text-2xs">/mo</span></span>
                   </div>
                 );
               })}
@@ -376,17 +380,16 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
             const shown = showAllBills ? recurringUpcoming : recurringUpcoming.slice(0, COLLAPSED);
             const hidden = recurringUpcoming.length - shown.length;
             return (
-              <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="mt-4 pt-3 border-t border-line">
                 <div className="metric-label mb-1">Upcoming</div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-line">
                   {shown.map((u) => {
                     const c = categories.find((x) => x.id === u.base.categoryId);
                     const paid = paidBillKeys.has(billKey(u.base));
                     const days = Math.round((parseISO(u.date).getTime() - startOfToday) / 86400000);
                     const status: BillStatus = paid ? 'paid' : days <= 5 ? 'due-soon' : 'upcoming';
-                    const palette = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
                     const mIdx = members.findIndex((m) => m.id === u.base.createdBy);
-                    const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: palette[mIdx % palette.length] } : undefined;
+                    const who = isHousehold && mIdx >= 0 ? { name: members[mIdx].name, color: memberColor(mIdx) } : undefined;
                     // foreign-currency bills project at today's rate (so they move with the market)
                     const amount = privacy ? u.amount : liveAmount(u.base, settings.fxRates);
                     const orig = u.base.origCurrency ? `${u.base.origAmount} ${currencySymbol(u.base.origCurrency)}` : undefined;
@@ -398,14 +401,14 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                   })}
                 </div>
                 {recurringUpcoming.length > COLLAPSED && (
-                  <button onClick={() => setShowAllBills((v) => !v)} className="mt-2 text-xs text-brand hover:underline">
+                  <button onClick={() => setShowAllBills((v) => !v)} className="mt-2 text-xs font-medium text-accent-ink hover:underline underline-offset-2">
                     {showAllBills ? 'Show less' : `Show all ${recurringUpcoming.length} (${hidden} more)`}
                   </button>
                 )}
               </div>
             );
           })()}
-          <p className="text-[11px] text-white/40 mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 — each person carries half (e.g. rent).</p>
+          <p className="text-2xs text-ink-muted mt-3">Weekly/quarterly/yearly items are normalised to a monthly figure. Shared bills are split 50/50 — each person carries half (e.g. rent).</p>
         </Card>
       )}
 
@@ -425,7 +428,7 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
           ) : (
             <>
               <div className="flex-none"><DonutChart data={spendDonut} height={150} centerLabel="Spent" centerValue={formatMoney(expenseTotal, cur, { compact: true })} /></div>
-              <div className="mt-1 flex items-center justify-between text-xs text-white/45">
+              <div className="mt-1 flex items-center justify-between text-xs text-ink-muted">
                 <span>{formatMoney(expenseTotal, cur, { compact: true })} of {formatMoney(monthIncome, cur, { compact: true })} income</span>
                 <span className="tabular-nums">{((expenseTotal / allocDenom) * 100).toFixed(0)}% used</span>
               </div>
@@ -440,19 +443,19 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
                       {cat?.emoji
                         ? <span className="text-base leading-none shrink-0 w-5 text-center">{cat.emoji}</span>
                         : <span className="w-2.5 h-2.5 rounded-full shrink-0 mx-[5px]" style={{ background: c.color }} />}
-                      <span className="text-white/80 truncate flex-1">{c.name}</span>
+                      <span className="text-ink truncate flex-1">{c.name}</span>
                       {isHousehold && <PayerChips payers={data.catPayers.get(c.id)} members={members} memberIds={memberIds} />}
-                      <span className="tabular-nums text-white/40 text-xs w-8 text-right">{pct.toFixed(0)}%</span>
+                      <span className="tabular-nums text-ink-muted text-xs w-8 text-right">{pct.toFixed(0)}%</span>
                       <span className="tabular-nums font-medium w-20 text-right">{formatMoney(c.value, cur, { compact: c.value > 99999 })}</span>
                     </div>
                   );
                 })}
               </div>
               {availableBal > 0 && (
-                <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-income/10 border border-income/20 px-3 py-2.5">
+                <div className="mt-3 flex items-center gap-2.5 rounded-card bg-income/10 px-3 py-2.5">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-income mx-[5px]" />
                   <span className="text-sm font-medium flex-1">Available to spend</span>
-                  <span className="tabular-nums text-white/50 text-xs w-8 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
+                  <span className="tabular-nums text-ink-muted text-xs w-8 text-right">{((availableBal / allocDenom) * 100).toFixed(0)}%</span>
                   <span className="tabular-nums font-semibold text-income w-20 text-right">{formatMoney(availableBal, cur, { compact: availableBal > 99999 })}</span>
                 </div>
               )}
@@ -506,7 +509,6 @@ export default function Dashboard({ onQuickAdd }: { onQuickAdd: () => void }) {
 }
 
 
-const CHIP_PALETTE = ['#3b82f6', '#a855f7', '#10b981', '#eab308'];
 function PayerChips({ payers, members, memberIds }: { payers?: Set<string>; members: { id: string; name: string }[]; memberIds: string[] }) {
   if (!payers) return null;
   const ids = new Set<string>();
@@ -518,26 +520,25 @@ function PayerChips({ payers, members, memberIds }: { payers?: Set<string>; memb
       {list.map((id) => {
         const idx = memberIds.indexOf(id);
         const m = members.find((x) => x.id === id);
-        return <span key={id} className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-1 ring-black/30" style={{ background: CHIP_PALETTE[idx % CHIP_PALETTE.length] }}>{(m?.name || '?').charAt(0).toUpperCase()}</span>;
+        return <span key={id} className="w-4 h-4 rounded-full flex items-center justify-center text-3xs font-bold text-on-color ring-2 ring-surface" style={{ background: memberColor(idx) }}>{(m?.name || '?').charAt(0).toUpperCase()}</span>;
       })}
     </span>
   );
 }
 
 function InsightCard({ ins, i }: { ins: ReturnType<typeof buildInsights>[number]; i: number }) {
-  const theme = useStore((s) => s.settings.theme);
   const Icon = getIcon(ins.icon, Sparkles);
-  const color = accentHex(ins.tone, theme);
+  const color = accentColor(ins.tone);
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
-      className="glass-hover rounded-xl border border-white/10 p-3.5 flex items-start gap-3">
-      <span className="rounded-lg p-2 shrink-0" style={{ background: `${color}22` }}><Icon size={16} color={color} /></span>
+    <motion.div {...staggered(i, 0.05)}
+      className="card-hover rounded-card border border-line bg-surface-2 p-3.5 flex items-start gap-3">
+      <span className="rounded-control p-2 shrink-0" style={{ background: accentColor(ins.tone, 0.12) }}><Icon size={16} color={color} /></span>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{ins.title}</span>
           {ins.value && <span className="text-sm font-bold" style={{ color }}>{ins.value}</span>}
         </div>
-        <p className="text-xs text-white/50 mt-0.5 leading-snug">{ins.detail}</p>
+        <p className="text-xs text-ink-muted mt-0.5 leading-snug">{ins.detail}</p>
       </div>
     </motion.div>
   );
@@ -553,17 +554,17 @@ function SavedBreakdownModal({ memberId, name, memberIds, refDate, onClose }: { 
   const Section = ({ title, lines, total, sign, split }: { title: string; lines: typeof b.income; total: number; sign: '+' | '−'; split?: boolean }) => (
     <div>
       <div className="flex items-center justify-between text-sm font-semibold mb-1.5">
-        <span>{title} <span className="text-white/40 font-normal">· {lines.length}</span></span>
+        <span>{title} <span className="text-ink-muted font-normal">· {lines.length}</span></span>
         <span className={cx('tabular-nums', sign === '+' ? 'text-income' : 'text-expense')}>{sign}{formatMoney(total, cur)}</span>
       </div>
-      {lines.length === 0 ? <p className="text-xs text-white/40">None this month.</p> : (
+      {lines.length === 0 ? <p className="text-xs text-ink-muted">None this month.</p> : (
         <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
           {lines.map(({ tx, share }) => (
-            <div key={tx.id} className="flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-1.5">
-              <span className="text-white/40 w-12 shrink-0">{format(parseISO(tx.date), 'd MMM')}</span>
-              <span className="flex-1 truncate text-white/70">{tx.merchant || catName(tx.categoryId)}<span className="text-white/35"> · {catName(tx.categoryId)}</span></span>
-              {split && <span className="text-white/35 tabular-nums">{formatMoney(tx.amount, cur)} ÷ {memberIds.length} =</span>}
-              <span className="tabular-nums font-medium text-white/80">{formatMoney(share, cur)}</span>
+            <div key={tx.id} className="flex items-center gap-2 text-xs rounded-control bg-surface-2 border border-line px-3 py-1.5">
+              <span className="text-ink-muted w-12 shrink-0">{format(parseISO(tx.date), 'd MMM')}</span>
+              <span className="flex-1 truncate text-ink-muted">{tx.merchant || catName(tx.categoryId)}<span className="text-ink-faint"> · {catName(tx.categoryId)}</span></span>
+              {split && <span className="text-ink-faint tabular-nums">{formatMoney(tx.amount, cur)} ÷ {memberIds.length} =</span>}
+              <span className="tabular-nums font-medium text-ink">{formatMoney(share, cur)}</span>
             </div>
           ))}
         </div>
@@ -576,11 +577,11 @@ function SavedBreakdownModal({ memberId, name, memberIds, refDate, onClose }: { 
         <Section title="Income" lines={b.income} total={b.incomeTotal} sign="+" />
         <Section title={`${name}'s own expenses`} lines={b.own} total={b.ownTotal} sign="−" />
         <Section title="Share of shared expenses" lines={b.shared} total={b.sharedTotal} sign="−" split />
-        <div className="flex items-center justify-between border-t border-white/10 pt-3 text-base font-bold">
+        <div className="flex items-center justify-between border-t border-line pt-3 text-base font-bold">
           <span>Saved</span>
           <span className={cx('tabular-nums', b.net >= 0 ? 'text-savings' : 'text-expense')}>{formatMoney(b.net, cur, { sign: true })}</span>
         </div>
-        <p className="text-[11px] text-white/40">
+        <p className="text-2xs text-ink-muted">
           Shared = expenses logged as “Everyone (split)” or with no payer; each person carries an equal part.
           Expenses logged with {name} as payer count in full for {name}, even if they were for both of you.
           This is month-to-date: salary counts from the 1st, while bills later in the month aren't included until they're posted.

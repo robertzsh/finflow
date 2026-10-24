@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Input, Label } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
+import { GateScreen, BrandMark } from '@/components/layout/GateScreen';
 
 export function Auth() {
   const { signIn, signUp, authError } = useStore();
@@ -26,19 +27,11 @@ export function Auth() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-6">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-3xl p-8 w-full max-w-md">
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className="rounded-xl bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-2 shadow-glow"><Sparkles size={18} className="text-white" /></div>
-          <div>
-            <div className="font-extrabold tracking-tight leading-none">FinFlow</div>
-            <div className="text-[10px] text-white/40 tracking-wider uppercase">Family finances</div>
-          </div>
-        </div>
+    <GateScreen>
+        <div className="mb-7"><BrandMark tagline="Family finances" /></div>
 
-        <h1 className="text-xl font-extrabold">{mode === 'in' ? 'Welcome back' : 'Create your account'}</h1>
-        <p className="text-sm text-white/50 mt-1 mb-6">
+        <h1 className="text-[1.75rem] font-bold leading-tight">{mode === 'in' ? 'Welcome back' : 'Create your account'}</h1>
+        <p className="text-sm text-ink-muted mt-1 mb-6">
           {mode === 'in' ? 'Sign in to your shared household.' : 'Start a household — invite your partner afterwards.'}
         </p>
 
@@ -47,7 +40,7 @@ export function Auth() {
             <div>
               <Label>Your name</Label>
               <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Robert" className="!pl-9" />
               </div>
             </div>
@@ -55,20 +48,20 @@ export function Auth() {
           <div>
             <Label>Email</Label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
               <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="!pl-9" />
             </div>
           </div>
           <div>
             <Label>Password</Label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
               <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="!pl-9" />
             </div>
           </div>
 
-          {authError && <p className="text-sm text-expense">{authError}</p>}
-          {confirm && <p className="text-sm text-income">Check your email to confirm your account, then sign in.</p>}
+          {authError && <Callout tone="red"><span className="text-expense">{authError}</span></Callout>}
+          {confirm && <Callout tone="green">Check your email to confirm your account, then sign in.</Callout>}
 
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? <Loader2 size={16} className="animate-spin" /> : <>{mode === 'in' ? 'Sign in' : 'Create account'} <ArrowRight size={16} /></>}
@@ -76,10 +69,9 @@ export function Auth() {
         </form>
 
         <button onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setConfirm(false); }}
-          className="mt-5 text-sm text-white/50 hover:text-white w-full text-center">
+          className="mt-5 text-sm text-ink-muted hover:text-ink w-full text-center transition-colors">
           {mode === 'in' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
         </button>
-      </motion.div>
-    </div>
+    </GateScreen>
   );
 }

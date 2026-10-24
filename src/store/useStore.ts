@@ -891,11 +891,14 @@ function applyTheme(theme: 'dark' | 'light' | 'pink') {
   // writes are async) and there's no theme flash on next load.
   try { localStorage.setItem('ff_theme', theme); } catch { /* ignore */ }
   const root = document.documentElement;
-  // Pink is a light-based theme, so it reuses the light utility remaps and adds a pink skin on top.
+  // Pink Aura is a light-based theme: it carries `light` too, and its token block overrides it.
   const isLightLike = theme === 'light' || theme === 'pink';
   root.classList.toggle('dark', theme === 'dark');
   root.classList.toggle('light', isLightLike);
   root.classList.toggle('pink', theme === 'pink');
+  // Browser / PWA status-bar colour follows the theme's canvas (mirrored in index.html).
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', { dark: '#141210', light: '#f6f8fc', pink: '#ffffff' }[theme]);
 }
 
 // The device's current theme — localStorage (most recent, synchronous) wins over the fallback.

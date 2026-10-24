@@ -5,7 +5,10 @@ import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
+import { Badge } from '@/components/ui/Badge';
+import { staggered } from '@/lib/motion';
 import { Input, Select, Label } from '@/components/ui/Field';
 import { ProgressBar } from '@/components/ui/Progress';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
@@ -40,23 +43,26 @@ export default function Budgets() {
         action={<Button onClick={() => setAddOpen(true)}><Plus size={16} /> New budget</Button>} />
 
       {/* Overview */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-4">
-        <Card className="p-5" delay={0}>
-          <p className="metric-label">Total budget</p>
-          <p className="metric-value text-2xl font-bold mt-2">{formatMoney(totalBudget, cur)}</p>
-          <div className="mt-3"><ProgressBar value={overallPct} color="#3b82f6" danger={overallPct > 100} /></div>
-          <p className="text-xs text-white/40 mt-2">{formatMoney(totalSpent, cur)} spent · {overallPct.toFixed(0)}% used</p>
-        </Card>
-        <Card className="p-5" delay={0.05}>
+      {/* The reference's "! monthly limit" callout */}
+      <Callout className="mb-3" icon={<span className="block w-4 text-center text-lg font-bold leading-5 text-ink">!</span>}>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-semibold">Total budget:</span>
+          <span className="metric-value font-display text-lg">{formatMoney(totalBudget, cur)}</span>
+          <span className="text-ink-muted text-sm">· {formatMoney(totalSpent, cur)} spent · {overallPct.toFixed(0)}% used</span>
+        </div>
+        <div className="mt-2.5 max-w-xl"><ProgressBar value={overallPct} danger={overallPct > 100} /></div>
+      </Callout>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Card className="p-4 sm:p-5" delay={0.05}>
           <p className="metric-label">Remaining</p>
-          <p className="metric-value text-2xl font-bold mt-2 text-income">{formatMoney(Math.max(0, totalBudget - totalSpent), cur)}</p>
-          <p className="text-xs text-white/40 mt-3">Across {progress.length} budgets</p>
+          <p className="metric-value font-display text-2xl font-semibold mt-2 text-income">{formatMoney(Math.max(0, totalBudget - totalSpent), cur)}</p>
+          <p className="text-xs text-ink-muted mt-2">Across {progress.length} budgets</p>
         </Card>
-        <Card className="p-5" delay={0.1}>
+        <Card className="p-4 sm:p-5" delay={0.1}>
           <p className="metric-label">Alerts</p>
-          <div className="flex items-center gap-4 mt-2">
-            <div><p className="metric-value text-2xl font-bold text-expense">{overCount}</p><p className="text-xs text-white/40">over budget</p></div>
-            <div><p className="metric-value text-2xl font-bold text-invest">{warnCount}</p><p className="text-xs text-white/40">projected over</p></div>
+          <div className="flex items-center gap-5 mt-2">
+            <div><p className="metric-value font-display text-2xl font-semibold text-expense">{overCount}</p><p className="text-xs text-ink-muted">over budget</p></div>
+            <div><p className="metric-value font-display text-2xl font-semibold text-invest">{warnCount}</p><p className="text-xs text-ink-muted">projected over</p></div>
           </div>
         </Card>
       </div>
@@ -71,42 +77,41 @@ export default function Budgets() {
             const over = p.spent > p.budget.amount;
             const editing = editId === p.budget.id;
             return (
-              <motion.div key={p.budget.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+              <motion.div key={p.budget.id} {...staggered(i)}>
                 <Card hover className="p-4">
                   <div className="flex items-center gap-3">
-                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={20} emoji={c?.emoji} />
+                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} size={18} emoji={c?.emoji} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{c?.name ?? p.budget.categoryId}</span>
-                        {over && <span className="text-expense flex items-center gap-1 text-xs"><AlertTriangle size={12} /> Over</span>}
-                        {!over && p.overspending && <span className="text-invest flex items-center gap-1 text-xs"><TrendingUp size={12} /> Trending over</span>}
+                        {over && <Badge tone="red"><AlertTriangle size={12} /> Over</Badge>}
+                        {!over && p.overspending && <Badge tone="yellow"><TrendingUp size={12} /> Trending over</Badge>}
                       </div>
-                      <p className="text-xs text-white/40">{formatMoney(p.spent, cur)} of {formatMoney(p.budget.amount, cur)}</p>
+                      <p className="text-xs text-ink-muted">{formatMoney(p.spent, cur)} of {formatMoney(p.budget.amount, cur)}</p>
                     </div>
                     {editing ? (
                       <div className="flex items-center gap-1">
                         <Input type="number" value={editVal} onChange={(e) => setEditVal(e.target.value)} className="!w-24 !py-1.5" autoFocus />
-                        <button onClick={() => { setBudget(p.budget.categoryId, Number(editVal) || 0); setEditId(null); }}
-                          className="rounded-lg bg-income/20 text-income p-1.5"><Check size={15} /></button>
+                        <IconButton size="sm" aria-label="Save budget" onClick={() => { setBudget(p.budget.categoryId, Number(editVal) || 0); setEditId(null); }}
+                          className="!bg-income/15 !text-income"><Check size={15} /></IconButton>
                       </div>
                     ) : (
-                      <button onClick={() => { setEditId(p.budget.id); setEditVal(String(p.budget.amount)); }}
-                        className="text-white/30 hover:text-white p-1"><Pencil size={15} /></button>
+                      <IconButton size="sm" aria-label="Edit budget" onClick={() => { setEditId(p.budget.id); setEditVal(String(p.budget.amount)); }}><Pencil size={15} /></IconButton>
                     )}
                   </div>
-                  <div className="mt-3"><ProgressBar value={p.pct} color={c?.color ?? '#3b82f6'} danger={over} /></div>
+                  <div className="mt-3"><ProgressBar value={p.pct} color={c?.color} danger={over} /></div>
                   <div className="flex justify-between mt-2 text-xs">
-                    <span className={over ? 'text-expense' : 'text-white/50'}>{p.pct.toFixed(0)}% used</span>
+                    <span className={over ? 'text-expense' : 'text-ink-muted'}>{p.pct.toFixed(0)}% used</span>
                     <span className={p.remaining < 0 ? 'text-expense' : 'text-income'}>
                       {p.remaining >= 0 ? `${formatMoney(p.remaining, cur)} left` : `${formatMoney(Math.abs(p.remaining), cur)} over`}
                     </span>
                   </div>
                   {p.overspending && (
-                    <p className="text-[11px] text-invest mt-2 flex items-center gap-1">
+                    <p className="text-2xs text-invest mt-2 flex items-center gap-1">
                       <TrendingUp size={11} /> Projected {formatMoney(p.projected, cur)} by month end
                     </p>
                   )}
-                  <button onClick={() => removeBudget(p.budget.id)} className="text-[11px] text-white/30 hover:text-expense mt-2">Remove budget</button>
+                  <button onClick={() => removeBudget(p.budget.id)} className="text-2xs text-ink-muted hover:text-expense mt-2 transition-colors">Remove budget</button>
                 </Card>
               </motion.div>
             );
@@ -127,7 +132,7 @@ function NewBudgetModal({ open, onClose, cats, onSave }: { open: boolean; onClos
     <Modal open={open} onClose={onClose} title="New budget">
       <div className="space-y-4">
         <div><Label>Category</Label>
-          <Select value={cat} onChange={(e) => setCat(e.target.value)}>
+          <Select aria-label="Category" value={cat} onChange={(e) => setCat(e.target.value)}>
             <option value="">Select category…</option>
             {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
