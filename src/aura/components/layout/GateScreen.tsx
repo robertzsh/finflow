@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { Aura } from '@/components/ui/Aura';
-import { Sparkle } from '@/components/ui/Sparkle';
+import { Aura } from '@/aura/components/ui/Aura';
+import { Sparkle } from '@/aura/components/ui/Sparkle';
 import { cx } from '@/lib/format';
-import { ease } from '@/lib/motion';
+import { ease } from '@/aura/lib/motion';
 
 /** Full-screen frame for sign-in, onboarding and the PIN lock: an aura cover across
  *  the top, a drifting orb, and one centred card. */

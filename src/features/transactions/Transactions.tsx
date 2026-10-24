@@ -1,16 +1,12 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search, Plus, SlidersHorizontal, ArrowUpDown, Trash2, Pencil, X, CheckSquare, Square, Download, ChevronLeft, ChevronRight,
-  Table2, ArrowDownToLine, ArrowUpFromLine, Type, List, CreditCard, User, Hash,
-} from 'lucide-react';
+import { Search, Plus, SlidersHorizontal, ArrowUpDown, Trash2, Pencil, X, CheckSquare, Square, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Segmented } from '@/components/ui/Segmented';
-import { Input, Select, Label } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Badge';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -113,12 +109,6 @@ export default function Transactions() {
   const activeFilters = [type !== 'all', cat !== 'all', method !== 'all', !!from, !!to].filter(Boolean).length;
   const anyFilter = activeFilters > 0 || month !== thisMonth || person !== 'household';
 
-  // Desktop table columns (Notion database view): select · name · category · method · [payer] · amount · edit
-  const cols = showPayer
-    ? 'md:grid-cols-[20px_minmax(0,1fr)_170px_120px_110px_150px_28px]'
-    : 'md:grid-cols-[20px_minmax(0,1fr)_170px_120px_150px_28px]';
-  const allSelected = selected.size === filtered.length && filtered.length > 0;
-
   return (
     <Page>
       <PageHeader title="Transactions" subtitle={`${filtered.length} shown · ${formatMoney(totalIn, cur)} in · ${formatMoney(totalOut, cur)} out`}
@@ -130,18 +120,24 @@ export default function Transactions() {
       {/* Person + month — what the summary below is about */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         {showPayer && (
-          <Segmented ariaLabel="Person" value={person} onChange={setPerson}
-            options={[{ value: 'household', label: 'Household' }, ...members.map((m) => ({ value: m.id, label: m.id === userId ? 'You' : m.name }))]} />
+          <div className="flex rounded-xl bg-white/5 border border-white/10 p-0.5" role="group" aria-label="Person">
+            {[{ id: 'household', label: 'Household' }, ...members.map((m) => ({ id: m.id, label: m.id === userId ? 'You' : m.name }))].map((o) => (
+              <button key={o.id} onClick={() => setPerson(o.id)} aria-pressed={person === o.id}
+                className={cx('rounded-lg px-3 py-1.5 text-sm transition', person === o.id ? 'bg-white/10 text-white font-medium' : 'text-white/55 hover:text-white')}>
+                {o.label}
+              </button>
+            ))}
+          </div>
         )}
         <div className="flex items-center gap-1">
-          <IconButton onClick={() => setMonth(monthOptions[monthIdx + 1])} disabled={month === 'all' || monthIdx >= monthOptions.length - 1}
-            aria-label="Previous month"><ChevronLeft size={16} /></IconButton>
+          <button onClick={() => setMonth(monthOptions[monthIdx + 1])} disabled={month === 'all' || monthIdx >= monthOptions.length - 1}
+            aria-label="Previous month" className="rounded-lg p-2 text-white/50 hover:text-white disabled:opacity-30"><ChevronLeft size={16} /></button>
           <Select aria-label="Month" value={month} onChange={(e) => setMonth(e.target.value)} className="!w-auto !py-1.5">
             {monthOptions.map((m) => <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>)}
             <option value="all">All time</option>
           </Select>
-          <IconButton onClick={() => setMonth(monthOptions[monthIdx - 1])} disabled={month === 'all' || monthIdx <= 0}
-            aria-label="Next month"><ChevronRight size={16} /></IconButton>
+          <button onClick={() => setMonth(monthOptions[monthIdx - 1])} disabled={month === 'all' || monthIdx <= 0}
+            aria-label="Next month" className="rounded-lg p-2 text-white/50 hover:text-white disabled:opacity-30"><ChevronRight size={16} /></button>
         </div>
       </div>
 
@@ -153,154 +149,128 @@ export default function Transactions() {
           { label: 'Saved', value: formatMoney(summary.saved, cur, { sign: true }), cls: summary.saved >= 0 ? 'text-savings' : 'text-expense' },
         ].map((x) => (
           <Card key={x.label} className="px-4 py-2.5 sm:p-4 min-w-0 flex sm:block items-center justify-between gap-3">
-            <p className="metric-label">{x.label}</p>
-            <p className={cx('metric-value font-display text-xl sm:text-2xl font-semibold sm:mt-2 truncate', x.cls)}>{x.value}</p>
+            <p className="text-xs text-white/50">{x.label}</p>
+            <p className={cx('metric-value text-lg sm:text-xl font-bold sm:mt-0.5 truncate tabular-nums', x.cls)}>{x.value}</p>
           </Card>
         ))}
       </div>
-      <p className="text-xs text-ink-muted -mt-2 mb-5">
+      <p className="text-[11px] text-white/40 -mt-2 mb-4">
         {personName} · {month === 'all' ? 'all time' : format(parseISO(`${month}-01`), 'MMMM yyyy')}
         {summary.income > 0 && summary.saved >= 0 && ` · ${summary.savingsRate.toFixed(0)}% of income saved`}
         {memberView && summary.sharedCount > 0 && ` · incl. ½ of ${summary.sharedCount} shared expense${summary.sharedCount > 1 ? 's' : ''} (${formatMoney(summary.sharedSpent, cur)})`}
       </p>
 
-      {/* View bar — Notion-style view tabs on the left, search / filter / sort on the right */}
-      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 border-b border-line mb-3">
-        <Segmented variant="tabs" ariaLabel="Type" value={type} onChange={setType} className="border-b-0 -mb-px"
-          options={[
-            { value: 'all', label: 'All', icon: <Table2 size={15} /> },
-            { value: 'income', label: 'Income', icon: <ArrowDownToLine size={15} /> },
-            { value: 'expense', label: 'Expense', icon: <ArrowUpFromLine size={15} /> },
-          ]} />
-        <div className="flex flex-wrap items-center gap-1.5 pb-2 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
-            <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search merchants, notes, amounts…"
-              className="!py-1.5 !pl-8 !pr-7 !bg-fill !border-line" />
-            {q && <IconButton size="sm" aria-label="Clear search" onClick={() => setQ('')} className="absolute right-0.5 top-1/2 -translate-y-1/2"><X size={14} /></IconButton>}
+      {/* Controls */}
+      <Card className="p-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] rounded-xl bg-white/[0.06] px-3 transition-colors focus-within:bg-white/[0.09]">
+            <Search size={16} className="text-white/40" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search merchants, notes, categories, amounts…"
+              className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-white/30" />
+            {q && <button onClick={() => setQ('')}><X size={14} className="text-white/40" /></button>}
           </div>
-          <Button variant="subtle" size="sm" onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters}>
-            <SlidersHorizontal size={15} /> Filters {activeFilters > 0 && <span className="rounded-full bg-accent-strong text-on-accent text-3xs font-semibold px-1.5">{activeFilters}</span>}
+          <Button variant="ghost" onClick={() => setShowFilters((v) => !v)}>
+            <SlidersHorizontal size={16} /> Filters {activeFilters > 0 && <span className="ml-1 rounded-full bg-blue-500 text-white text-[10px] px-1.5">{activeFilters}</span>}
           </Button>
-          <div className="flex items-center">
-            <Select aria-label="Sort by" value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="!w-auto !py-1 !pl-2.5 !text-[13px] !bg-transparent !border-transparent hover:!bg-hover">
+          <button onClick={() => setSortDir((d) => d === 'asc' ? 'desc' : 'asc')}
+            className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/70">
+            <ArrowUpDown size={15} />
+            <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} onClick={(e) => e.stopPropagation()}
+              className="bg-transparent outline-none text-sm">
               <option value="date">Date</option><option value="amount">Amount</option><option value="merchant">Merchant</option>
-            </Select>
-            <IconButton size="sm" onClick={() => setSortDir((d) => d === 'asc' ? 'desc' : 'asc')}
-              aria-label={sortDir === 'asc' ? 'Sort descending' : 'Sort ascending'} title={sortDir === 'asc' ? 'Ascending' : 'Descending'}>
-              <ArrowUpDown size={15} className={cx('transition-transform', sortDir === 'asc' && 'rotate-180')} />
-            </IconButton>
-          </div>
+            </select>
+            <span className="text-white/40 text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span>
+          </button>
         </div>
-      </div>
 
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden">
-            <div className="rounded-card border border-line bg-surface-2 p-3 mb-3">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <Select value={type} onChange={(e) => setType(e.target.value as any)} aria-label="Type">
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-3">
+                <Select value={type} onChange={(e) => setType(e.target.value as any)}>
                   <option value="all">All types</option><option value="income">Income</option><option value="expense">Expense</option>
                 </Select>
-                <Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+                <Select value={cat} onChange={(e) => setCat(e.target.value)}>
                   <option value="all">All categories</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </Select>
-                <Select value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Method">
+                <Select value={method} onChange={(e) => setMethod(e.target.value)}>
                   <option value="all">All methods</option>
                   {methods.map((m) => <option key={m} value={m}>{m}</option>)}
                 </Select>
-                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="From date" />
-                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="To date" />
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
-              {anyFilter && <button onClick={clearFilters} className="text-xs font-medium text-accent-ink hover:underline underline-offset-2 mt-2.5">Clear all filters</button>}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {anyFilter && <button onClick={clearFilters} className="text-xs text-brand mt-2">Clear all filters</button>}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
 
       {/* Bulk bar */}
       <AnimatePresence>
         {selected.size > 0 && (
           <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -10, opacity: 0 }}
-            className="rounded-card bg-accent-soft px-4 py-2 mb-3 flex items-center gap-2">
-            <span className="text-sm font-medium text-accent-ink">{selected.size} selected</span>
+            className="glass rounded-xl px-4 py-2.5 mb-3 flex items-center gap-3 border border-blue-500/30">
+            <span className="text-sm font-medium">{selected.size} selected</span>
             <div className="flex-1" />
-            <Button variant="ghost" size="sm" onClick={() => setBulkOpen(true)}><Pencil size={14} /> Bulk edit</Button>
-            <Button variant="danger" size="sm" onClick={() => { deleteTransactions([...selected]); setSelected(new Set()); }}><Trash2 size={14} /> Delete</Button>
-            <IconButton size="sm" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X size={16} /></IconButton>
+            <Button variant="ghost" onClick={() => setBulkOpen(true)}><Pencil size={14} /> Bulk edit</Button>
+            <Button variant="danger" onClick={() => { deleteTransactions([...selected]); setSelected(new Set()); }}><Trash2 size={14} /> Delete</Button>
+            <button onClick={() => setSelected(new Set())}><X size={16} className="text-white/50" /></button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* List — a database table on desktop, compact rows on phones */}
+      {/* List */}
       {filtered.length === 0 ? (
         <Card><EmptyState icon="SearchX" title="No transactions found" subtitle="Try adjusting your search or filters."
           action={<Button onClick={() => setAdding(true)}><Plus size={16} /> Add transaction</Button>} /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className={cx('flex md:grid items-center gap-3 px-4 py-2 border-b border-line text-[13px] text-ink-muted', cols)}>
-            <button onClick={toggleAll} aria-label={allSelected ? 'Deselect all' : 'Select all'} className="hover:text-ink">
-              {allSelected ? <CheckSquare size={16} className="text-accent" /> : <Square size={16} />}
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/10 text-xs text-white/40">
+            <button onClick={toggleAll} className="text-white/50 hover:text-white">
+              {selected.size === filtered.length && filtered.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
             </button>
-            <span className="md:hidden">Select all</span>
-            <span className="hidden md:flex items-center gap-1.5"><Type size={14} /> Name</span>
-            <span className="hidden md:flex items-center gap-1.5"><List size={14} /> Category</span>
-            <span className="hidden md:flex items-center gap-1.5"><CreditCard size={14} /> Method</span>
-            {showPayer && <span className="hidden md:flex items-center gap-1.5"><User size={14} /> Payer</span>}
-            <span className="hidden md:flex items-center justify-end gap-1.5"><Hash size={14} /> Amount</span>
+            <span>Select all</span>
           </div>
-          <div>
+          <div className="divide-y divide-white/5">
             {grouped.map(([date, items]) => (
               // content-visibility skips rendering/layout for off-screen day groups —
               // keeps a long history (hundreds/thousands of rows) fast to scroll.
               <div key={date} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 320px' } as React.CSSProperties}>
-                <div className="px-4 py-1.5 text-xs font-medium text-ink-muted bg-surface-2 border-b border-line sticky top-0">
+                <div className="px-4 py-2 text-xs font-medium text-white/40 bg-white/[0.02] sticky top-0">
                   {isSameDay(parseISO(date), new Date()) ? 'Today' : format(parseISO(date), 'EEEE, d MMM yyyy')}
                 </div>
                 {items.map((t) => {
                   const c = categories.find((x) => x.id === t.categoryId);
                   const sel = selected.has(t.id);
                   return (
-                    <div key={t.id} className={cx('flex md:grid items-center gap-3 px-4 py-2.5 md:py-2 border-b border-line last:border-b-0 transition-colors', cols, sel ? 'bg-accent-soft' : 'hover:bg-hover')}>
-                      <button onClick={() => toggle(t.id)} aria-label={sel ? 'Deselect transaction' : 'Select transaction'} className="text-ink-muted hover:text-ink shrink-0">
-                        {sel ? <CheckSquare size={16} className="text-accent" /> : <Square size={16} />}
+                    <div key={t.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition ${sel ? 'bg-blue-500/5' : ''}`}>
+                      <button onClick={() => toggle(t.id)} aria-label={sel ? 'Deselect transaction' : 'Select transaction'} className="text-white/40 hover:text-white shrink-0">
+                        {sel ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
                       </button>
-                      <div className="min-w-0 flex-1 flex items-center gap-3">
-                        <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} emoji={c?.emoji} size={16} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium truncate">{t.merchant || c?.name || '—'}</span>
-                            {t.recurring && <span className="shrink-0 text-goal text-xs" title={`Recurring · ${t.frequency}`}>↻</span>}
-                            {t.auto && <Badge tone="gray" className="shrink-0 !text-3xs !leading-4">auto</Badge>}
-                          </div>
-                          <div className="text-xs text-ink-muted truncate md:hidden">
-                            {c?.name} · {t.method}{t.recurring ? ` · ${t.frequency}` : ''}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerLabel(t.createdBy) ? ` · ${payerLabel(t.createdBy)}` : ''}
-                          </div>
-                          {t.notes && <div className="hidden md:block text-xs text-ink-muted truncate">{t.notes}</div>}
+                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} emoji={c?.emoji} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium truncate">{t.merchant || c?.name || '—'}</span>
+                          {t.recurring && <span className="shrink-0 text-goal text-[11px]" title={`Recurring · ${t.frequency}`}>↻</span>}
+                          {t.auto && <span className="shrink-0 text-[10px] text-white/40 px-1 py-0.5 rounded bg-white/10" title="Posted automatically from a recurring bill">auto</span>}
+                        </div>
+                        <div className="text-xs text-white/40 truncate">
+                          {c?.name} · {t.method}{t.recurring ? ` · ${t.frequency}` : ''}{t.notes ? ` · ${t.notes}` : ''}{showPayer && payerLabel(t.createdBy) ? ` · ${payerLabel(t.createdBy)}` : ''}
                         </div>
                       </div>
-                      <div className="hidden md:block min-w-0">{c && <Badge color={c.color}>{c.emoji ? `${c.emoji} ` : ''}<span className="truncate">{c.name}</span></Badge>}</div>
-                      <div className="hidden md:block text-sm text-ink-muted truncate">{t.method}</div>
-                      {showPayer && <div className="hidden md:block text-sm text-ink-muted truncate">{payerLabel(t.createdBy) || '—'}</div>}
-                      <div className={cx('text-right font-semibold tabular-nums shrink-0', t.type === 'income' && 'text-income')}>
+                      <div className={`text-right font-semibold tabular-nums shrink-0 ${t.type === 'income' ? 'text-income' : ''}`}>
                         {t.type === 'income' ? '+' : '−'}{formatMoney(t.amount, cur)}
-                        {shareById.has(t.id) && <div className="text-3xs font-normal text-ink-muted">{personName === 'You' ? 'your' : `${personName}'s`} part {formatMoney(shareById.get(t.id)!, cur)}</div>}
+                        {shareById.has(t.id) && <div className="text-[10px] font-normal text-white/40">{personName === 'You' ? 'your' : `${personName}'s`} part {formatMoney(shareById.get(t.id)!, cur)}</div>}
                       </div>
-                      <IconButton size="sm" onClick={() => setEditing(t)} aria-label="Edit transaction" className="!text-ink-faint hover:!text-ink"><Pencil size={15} /></IconButton>
+                      <button onClick={() => setEditing(t)} aria-label="Edit transaction" className="text-white/30 hover:text-white shrink-0 p-1"><Pencil size={15} /></button>
                     </div>
                   );
                 })}
               </div>
             ))}
-          </div>
-          {/* The reference's database footer: a small-caps SUM under the amount column */}
-          <div className="flex flex-wrap items-baseline justify-end gap-x-5 gap-y-1 px-4 py-2.5 border-t border-line bg-surface-2 text-sm">
-            <span className="metric-label">Sum</span>
-            <span className="tabular-nums text-income font-medium">+{formatMoney(totalIn, cur)}</span>
-            <span className="tabular-nums font-medium">−{formatMoney(totalOut, cur)}</span>
           </div>
         </Card>
       )}
@@ -321,24 +291,24 @@ function BulkEditModal({ open, onClose, ids, onApply }: { open: boolean; onClose
   return (
     <Modal open={open} onClose={onClose} title={`Bulk edit ${ids.length} transactions`}>
       <div className="space-y-4">
-        <p className="text-sm text-ink-muted">Only fields you set will be changed. Leave blank to keep existing values.</p>
+        <p className="text-sm text-white/50">Only fields you set will be changed. Leave blank to keep existing values.</p>
         <div>
-          <Label>Category</Label>
-          <Select aria-label="Category" value={cat} onChange={(e) => setCat(e.target.value)}>
+          <label className="text-xs text-white/60">Category</label>
+          <Select value={cat} onChange={(e) => setCat(e.target.value)}>
             <option value="">— keep —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         </div>
         <div>
-          <Label>Payment method</Label>
-          <Select aria-label="Payment method" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <label className="text-xs text-white/60">Payment method</label>
+          <Select value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="">— keep —</option>
             {['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'].map((m) => <option key={m}>{m}</option>)}
           </Select>
         </div>
         <div>
-          <Label>Recurring</Label>
-          <Select aria-label="Recurring" value={recurring} onChange={(e) => setRecurring(e.target.value)}>
+          <label className="text-xs text-white/60">Recurring</label>
+          <Select value={recurring} onChange={(e) => setRecurring(e.target.value)}>
             <option value="">— keep —</option><option value="yes">Mark recurring (monthly)</option><option value="no">Mark not recurring</option>
           </Select>
         </div>

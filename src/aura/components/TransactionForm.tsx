@@ -1,0 +1,211 @@
+import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { Trash2, AlertCircle, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { useStore } from '@/store/useStore';
+import { Label, Input, Select, Textarea } from '@/aura/components/ui/Field';
+import { SearchableSelect } from '@/aura/components/ui/SearchableSelect';
+import { Button } from '@/aura/components/ui/Button';
+import { Segmented } from '@/aura/components/ui/Segmented';
+import { Callout } from '@/aura/components/ui/Callout';
+import { parseAmount, formatMoney, localDateKey } from '@/lib/format';
+import { rateForDate } from '@/lib/rates';
+import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
+
+interface FormValues {
+  type: TxType;
+  amount: number;
+  categoryId: string;
+  method: string;
+  date: string;
+  notes?: string;
+  recurring: boolean;
+  frequency?: string;
+  variableAmount?: boolean;
+}
+
+const METHODS: PaymentMethod[] = ['Card', 'Cash', 'Bank Transfer', 'Direct Debit', 'PayPal', 'Apple Pay', 'Google Pay', 'Other'];
+
+export function TransactionForm({ existing, onDone, defaultDate }: { existing?: Transaction; onDone: () => void; defaultDate?: string }) {
+  const { categories, addTransaction, updateTransaction, deleteTransaction, cloud, authed, members, userId, settings } = useStore();
+  const base = settings.currency;
+  const fx = settings.fxRates;
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const showPaidBy = cloud && authed && members.length > 1;
+  const [paidBy, setPaidBy] = useState<string>(existing?.createdBy ?? userId ?? '');
+  // Transactions can be entered in another currency. If this one was, we remember the
+  // original currency + amount so editing shows those (and re-converts at the date's rate).
+  const [txCur, setTxCur] = useState<CurrencyCode>(existing?.origCurrency ?? base);
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
+    defaultValues: existing ? {
+      type: existing.type, amount: existing.origAmount ?? existing.amount, categoryId: existing.categoryId,
+      method: existing.method, date: existing.date,
+      notes: existing.notes ?? '', recurring: existing.recurring, frequency: existing.frequency ?? 'monthly', variableAmount: existing.variableAmount ?? false,
+    } : {
+      type: 'expense', amount: undefined as unknown as number, categoryId: '',
+      method: 'Card', date: defaultDate || localDateKey(), notes: '', recurring: false, frequency: 'monthly', variableAmount: false,
+    },
+  });
+
+  const type = watch('type') as TxType;
+  const recurring = watch('recurring');
+  const catId = watch('categoryId') as string;
+  const cats = categories.filter((c) => c.kind === type);
+  const currentCat = categories.find((c) => c.id === catId);
+  const topId = currentCat?.parent ?? catId ?? '';       // the top-level category currently chosen
+  const topCat = categories.find((c) => c.id === topId);
+  const topCats = cats.filter((c) => !c.parent);          // top-level categories
+  const subCats = categories.filter((c) => c.parent === topId && c.kind === type);
+  // Searchable list: every category of this type — parents AND their sub-categories —
+  // so you can type "Uber", "Ikea", "Bolt"… and pick it directly. Subs show their parent.
+  const catOptions = topCats.flatMap((p) => [
+    { value: p.id, label: p.name, emoji: p.emoji },
+    ...cats.filter((c) => c.parent === p.id).map((s) => ({ value: s.id, label: `${s.name} · ${p.name}`, emoji: s.emoji })),
+  ]);
+
+  const onValid = (v: FormValues) => {
+    if (submitting) return; // guard against rapid double-submit → duplicate rows
+    setSubmitting(true);
+    setFormError('');
+    try {
+      const raw = parseAmount(v.amount as unknown as string);
+      // Convert to the base currency using the rate on the transaction's DATE when
+      // we have a snapshot for it, otherwise the current rate (fx = lei per 1 unit).
+      const foreign = txCur !== base;
+      const rate = foreign ? rateForDate(v.date, txCur, fx) : 1;
+      const amount = Math.round(raw * rate * 100) / 100;
+      if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter an amount greater than 0.'); setSubmitting(false); return; }
+      if (!v.categoryId) { setFormError('Pick a category.'); setSubmitting(false); return; }
+      const cat = categories.find((c) => c.id === v.categoryId);
+      const payload = {
+        type: v.type, amount, categoryId: v.categoryId,
+        // Remember the original foreign amount so future occurrences (or a change of
+        // date) re-convert at the right day's rate; clear it when entered in base.
+        origCurrency: foreign ? txCur : undefined,
+        origAmount: foreign ? raw : undefined,
+        merchant: existing?.merchant || cat?.name || '', // no manual merchant — default to category name
+        method: v.method as PaymentMethod, date: v.date, notes: v.notes,
+        recurring: v.recurring, frequency: v.recurring ? (v.frequency as RecurringFrequency) : undefined,
+        variableAmount: v.recurring ? !!v.variableAmount : undefined,
+        receipt: existing?.receipt,
+        createdBy: showPaidBy ? (paidBy || userId || undefined) : existing?.createdBy,
+      };
+      if (existing) updateTransaction(existing.id, payload);
+      else addTransaction(payload);
+      onDone();
+    } catch (e: any) {
+      setFormError(e?.message ?? 'Could not save. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
+  const onInvalid = () => setFormError('Please fill in the amount and category.');
+  const submit = handleSubmit(onValid, onInvalid);
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <Segmented fill ariaLabel="Type" value={type} onChange={(t: TxType) => { setValue('type', t); setValue('categoryId', ''); }}
+        options={[
+          { value: 'expense', label: 'Expense', icon: <ArrowUpFromLine size={15} />, activeClassName: 'text-expense' },
+          { value: 'income', label: 'Income', icon: <ArrowDownToLine size={15} />, activeClassName: 'text-income' },
+        ]} />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Amount</Label>
+          <div className="flex gap-2">
+            <Input type="text" inputMode="decimal" placeholder="0,00" className="flex-1"
+              {...register('amount', { required: 'Enter an amount', validate: (v) => (parseAmount(v as unknown as string) > 0) || 'Amount must be greater than 0' })} />
+            <Select aria-label="Currency" value={txCur} onChange={(e) => setTxCur(e.target.value as CurrencyCode)} className="!w-24">
+              {(['RON', 'EUR', 'USD', 'GBP'] as CurrencyCode[]).map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </div>
+          {txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (() => {
+            const r = rateForDate(watch('date'), txCur, fx);
+            return <p className="text-2xs text-ink-muted mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * r, base)} at {r} {base}/{txCur}</p>;
+          })()}
+          {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
+        </div>
+        <div>
+          <Label>Date</Label>
+          <Input type="date" {...register('date')} />
+        </div>
+      </div>
+
+      <input type="hidden" {...register('categoryId', { required: 'Pick a category' })} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Category</Label>
+          <SearchableSelect ariaLabel="Category" searchLabel="Search categories…" placeholder="Select…"
+            value={topId}
+            options={catOptions}
+            onChange={(v) => setValue('categoryId', v, { shouldValidate: true })} />
+          {errors.categoryId && <p className="text-xs text-expense mt-1">{errors.categoryId.message}</p>}
+        </div>
+        <div>
+          <Label>Payment method</Label>
+          <Select aria-label="Payment method" {...register('method')}>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select>
+        </div>
+      </div>
+
+      {subCats.length > 0 && (
+        <div>
+          <Label>Subcategory ({topCat?.name})</Label>
+          <Select aria-label="Subcategory" value={currentCat?.parent ? catId : ''} onChange={(e) => setValue('categoryId', e.target.value || topId, { shouldValidate: true })}>
+            <option value="">General — {topCat?.name}</option>
+            {subCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
+          </Select>
+        </div>
+      )}
+
+      {showPaidBy && (
+        <div>
+          <Label>Paid by</Label>
+          <Select aria-label="Paid by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+            {members.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === userId ? ' (you)' : ''}</option>)}
+            <option value="all">👥 Everyone (split equally)</option>
+          </Select>
+        </div>
+      )}
+
+      <div>
+        <Label>Notes (optional)</Label>
+        <Textarea rows={2} placeholder="Add a note…" {...register('notes')} />
+      </div>
+
+      <label className="flex items-center justify-between gap-3 rounded-card bg-surface-2 border border-line px-3.5 py-3 cursor-pointer">
+        <div>
+          <div className="text-sm font-medium">Recurring transaction</div>
+          <div className="text-xs text-ink-muted">Auto-projected in your calendar</div>
+        </div>
+        <input type="checkbox" {...register('recurring')} className="w-5 h-5 shrink-0" />
+      </label>
+      {recurring && (
+        <div>
+          <Label>Frequency</Label>
+          <Select aria-label="Frequency" {...register('frequency')}>
+            <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
+          </Select>
+          <label className="flex items-center gap-2.5 mt-3 text-sm cursor-pointer">
+            <input type="checkbox" {...register('variableAmount')} className="w-5 h-5" />
+            <span>
+              <span className="font-medium">Amount varies each time</span>
+              <span className="block text-xs text-ink-muted">We'll ask you to confirm the amount before it posts (e.g. Digi, utilities)</span>
+            </span>
+          </label>
+        </div>
+      )}
+
+      {formError && (
+        <Callout tone="red" icon={<AlertCircle size={16} />}><span className="text-expense font-medium">{formError}</span></Callout>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" className="flex-1" disabled={submitting}>{existing ? 'Save changes' : 'Add transaction'}</Button>
+        {existing && <Button type="button" variant="danger" aria-label="Delete transaction" onClick={() => { deleteTransaction(existing.id); onDone(); }}><Trash2 size={16} /></Button>}
+      </div>
+    </form>
+  );
+}

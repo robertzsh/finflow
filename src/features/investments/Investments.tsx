@@ -5,9 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
-import type { TagTone } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Input, Label, Select } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
@@ -22,7 +20,6 @@ import type { Investment, InvestmentKind, CurrencyCode } from '@/types';
 
 const KINDS: InvestmentKind[] = ['Stock', 'ETF', 'Crypto', 'Savings', 'Pension'];
 const LIVE_KINDS = new Set<InvestmentKind>(['Stock', 'ETF', 'Crypto']);
-const KIND_TONE: Record<string, TagTone> = { Stock: 'blue', ETF: 'purple', Crypto: 'orange', Savings: 'green', Pension: 'brown' };
 
 /** Tiny inline sparkline from a holding's value history. */
 function Sparkline({ points, up }: { points: number[]; up: boolean }) {
@@ -33,7 +30,7 @@ function Sparkline({ points, up }: { points: number[]; up: boolean }) {
   const d = points.map((p, i) => `${(i / (points.length - 1)) * w},${h - ((p - min) / span) * h}`).join(' ');
   return (
     <svg width={w} height={h} className="shrink-0" aria-hidden>
-      <polyline points={d} fill="none" stroke={up ? 'rgb(var(--income))' : 'rgb(var(--expense))'} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+      <polyline points={d} fill="none" stroke={up ? 'var(--income, #10b981)' : 'var(--expense, #f43f5e)'} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
     </svg>
   );
 }
@@ -96,15 +93,15 @@ export default function Investments() {
           <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={onCSV} />
         </div>} />
 
-      {msg && <Callout tone="yellow" icon={<Upload size={16} />} className="mb-4">{msg}</Callout>}
+      {msg && <div className="mb-4 rounded-xl bg-invest/15 border border-invest/30 text-invest px-4 py-2.5 text-sm">{msg}</div>}
 
       {/* Hero portfolio card (terminal/mono style) */}
       <PortfolioCard />
 
       {needsKey && (
         <Card className="p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2"><KeyRound size={16} className="text-accent" /><span className="text-sm font-medium">Live stock & ETF prices</span></div>
-          <p className="text-xs text-ink-muted mb-3">Add a free <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="font-medium text-accent-ink hover:underline underline-offset-2">Finnhub</a> API key to pull live stock/ETF quotes. Crypto is already live (free, no key).</p>
+          <div className="flex items-center gap-2 mb-2"><KeyRound size={16} className="text-invest" /><span className="text-sm font-medium">Live stock & ETF prices</span></div>
+          <p className="text-xs text-white/50 mb-3">Add a free <a href="https://finnhub.io/register" target="_blank" rel="noreferrer" className="text-brand hover:underline">Finnhub</a> API key to pull live stock/ETF quotes. Crypto is already live (free, no key).</p>
           <div className="flex gap-2">
             <Input type={showKey ? 'text' : 'password'} value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Finnhub API key" className="flex-1" />
             <Button variant="ghost" onClick={() => setShowKey((v) => !v)}>{showKey ? 'Hide' : 'Show'}</Button>
@@ -132,8 +129,8 @@ export default function Investments() {
           action={<Button onClick={() => setOpen(true)}><Plus size={16} /> Add holding</Button>} /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="px-5 pt-5"><SectionCardHeader title="Holdings" hint={hasLive ? 'Prices update on Refresh · crypto free, stocks via Finnhub' : undefined} /></div>
-          <div className="divide-y divide-line border-t border-line">
+          <SectionCardHeader title="Holdings" hint={hasLive ? 'Prices update on Refresh · crypto free, stocks via Finnhub' : undefined} />
+          <div className="divide-y divide-white/5 -mx-5 -mb-5">
             {investments.map((inv, i) => {
               const gain = inv.currentValue - inv.costBasis;
               const gp = inv.costBasis > 0 ? (gain / inv.costBasis) * 100 : 0;
@@ -144,22 +141,22 @@ export default function Investments() {
               const spark = (inv.history ?? []).map((p) => p.value);
               return (
                 <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-hover group">
-                  <div className="w-9 h-9 rounded-control bg-tag-yellow-bg text-tag-yellow-fg flex items-center justify-center font-semibold text-2xs shrink-0">
+                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.03] group">
+                  <div className="w-9 h-9 rounded-xl bg-invest/15 border border-invest/20 flex items-center justify-center text-invest font-bold text-[11px] shrink-0">
                     {(inv.ticker ?? inv.name.slice(0, 3)).toUpperCase().slice(0, 4)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge tone={KIND_TONE[inv.kind] ?? 'gray'}>{inv.kind}</Badge></div>
-                    <div className="text-xs text-ink-muted tabular-nums">{inv.units} @ {formatMoney(price, ic)}{q ? <span className={cx('ml-1.5', q.changePct >= 0 ? 'text-income' : 'text-expense')}>{q.changePct >= 0 ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%</span> : null}</div>
+                    <div className="flex items-center gap-2"><span className="font-medium truncate">{inv.name}</span><Badge color="#eab308">{inv.kind}</Badge></div>
+                    <div className="text-xs text-white/40 tabular-nums">{inv.units} @ {formatMoney(price, ic)}{q ? <span className={cx('ml-1.5', q.changePct >= 0 ? 'text-income' : 'text-expense')}>{q.changePct >= 0 ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%</span> : null}</div>
                   </div>
                   <Sparkline points={spark} up={gain >= 0} />
                   <div className="text-right shrink-0 w-28">
                     <div className="metric-value font-semibold">{formatMoney(inv.currentValue, ic)}</div>
                     <div className={cx('text-xs metric-value', gain >= 0 ? 'text-income' : 'text-expense')}>{gain >= 0 ? '+' : ''}{gp.toFixed(1)}% · {share.toFixed(0)}%</div>
                   </div>
-                  <div className="flex items-center can-hover:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-                    <IconButton size="sm" onClick={() => setEditInv(inv)} aria-label="Edit holding"><Pencil size={15} /></IconButton>
-                    <IconButton size="sm" onClick={() => deleteInvestment(inv.id)} aria-label="Delete holding" className="hover:!text-expense"><Trash2 size={15} /></IconButton>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => setEditInv(inv)} className="text-white/25 hover:text-white p-1" aria-label="Edit holding"><Pencil size={15} /></button>
+                    <button onClick={() => deleteInvestment(inv.id)} className="text-white/25 hover:text-expense p-1" aria-label="Delete holding"><Trash2 size={15} /></button>
                   </div>
                 </motion.div>
               );
@@ -201,15 +198,15 @@ function InvestmentModal({ open, onClose, onSave, existing }: { open: boolean; o
           <div><Label>Ticker {live ? '(for live price)' : '(optional)'}</Label><Input value={ticker} onChange={(e) => setTicker(e.target.value)} placeholder={kind === 'Crypto' ? 'BTC' : 'AAPL'} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Type</Label><Select aria-label="Type" value={kind} onChange={(e) => setKind(e.target.value as InvestmentKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select></div>
-          <div><Label>Currency</Label><Select aria-label="Holding currency" value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
+          <div><Label>Type</Label><Select value={kind} onChange={(e) => setKind(e.target.value as InvestmentKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select></div>
+          <div><Label>Currency</Label><Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div><Label>Units</Label><Input type="number" value={units} onChange={(e) => setUnits(e.target.value)} placeholder="0" /></div>
           <div><Label>Invested</Label><Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" /></div>
           <div><Label>Current value</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0.00" /></div>
         </div>
-        {live && <p className="text-2xs text-ink-muted">With a ticker set, tap Refresh on the Investments page to update the value from the live price × units.</p>}
+        {live && <p className="text-[11px] text-white/40">With a ticker set, tap Refresh on the Investments page to update the value from the live price × units.</p>}
         <Button className="w-full" disabled={!name || !value} onClick={() => onSave({
           name, ticker: ticker || undefined, kind, currency, units: Number(units) || 1,
           costBasis: Number(cost) || 0, currentValue: Number(value) || 0,

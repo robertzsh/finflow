@@ -1,0 +1,83 @@
+/* ===========================================================================
+   Pink Aura design tokens — the single source of truth for the Pink Aura skin's
+   colour, type, depth and shape (src/aura). Only defined under html.pink, so the
+   classic Dark/Light UI never sees them.
+
+   Components use the semantic Tailwind names mapped to these in
+   tailwind.config.js (bg-surface, text-ink-muted, border-line, bg-accent-soft,
+   text-income, rounded-card, …). Colours that need Tailwind's alpha modifier
+   (`text-ink/60`) are space-separated RGB channels; inherently translucent
+   colours (lines, fills, scrims) are full colour values.
+   =========================================================================== */
+
+/* --- Pink Aura ------------------------------------------------------------- */
+html.pink {
+  color-scheme: light;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Source Serif 4', Georgia, ui-serif, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --r-tag: 4px;
+  --r-control: 6px;
+  --r-card: 10px;
+  --r-sheet: 14px;
+
+  --canvas: 255 255 255;
+  --canvas-image: none;
+  --surface: 255 255 255;
+  --surface-2: 252 247 249;
+  --overlay: 255 255 255;
+
+  --ink: 55 53 47;
+  --ink-muted: 107 105 101;
+  --ink-faint: 140 138 134;
+
+  --line: #ede8ea;
+  --line-strong: #ded6da;
+  --fill: rgba(55,53,47,0.05);
+  --hover: rgba(55,53,47,0.06);
+  --active: rgba(193,76,138,0.10);
+  --scrim: rgba(15,15,15,0.40);
+
+  --accent: 193 76 138;
+  --accent-strong: 169 61 118;
+  --accent-ink: 163 59 114;
+  --accent-soft: #f9f1f4;
+  --on-accent: 255 255 255;
+  --focus: 193 76 138;
+
+  --income: 0 128 154;
+  --expense: 196 69 63;
+  --savings: 176 70 128;
+  --invest: 168 100 21;
+  --goal: 138 93 170;
+  --warn: 154 106 18;
+
+  --member-1: 193 76 138;
+  --member-2: 138 93 170;
+  --member-3: 68 131 97;
+  --member-4: 217 115 13;
+
+  --tag-gray-bg: #e3e2e0;    --tag-gray-fg: #32302c;
+  --tag-brown-bg: #eee0da;   --tag-brown-fg: #442a1e;
+  --tag-orange-bg: #fadec9;  --tag-orange-fg: #49290e;
+  --tag-yellow-bg: #fdecc8;  --tag-yellow-fg: #402c1b;
+  --tag-green-bg: #dbeddb;   --tag-green-fg: #1c3829;
+  --tag-blue-bg: #d3e5ef;    --tag-blue-fg: #183347;
+  --tag-purple-bg: #e8deee;  --tag-purple-fg: #412454;
+  --tag-pink-bg: #f5e0e9;    --tag-pink-fg: #4c2337;
+  --tag-red-bg: #ffe2dd;     --tag-red-fg: #5d1715;
+
+  --aura-base: #fff0f9;
+  --aura-mid: #fdeaf2;
+  --aura-ring: #f9d2e1;
+  --aura-glow: #fccad5;
+  --sparkle: 255 110 165;
+
+  --shadow-card: 0 1px 2px rgba(55,53,47,0.04);
+  --shadow-lift: 0 1px 2px rgba(55,53,47,0.04), 0 12px 28px -12px rgba(193,76,138,0.28);
+  --shadow-popover: 0 0 0 1px rgba(15,15,15,0.05), 0 3px 6px rgba(15,15,15,0.08), 0 9px 24px rgba(15,15,15,0.14);
+
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6965' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}

@@ -12,32 +12,38 @@ function useCur() { return useStore((s) => s.settings.currency); }
 // like "16 K RON" don't get clipped. The tooltip still shows the full currency amount.
 const axisTick = (v: number) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 
-// Chart palette straight from the theme tokens (src/styles/tokens.css): CSS-var colours
-// work in SVG fill/stroke, so charts re-tint with the theme without any JS lookup.
-// Series pairs (income vs expense) are validated for colour-blind separation per theme.
-const CHART = {
-  income: 'rgb(var(--income))',
-  expense: 'rgb(var(--expense))',
-  savings: 'rgb(var(--savings))',
-  invest: 'rgb(var(--invest))',
-  axis: 'rgb(var(--ink-muted))',
-  grid: 'var(--line)',
-  cursor: 'var(--hover)',
-};
+// Theme-aware chart palette. Pink swaps green/red/blue for teal/coral/berry, and
+// the tooltip flips to a light card on light/pink so its text stays readable.
 function useChartTheme() {
-  return CHART;
+  const theme = useStore((s) => s.settings.theme);
+  const pink = theme === 'pink';
+  const light = theme === 'light' || pink;
+  return {
+    income: pink ? '#06b6d4' : '#10b981',
+    expense: pink ? '#f43f5e' : '#ef4444',
+    savings: pink ? '#db2777' : '#3b82f6',
+    invest: pink ? '#f59e0b' : '#eab308',
+    axis: light ? '#64748b' : '#94a3b8',
+    grid: light ? 'rgba(100,116,139,0.16)' : 'rgba(148,163,184,0.18)',
+    tipBg: light ? 'rgba(255,255,255,0.98)' : '#0d1220',
+    tipText: light ? '#0f172a' : '#ffffff',
+    tipMuted: light ? 'rgba(15,23,42,0.62)' : 'rgba(255,255,255,0.7)',
+    tipBorder: light ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.14)',
+  };
 }
 
 function TT({ active, payload, label, currency }: any) {
+  const t = useChartTheme();
   if (!active || !payload?.length) return null;
   return (
-    <div className="menu px-3 py-2 text-xs">
-      {label && <div className="font-semibold text-ink mb-1">{label}</div>}
+    <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, color: t.tipText, backdropFilter: 'blur(8px)' }}
+      className="rounded-xl px-3 py-2 text-xs shadow-lg">
+      {label && <div className="font-semibold mb-1" style={{ color: t.tipText }}>{label}</div>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color || p.fill }} />
-          <span className="capitalize text-ink-muted">{p.name}:</span>
-          <span className="font-semibold tabular-nums text-ink">{formatMoney(p.value, currency, { compact: p.value > 9999 })}</span>
+          <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
+          <span className="capitalize" style={{ color: t.tipMuted }}>{p.name}:</span>
+          <span className="font-semibold" style={{ color: t.tipText }}>{formatMoney(p.value, currency, { compact: p.value > 9999 })}</span>
         </div>
       ))}
     </div>
@@ -91,7 +97,7 @@ export function SpendSaveBars({ data, height = 260 }: { data: { month: string; s
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
-        <Tooltip content={<TT currency={currency} />} cursor={{ fill: c.cursor }} />
+        <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
         <Legend wrapperStyle={{ fontSize: 11, color: c.axis }} />
         <Bar dataKey="spending" name="Spending" fill={c.expense} radius={[4, 4, 0, 0]} />
         <Bar dataKey="savings" name="Savings" fill={c.income} radius={[4, 4, 0, 0]} />
@@ -110,7 +116,7 @@ export function SavedPerMonthBars({ data, height = 240 }: { data: { month: strin
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
-        <Tooltip content={<TT currency={currency} />} cursor={{ fill: c.cursor }} />
+        <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
         <Bar dataKey="net" name="Saved" radius={[4, 4, 0, 0]}>
           {data.map((d, i) => <Cell key={i} fill={d.net >= 0 ? c.savings : c.expense} />)}
         </Bar>
@@ -137,8 +143,8 @@ export function DonutChart({ data, height = 260, centerLabel, centerValue }:
       </ResponsiveContainer>
       {showCenter && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center">
-          <span className="text-2xs uppercase tracking-wide text-ink-muted truncate max-w-full">{shown ? shown.name : centerLabel}</span>
-          <span className="font-display text-xl font-semibold tabular-nums truncate max-w-full">{shown ? formatMoney(shown.value, currency, { compact: true }) : centerValue}</span>
+          <span className="text-[11px] uppercase tracking-wide text-white/45 truncate max-w-full">{shown ? shown.name : centerLabel}</span>
+          <span className="text-lg font-bold tabular-nums truncate max-w-full">{shown ? formatMoney(shown.value, currency, { compact: true }) : centerValue}</span>
         </div>
       )}
     </div>
@@ -154,9 +160,9 @@ export function ComparisonBars({ data, height = 260 }: { data: { month: string; 
         <CartesianGrid stroke={c.grid} vertical={false} />
         <XAxis dataKey="month" tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: c.axis }} axisLine={false} tickLine={false} tickFormatter={(v) => axisTick(v)} width={40} />
-        <Tooltip content={<TT currency={currency} />} cursor={{ fill: c.cursor }} />
-        <Bar dataKey="income" fill={c.income} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="expense" fill={c.expense} radius={[4, 4, 0, 0]} />
+        <Tooltip content={<TT currency={currency} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+        <Bar dataKey="income" fill={c.income} radius={[5, 5, 0, 0]} />
+        <Bar dataKey="expense" fill={c.expense} radius={[5, 5, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -201,7 +207,7 @@ export function LegendList({ data, total, currency }: { data: { name: string; va
     <div className="space-y-2">
       {data.map((d) => (
         <div key={d.name} className="flex items-center justify-between text-sm">
-          <span className="flex items-center gap-2 text-ink-muted">
+          <span className="flex items-center gap-2 text-white/70">
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />{d.name}
           </span>
           <span className="tabular-nums font-medium">{total > 0 ? Math.round((d.value / total) * 100) : 0}%</span>

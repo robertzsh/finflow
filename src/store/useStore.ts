@@ -891,10 +891,9 @@ function applyTheme(theme: 'dark' | 'light' | 'pink') {
   // writes are async) and there's no theme flash on next load.
   try { localStorage.setItem('ff_theme', theme); } catch { /* ignore */ }
   const root = document.documentElement;
-  // Pink Aura is a light-based theme: it carries `light` too, and its token block overrides it.
-  const isLightLike = theme === 'light' || theme === 'pink';
+  // Pink Aura is a separate skin (src/aura), so it doesn't carry the classic `light` class.
   root.classList.toggle('dark', theme === 'dark');
-  root.classList.toggle('light', isLightLike);
+  root.classList.toggle('light', theme === 'light');
   root.classList.toggle('pink', theme === 'pink');
   // Browser / PWA status-bar colour follows the theme's canvas (mirrored in index.html).
   document.querySelector('meta[name="theme-color"]')

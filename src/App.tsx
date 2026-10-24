@@ -1,13 +1,9 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Sidebar, MobileNav } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
-import { PageCover } from '@/components/layout/PageHeader';
-import { Aura } from '@/components/ui/Aura';
-import { PageSkeleton } from '@/components/ui/Skeleton';
 import { CommandPalette } from '@/components/CommandPalette';
 import { TransactionModal } from '@/components/TransactionModal';
 import { LockScreen } from '@/components/LockScreen';
@@ -19,6 +15,8 @@ import { useHotkey } from '@/hooks/useHotkeys';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { setInsightCurrency } from '@/lib/insights';
 import { currencySymbol } from '@/lib/format';
+import { useAura } from '@/aura/useAura';
+import type { AuraGate } from '@/aura/AuraApp';
 
 // Route pages are lazy-loaded so each one is its own chunk — the initial load only
 // pulls the dashboard, not every screen (and their charts) up front.
@@ -31,24 +29,11 @@ const Investments = lazy(() => import('@/features/investments/Investments'));
 const Calendar = lazy(() => import('@/features/calendar/Calendar'));
 const Reports = lazy(() => import('@/features/reports/Reports'));
 const SettingsPage = lazy(() => import('@/features/settings/Settings'));
+// The Pink Aura skin is its own UI (src/aura), loaded only when that theme is on.
+const AuraApp = lazy(() => import('@/aura/AuraApp'));
 
 function PageLoader() {
-  return <PageSkeleton />;
-}
-
-/** Boot splash: the aura orb with the FinFlow mark while data loads. */
-function Splash() {
-  return (
-    <div className="app-bg min-h-[100dvh] flex items-center justify-center" role="status">
-      <div className="relative grid h-40 w-40 place-items-center">
-        <Aura variant="orb" drift className="absolute inset-0" />
-        <span className="relative grid h-12 w-12 place-items-center rounded-[12px] bg-accent text-on-accent shadow-card animate-pulse">
-          <Sparkles size={22} />
-        </span>
-      </div>
-      <span className="sr-only">Loading FinFlow…</span>
-    </div>
-  );
+  return <div className="flex items-center justify-center py-24 text-white/40 text-sm">Loading…</div>;
 }
 
 export default function App() {
@@ -94,14 +79,38 @@ export default function App() {
   useHotkey('mod+k', (e) => { e.preventDefault(); setPaletteOpen((v) => !v); }, []);
   useHotkey('mod+n', (e) => { e.preventDefault(); setQuickAdd(true); }, []);
   useIdleLock();
+  const aura = useAura();
+
+  // Pink Aura: same data and gates, drawn by the aura skin. Dark and Light use the UI below.
+  if (aura) {
+    const gate: AuraGate = cloud && !authReady ? 'loading'
+      : cloud && !authed ? 'auth'
+      : !ready ? 'loading'
+      : !cloud && !settings.onboarded ? 'onboarding'
+      : locked && settings.pinEnabled ? 'locked'
+      : 'app';
+    return (
+      <Suspense fallback={<div className="app-bg min-h-[100dvh]" />}>
+        <AuraApp gate={gate} paletteOpen={paletteOpen} setPaletteOpen={setPaletteOpen} quickAdd={quickAdd} setQuickAdd={setQuickAdd} />
+      </Suspense>
+    );
+  }
 
   // Cloud mode: show a login screen until signed in.
   if (cloud) {
-    if (!authReady) return <Splash />;
+    if (!authReady) {
+      return <div className="app-bg min-h-[100dvh] flex items-center justify-center"><div className="animate-pulse text-white/40">Loading FinFlow…</div></div>;
+    }
     if (!authed) return <div className="app-bg min-h-[100dvh]"><Auth /></div>;
   }
 
-  if (!ready) return <Splash />;
+  if (!ready) {
+    return (
+      <div className="app-bg min-h-[100dvh] flex items-center justify-center">
+        <div className="animate-pulse text-white/40">Loading FinFlow…</div>
+      </div>
+    );
+  }
 
   // Onboarding only applies to local mode; PIN lock applies in both modes.
   if (!cloud && !settings.onboarded) return <div className="app-bg min-h-[100dvh]"><Onboarding /></div>;
@@ -109,10 +118,9 @@ export default function App() {
 
   return (
     <div className="app-bg min-h-[100dvh] flex">
-      <Sidebar onQuickAdd={() => setQuickAdd(true)} />
-      <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-12">
+      <Sidebar />
+      <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-8">
         <Topbar onQuickAdd={() => setQuickAdd(true)} onSearch={() => setPaletteOpen(true)} />
-        <PageCover />
         <AnimatePresence mode="wait">
           <Suspense fallback={<PageLoader />}>
           <Routes key={privacy ? 'priv' : 'norm'}>
