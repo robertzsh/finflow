@@ -66,8 +66,10 @@ src/
 
 ## Colour palette
 
-Three themes share one token set (`src/styles/tokens.css`): **Dark** (default, warm ink + gold), **Light** (slate + gold) and **Pink Aura** (a Notion-style white page with a pink aura cover, raspberry accent and pastel tags).
-Money colours per theme: income · expenses · savings · investments · goals (`text-income`, `text-expense`, …).
+emerald = income · red = expenses · blue = savings · yellow = investments · purple = goals.
+
+Themes: **Dark** (default) and **Light** use the classic UI; **Pink Aura** is a separate skin (`src/aura/`) styled after
+Notion's "Pink Aura" template — a white page with a pink aura cover, raspberry accent and pastel tags.
 
 ## Notes
 

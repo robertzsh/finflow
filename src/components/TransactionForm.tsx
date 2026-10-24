@@ -1,12 +1,10 @@
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
-import { Trash2, AlertCircle, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { Trash2, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Label, Input, Select, Textarea } from '@/components/ui/Field';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/Button';
-import { Segmented } from '@/components/ui/Segmented';
-import { Callout } from '@/components/ui/Callout';
 import { parseAmount, formatMoney, localDateKey } from '@/lib/format';
 import { rateForDate } from '@/lib/rates';
 import type { Transaction, TxType, PaymentMethod, RecurringFrequency, CurrencyCode } from '@/types';
@@ -105,11 +103,14 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Segmented fill ariaLabel="Type" value={type} onChange={(t: TxType) => { setValue('type', t); setValue('categoryId', ''); }}
-        options={[
-          { value: 'expense', label: 'Expense', icon: <ArrowUpFromLine size={15} />, activeClassName: 'text-expense' },
-          { value: 'income', label: 'Income', icon: <ArrowDownToLine size={15} />, activeClassName: 'text-income' },
-        ]} />
+      <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-white/5">
+        {(['expense', 'income'] as TxType[]).map((t) => (
+          <button type="button" key={t} onClick={() => { setValue('type', t); setValue('categoryId', ''); }}
+            className={`rounded-lg py-2 text-sm font-semibold capitalize transition ${type === t ? (t === 'income' ? 'bg-income/20 text-income border border-income/30' : 'bg-expense/20 text-expense border border-expense/30') : 'text-white/50'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -123,7 +124,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
           </div>
           {txCur !== base && parseAmount(watch('amount') as unknown as string) > 0 && (() => {
             const r = rateForDate(watch('date'), txCur, fx);
-            return <p className="text-2xs text-ink-muted mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * r, base)} at {r} {base}/{txCur}</p>;
+            return <p className="text-[11px] text-white/50 mt-1">≈ {formatMoney(parseAmount(watch('amount') as unknown as string) * r, base)} at {r} {base}/{txCur}</p>;
           })()}
           {errors.amount && <p className="text-xs text-expense mt-1">{errors.amount.message}</p>}
         </div>
@@ -145,14 +146,14 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
         </div>
         <div>
           <Label>Payment method</Label>
-          <Select aria-label="Payment method" {...register('method')}>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select>
+          <Select {...register('method')}>{METHODS.map((m) => <option key={m}>{m}</option>)}</Select>
         </div>
       </div>
 
       {subCats.length > 0 && (
         <div>
           <Label>Subcategory ({topCat?.name})</Label>
-          <Select aria-label="Subcategory" value={currentCat?.parent ? catId : ''} onChange={(e) => setValue('categoryId', e.target.value || topId, { shouldValidate: true })}>
+          <Select value={currentCat?.parent ? catId : ''} onChange={(e) => setValue('categoryId', e.target.value || topId, { shouldValidate: true })}>
             <option value="">General — {topCat?.name}</option>
             {subCats.map((c) => <option key={c.id} value={c.id}>{c.emoji ? `${c.emoji} ${c.name}` : c.name}</option>)}
           </Select>
@@ -162,7 +163,7 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
       {showPaidBy && (
         <div>
           <Label>Paid by</Label>
-          <Select aria-label="Paid by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+          <Select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
             {members.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === userId ? ' (you)' : ''}</option>)}
             <option value="all">👥 Everyone (split equally)</option>
           </Select>
@@ -174,32 +175,34 @@ export function TransactionForm({ existing, onDone, defaultDate }: { existing?: 
         <Textarea rows={2} placeholder="Add a note…" {...register('notes')} />
       </div>
 
-      <label className="flex items-center justify-between gap-3 rounded-card bg-surface-2 border border-line px-3.5 py-3 cursor-pointer">
+      <div className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-3">
         <div>
           <div className="text-sm font-medium">Recurring transaction</div>
-          <div className="text-xs text-ink-muted">Auto-projected in your calendar</div>
+          <div className="text-xs text-white/40">Auto-projected in your calendar</div>
         </div>
-        <input type="checkbox" {...register('recurring')} className="w-5 h-5 shrink-0" />
-      </label>
+        <input type="checkbox" {...register('recurring')} className="w-5 h-5 accent-blue-500" />
+      </div>
       {recurring && (
         <div>
           <Label>Frequency</Label>
-          <Select aria-label="Frequency" {...register('frequency')}>
+          <Select {...register('frequency')}>
             <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
             <option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
           </Select>
           <label className="flex items-center gap-2.5 mt-3 text-sm cursor-pointer">
-            <input type="checkbox" {...register('variableAmount')} className="w-5 h-5" />
+            <input type="checkbox" {...register('variableAmount')} className="w-5 h-5 accent-blue-500" />
             <span>
               <span className="font-medium">Amount varies each time</span>
-              <span className="block text-xs text-ink-muted">We'll ask you to confirm the amount before it posts (e.g. Digi, utilities)</span>
+              <span className="block text-xs text-white/40">We'll ask you to confirm the amount before it posts (e.g. Digi, utilities)</span>
             </span>
           </label>
         </div>
       )}
 
       {formError && (
-        <Callout tone="red" icon={<AlertCircle size={16} />}><span className="text-expense font-medium">{formError}</span></Callout>
+        <div className="flex items-center gap-2 rounded-xl bg-expense/15 border border-expense/30 text-expense px-3.5 py-2.5 text-sm">
+          <AlertCircle size={16} /> {formError}
+        </div>
       )}
 
       <div className="flex gap-2 pt-1">

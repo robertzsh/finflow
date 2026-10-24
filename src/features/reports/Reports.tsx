@@ -5,7 +5,6 @@ import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader, SectionCardHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { ProgressBar } from '@/components/ui/Progress';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Field';
 import { ComparisonBars, DonutChart } from '@/components/charts/ChartKit';
@@ -72,7 +71,7 @@ export default function Reports() {
         } />
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <Select aria-label="Report type" value={report} onChange={(e) => setReport(e.target.value as ReportType)} className="!w-auto">
+        <Select value={report} onChange={(e) => setReport(e.target.value as ReportType)} className="!w-auto">
           <option value="monthly">Monthly report</option>
           <option value="yearly">Yearly report</option>
           <option value="category">Category report</option>
@@ -82,25 +81,18 @@ export default function Reports() {
           <option value="balance">Balance breakdown</option>
         </Select>
         {(report === 'monthly' || report === 'category' || report === 'merchant') && (
-          <Select aria-label="Report month" value={monthSel} onChange={(e) => setMonthSel(e.target.value)} className="!w-auto">
+          <Select value={monthSel} onChange={(e) => setMonthSel(e.target.value)} className="!w-auto">
             {monthOptions.map((m) => <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>)}
           </Select>
         )}
       </div>
 
       {report !== 'balance' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          {[
-            { label: 'Income', value: formatMoney(stats.income, cur), cls: 'text-income' },
-            { label: 'Expenses', value: formatMoney(stats.expense, cur), cls: 'text-expense' },
-            { label: 'Net', value: formatMoney(stats.net, cur, { sign: true }), cls: stats.net >= 0 ? 'text-income' : 'text-expense' },
-            { label: 'Savings rate', value: `${stats.savingsRate.toFixed(0)}%`, cls: 'text-savings' },
-          ].map((x) => (
-            <Card key={x.label} className="p-4">
-              <p className="metric-label">{x.label}</p>
-              <p className={`metric-value font-display text-xl sm:text-2xl font-semibold mt-2 truncate ${x.cls}`}>{x.value}</p>
-            </Card>
-          ))}
+        <div className="grid sm:grid-cols-4 gap-3 mb-4">
+          <Card className="p-4"><p className="text-xs text-white/50">Income</p><p className="text-xl font-bold text-income mt-1">{formatMoney(stats.income, cur)}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Expenses</p><p className="text-xl font-bold text-expense mt-1">{formatMoney(stats.expense, cur)}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Net</p><p className={`text-xl font-bold mt-1 ${stats.net >= 0 ? 'text-income' : 'text-expense'}`}>{formatMoney(stats.net, cur, { sign: true })}</p></Card>
+          <Card className="p-4"><p className="text-xs text-white/50">Savings rate</p><p className="text-xl font-bold text-savings mt-1">{stats.savingsRate.toFixed(0)}%</p></Card>
         </div>
       )}
 
@@ -109,12 +101,12 @@ export default function Reports() {
           <SectionCardHeader title="How your balance is calculated" hint="Starting balances, plus every income, minus every expense, all-time" />
           <div className="space-y-2 text-sm max-w-xl">
             {(cloud && authed ? members : [{ id: 'me', name: settings.name || 'You', openingBalance: settings.openingBalance }]).map((m) => (
-              <div key={m.id} className="flex items-center justify-between text-ink-muted">
+              <div key={m.id} className="flex items-center justify-between text-white/60">
                 <span>Starting balance · {m.name}</span>
                 <span className="tabular-nums">{formatMoney(m.openingBalance, cur)}</span>
               </div>
             ))}
-            <div className="flex items-center justify-between font-medium border-t border-line pt-2">
+            <div className="flex items-center justify-between font-medium border-t border-white/10 pt-2">
               <span>Total starting balance</span><span className="tabular-nums">{formatMoney(opening, cur)}</span>
             </div>
             <div className="flex items-center justify-between text-income">
@@ -128,12 +120,12 @@ export default function Reports() {
                 <span>{transferred > 0 ? '−' : '+'} Net moved to Economii</span><span className="tabular-nums">{transferred > 0 ? '−' : ''}{formatMoney(Math.abs(transferred), cur)}</span>
               </div>
             )}
-            <div className="flex items-center justify-between font-display text-lg font-semibold border-t border-line pt-2 mt-1">
+            <div className="flex items-center justify-between text-lg font-bold border-t border-white/10 pt-2 mt-1">
               <span>Current balance</span><span className="tabular-nums">{formatMoney(currentBalance, cur)}</span>
             </div>
           </div>
-          <p className="text-2xs text-ink-muted mt-3">
-            If this looks off, check each person's <span className="text-ink-muted">starting balance</span> in Settings, or delete any duplicate income/expense in Transactions. Every transaction ever logged affects this figure — not just this month.
+          <p className="text-[11px] text-white/40 mt-3">
+            If this looks off, check each person's <span className="text-white/70">starting balance</span> in Settings, or delete any duplicate income/expense in Transactions. Every transaction ever logged affects this figure — not just this month.
           </p>
         </Card>
       )}
@@ -165,9 +157,11 @@ export default function Reports() {
           <div className="space-y-2">
             {byMerchant.map((m, i) => (
               <div key={m.name} className="flex items-center gap-3 text-sm">
-                <span className="text-ink-muted tabular-nums w-5">{i + 1}</span>
-                <span className="flex-1 truncate">{m.name}</span>
-                <div className="w-32 hidden sm:block"><ProgressBar value={(m.value / byMerchant[0].value) * 100} /></div>
+                <span className="text-white/30 w-5">{i + 1}</span>
+                <span className="flex-1">{m.name}</span>
+                <div className="w-32 h-2 rounded-full bg-white/10 overflow-hidden hidden sm:block">
+                  <div className="h-full bg-gradient-to-r from-[#e0b15a] to-[#c88a50]" style={{ width: `${(m.value / byMerchant[0].value) * 100}%` }} />
+                </div>
                 <span className="tabular-nums font-medium w-20 text-right">{formatMoney(m.value, cur)}</span>
               </div>
             ))}

@@ -1,53 +1,55 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, MoreHorizontal, Plus } from 'lucide-react';
+import {
+  LayoutDashboard, ArrowLeftRight, Target, Wallet, LineChart, CalendarDays, FileBarChart, Settings, Sparkles, MoreHorizontal, PiggyBank,
+} from 'lucide-react';
 import { cx } from '@/lib/format';
-import { spring } from '@/lib/motion';
-import { useStore } from '@/store/useStore';
-import { NAV } from './nav';
 
-export function Sidebar({ onQuickAdd }: { onQuickAdd: () => void }) {
-  const name = useStore((s) => s.settings.name);
+const NAV = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { to: '/goals', label: 'Goals', icon: Target },
+  { to: '/budgets', label: 'Budgets', icon: Wallet },
+  { to: '/savings', label: 'Economii', icon: PiggyBank },
+  { to: '/investments', label: 'Investments', icon: LineChart },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/reports', label: 'Reports', icon: FileBarChart },
+  { to: '/settings', label: 'Settings', icon: Settings },
+];
+
+export function Sidebar() {
   return (
-    <aside className="hidden lg:flex flex-col w-60 shrink-0 h-screen sticky top-0 bg-surface-2 border-r border-line px-2 pt-3 pb-3">
-      <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-accent text-on-accent shadow-card">
-          <Sparkles size={15} strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0">
-          <div className="font-display text-[15px] font-semibold leading-tight">FinFlow</div>
-          <div className="text-2xs text-ink-muted truncate">{name ? `${name}’s money` : 'Money in motion'}</div>
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 p-4 chrome-glass border-r border-white/10">
+      <div className="flex items-center gap-2.5 px-3 py-4">
+        <div className="rounded-xl bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-2 shadow-glow">
+          <Sparkles size={18} className="text-white" />
+        </div>
+        <div>
+          <div className="font-extrabold tracking-tight leading-none">FinFlow</div>
+          <div className="text-[10px] text-white/40 tracking-wider uppercase">Money in motion</div>
         </div>
       </div>
-
-      <button onClick={onQuickAdd}
-        className="mt-3 flex h-8 items-center gap-2.5 rounded-control px-2 text-sm text-ink-muted transition hover:bg-hover hover:text-ink">
-        <Plus size={17} /> New transaction
-        <span className="kbd ml-auto">⌘N</span>
-      </button>
-
-      <div className="mt-5 mb-1 px-2 text-2xs font-medium text-ink-muted">Pages</div>
-      <nav className="flex-1 space-y-px">
+      <nav className="mt-4 flex-1 space-y-1">
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end}
             className={({ isActive }) => cx(
-              'relative flex h-8 items-center gap-2.5 rounded-control px-2 text-sm transition-colors',
-              isActive ? 'text-accent-ink font-medium' : 'text-ink-muted hover:text-ink hover:bg-hover',
+              'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+              isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/5',
             )}>
             {({ isActive }) => (
               <>
-                {isActive && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-control bg-accent-soft" transition={spring.nav} />}
-                <n.icon size={17} className="relative z-10 shrink-0" />
-                <span className="relative z-10 truncate">{n.label}</span>
+                {isActive && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-white/10 border border-white/10" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+                <n.icon size={18} className="relative z-10" />
+                <span className="relative z-10">{n.label}</span>
               </>
             )}
           </NavLink>
         ))}
       </nav>
-
-      <div className="px-2 pt-3 text-2xs text-ink-muted">
-        Press <span className="kbd">⌘K</span> to search or jump anywhere
+      <div className="glass rounded-xl p-3 text-xs text-white/50">
+        <div className="font-semibold text-white/70 mb-1">Quick add</div>
+        Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/80">⌘K</kbd> anywhere
       </div>
     </aside>
   );
@@ -66,18 +68,17 @@ export function MobileNav() {
       <AnimatePresence>
         {moreOpen && (
           <motion.div className="lg:hidden fixed inset-0 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-scrim" onClick={() => setMoreOpen(false)} />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
             <motion.div
               initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-              transition={spring.sheet}
-              className="absolute inset-x-0 bottom-0 rounded-t-sheet bg-overlay shadow-popover p-3 pb-[calc(env(safe-area-inset-bottom)+72px)]">
-              <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-strong" />
-              <div className="grid grid-cols-2 gap-1.5">
+              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+              className="glass absolute inset-x-0 bottom-0 rounded-t-3xl p-3 pb-[calc(env(safe-area-inset-bottom)+72px)] border-t border-white/10">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
+              <div className="grid grid-cols-2 gap-2">
                 {MOBILE_MORE.map((n) => (
                   <NavLink key={n.to} to={n.to} onClick={() => setMoreOpen(false)}
-                    className={({ isActive }) => cx('flex items-center gap-3 rounded-control px-3.5 py-3 text-sm font-medium transition-colors',
-                      isActive ? 'bg-accent-soft text-accent-ink' : 'bg-fill text-ink hover:bg-hover')}>
-                    <n.icon size={19} /> {n.label}
+                    className={({ isActive }) => cx('flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium', isActive ? 'bg-white/10 text-white' : 'bg-white/5 text-white/70')}>
+                    <n.icon size={20} /> {n.label}
                   </NavLink>
                 ))}
               </div>
@@ -86,22 +87,16 @@ export function MobileNav() {
         )}
       </AnimatePresence>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-line flex justify-around px-1 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom))]">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 chrome-glass border-t border-white/10 flex justify-around px-1 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom))]">
         {MOBILE_MAIN.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setMoreOpen(false)}
-            className={({ isActive }) => cx('relative flex flex-col items-center gap-0.5 rounded-control px-3 py-1.5 text-3xs font-medium transition-colors', isActive ? 'text-accent-ink' : 'text-ink-muted')}>
-            {({ isActive }) => (
-              <>
-                <n.icon size={20} strokeWidth={isActive ? 2.2 : 1.9} /><span>{n.label}</span>
-                {isActive && <span aria-hidden className="absolute -top-1.5 h-0.5 w-5 rounded-full bg-accent" />}
-              </>
-            )}
+            className={({ isActive }) => cx('flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px]', isActive ? 'text-white' : 'text-white/50')}>
+            <n.icon size={20} /><span>{n.label}</span>
           </NavLink>
         ))}
-        <button onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}
-          className={cx('relative flex flex-col items-center gap-0.5 rounded-control px-3 py-1.5 text-3xs font-medium transition-colors', moreOpen || moreActive ? 'text-accent-ink' : 'text-ink-muted')}>
+        <button onClick={() => setMoreOpen((v) => !v)}
+          className={cx('flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px]', moreOpen || moreActive ? 'text-white' : 'text-white/50')}>
           <MoreHorizontal size={20} /><span>More</span>
-          {moreActive && !moreOpen && <span aria-hidden className="absolute -top-1.5 h-0.5 w-5 rounded-full bg-accent" />}
         </button>
       </nav>
     </>

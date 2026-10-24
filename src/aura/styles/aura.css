@@ -1,0 +1,105 @@
+/* ===========================================================================
+   Pink Aura skin — global styles. Imported at the top of src/index.css.
+
+   Every rule is scoped to html.pink so the classic Dark/Light UI is untouched:
+   - `html.pink …` where the rule must beat the classic globals in index.css
+     (body, headings, focus, scrollbar, page background, shared class names);
+   - `:where(html.pink) …` for component classes, so Tailwind utilities on the
+     same element (`shadow-lift`, `!bg-surface-2`, …) still win.
+   =========================================================================== */
+
+@import './tokens.css';
+
+/* --- Base ------------------------------------------------------------------ */
+html.pink body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
+  letter-spacing: normal;
+}
+
+/* Source Serif 4 carries the personality on headings and big figures; UI stays Inter. */
+html.pink h1, html.pink h2, html.pink h3, html.pink .font-display { font-family: var(--font-display); }
+html.pink h1, html.pink h2 { letter-spacing: -0.015em; }
+:where(html.pink) h1, :where(html.pink) h2, :where(html.pink) h3 { color: rgb(var(--ink)); }
+
+html.pink ::selection { background: rgb(var(--accent) / 0.22); }
+html.pink input[type='checkbox'], html.pink input[type='radio'], html.pink input[type='range'], html.pink progress {
+  accent-color: rgb(var(--accent-strong));
+}
+
+/* Page background: flat white canvas, like a Notion page. */
+html.pink .app-bg::before { background: rgb(var(--canvas)); }
+
+/* Focus ring for buttons/links; text fields show focus via their own border + soft ring. */
+html.pink :focus-visible { outline: 2px solid rgb(var(--focus)); outline-offset: 2px; border-radius: var(--r-control); }
+html.pink input:focus-visible, html.pink textarea:focus-visible, html.pink select:focus-visible { outline: none; }
+
+html.pink ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+html.pink ::-webkit-scrollbar-thumb:hover { background: var(--active); background-clip: padding-box; }
+
+/* --- Typography tokens shared by name with the classic UI ------------------- */
+/* .metric-label is the reference's small-caps "SUM" label. */
+html.pink .metric-label { color: rgb(var(--ink-muted)); }
+html.pink .section-title { font-family: var(--font-display); font-weight: 600; font-size: 1.125rem; line-height: 1.25; }
+html.pink .section-hint { color: rgb(var(--ink-muted)); }
+
+/* --- Components ------------------------------------------------------------ */
+/* Surfaces — flat, hairline-bordered blocks (Notion), no glass. */
+:where(html.pink) .card {
+  background-color: rgb(var(--surface));
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+:where(html.pink) .card-hover { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+@media (hover: hover) {
+  :where(html.pink) .card-hover:hover { transform: translateY(-1px); border-color: var(--line-strong); box-shadow: var(--shadow-lift); }
+}
+
+/* Floating menus, popovers and chart tooltips — opaque so they stay readable. */
+:where(html.pink) .menu {
+  background-color: rgb(var(--overlay));
+  border-radius: calc(var(--r-control) + 2px);
+  box-shadow: var(--shadow-popover);
+}
+
+/* Native select: theme-coloured chevron. */
+:where(html.pink) .field-select {
+  appearance: none;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 2rem;
+}
+
+:where(html.pink) .kbd {
+  display: inline-flex; align-items: center; gap: 1px;
+  border-radius: var(--r-tag); padding: 1px 5px;
+  font-size: 10px; line-height: 14px; font-weight: 500;
+  background: var(--fill); border: 1px solid var(--line); color: rgb(var(--ink-muted));
+}
+
+/* The reference's blurred pink "aura": a soft ring of colour on a pale base. */
+:where(html.pink) .aura-cover {
+  background:
+    radial-gradient(ellipse 40% 150% at 50% 60%, var(--aura-mid) 0%, var(--aura-mid) 42%, var(--aura-ring) 68%, transparent 88%),
+    radial-gradient(ellipse 30% 90% at 88% 10%, var(--aura-glow) 0%, transparent 70%),
+    var(--aura-base);
+}
+:where(html.pink) .aura-orb {
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 50%, var(--aura-mid) 0%, var(--aura-mid) 38%, var(--aura-ring) 58%, var(--aura-glow) 66%, transparent 72%);
+}
+
+:where(html.pink) .skeleton {
+  position: relative; overflow: hidden;
+  background: var(--fill); border-radius: var(--r-control);
+}
+:where(html.pink) .skeleton::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--hover), transparent);
+  animation: aura-shimmer 1.6s infinite;
+}
+@keyframes aura-shimmer { 100% { transform: translateX(100%); } }

@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
-import { Button } from '@/components/ui/Button';
+import { isAuraDevice } from '@/aura/useAura';
+import { AuraErrorFallback } from '@/aura/components/ErrorFallback';
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
@@ -65,19 +66,28 @@ export class ErrorBoundary extends Component<Props, State> {
     if (isChunkLoadError(this.state.error.message) && (() => { try { return !!sessionStorage.getItem('ff-chunk-reloaded'); } catch { return false; } })()) {
       return null;
     }
+    if (isAuraDevice()) {
+      return <AuraErrorFallback message={this.state.error.message} onReload={() => hardReset()} onRetry={() => this.setState({ error: null })} />;
+    }
     return (
       <div className="app-bg min-h-[100dvh] flex items-center justify-center p-6">
-        <div className="card max-w-md w-full p-8 text-center shadow-lift">
+        <div className="glass rounded-2xl p-8 max-w-md w-full text-center">
           <div className="text-4xl mb-3">😵‍💫</div>
-          <h1 className="text-xl font-semibold mb-1">Something went wrong</h1>
-          <p className="text-sm text-ink-muted mb-5">
+          <h1 className="text-lg font-bold mb-1">Something went wrong</h1>
+          <p className="text-sm text-white/60 mb-5">
             The app hit an unexpected error. Your data is safe — reloading usually fixes it.
           </p>
           <div className="flex gap-2 justify-center">
-            <Button onClick={() => hardReset()}>Reload</Button>
-            <Button variant="ghost" onClick={() => { this.setState({ error: null }); }}>Try again</Button>
+            <button onClick={() => hardReset()}
+              className="rounded-xl bg-gradient-to-r from-[#e0b15a] to-[#c88a50] text-white text-sm font-semibold px-4 py-2 hover:opacity-90">
+              Reload
+            </button>
+            <button onClick={() => { this.setState({ error: null }); }}
+              className="rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm font-semibold px-4 py-2 hover:bg-white/10">
+              Try again
+            </button>
           </div>
-          <p className="selectable mt-4 text-2xs text-ink-muted break-words">{this.state.error.message}</p>
+          <p className="mt-4 text-[11px] text-white/30 break-words">{this.state.error.message}</p>
         </div>
       </div>
     );

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CategoryIcon } from './CategoryIcon';
-import { SWATCHES } from '@/lib/palette';
+import { SWATCHES } from '@/aura/lib/palette';
 import { cx } from '@/lib/format';
 
 /** Toggleable tag-style chip (presets, quick picks). */

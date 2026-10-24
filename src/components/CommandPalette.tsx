@@ -1,16 +1,23 @@
 import { useMemo, useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, CornerDownLeft } from 'lucide-react';
+import { Search, Plus, LayoutDashboard, ArrowLeftRight, Target, LineChart, CalendarDays, FileBarChart, Settings, PiggyBank } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatMoney } from '@/lib/format';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { TransactionModal } from '@/components/TransactionModal';
 import type { Transaction } from '@/types';
-import { NAV } from '@/components/layout/nav';
 
-const PAGES = NAV;
-const GROUP = 'px-3 pt-3 pb-1 text-2xs font-medium text-ink-muted';
+const PAGES = [
+  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
+  { label: 'Transactions', to: '/transactions', icon: ArrowLeftRight },
+  { label: 'Goals', to: '/goals', icon: Target },
+  { label: 'Economii', to: '/savings', icon: PiggyBank },
+  { label: 'Investments', to: '/investments', icon: LineChart },
+  { label: 'Calendar', to: '/calendar', icon: CalendarDays },
+  { label: 'Reports', to: '/reports', icon: FileBarChart },
+  { label: 'Settings', to: '/settings', icon: Settings },
+];
 
 export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; onClose: () => void; onQuickAdd: () => void }) {
   const { transactions, categories, settings } = useStore();
@@ -36,43 +43,40 @@ export function CommandPalette({ open, onClose, onQuickAdd }: { open: boolean; o
       {open && (
         <motion.div className="fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <div className="absolute inset-0 bg-scrim" onClick={onClose} />
-          <motion.div initial={{ y: -16, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }}
-            role="dialog" aria-modal="true" aria-label="Search"
-            className="menu relative z-10 w-full max-w-xl !rounded-sheet overflow-hidden">
-            <div className="flex items-center gap-3 px-4 border-b border-line">
-              <Search size={18} className="text-ink-muted shrink-0" />
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search or jump to…" aria-label="Search or jump to"
-                className="flex-1 bg-transparent py-4 text-base outline-none placeholder:text-ink-faint" />
-              <kbd className="kbd">ESC</kbd>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+          <motion.div initial={{ y: -20, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }}
+            className="glass relative z-10 w-full max-w-xl rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-3 px-4 border-b border-white/[0.06]">
+              <Search size={18} className="text-white/40" />
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search or jump to…"
+                className="flex-1 bg-transparent py-4 text-sm outline-none placeholder:text-white/30" />
+              <kbd className="text-[10px] text-white/40 px-1.5 py-0.5 rounded bg-white/10">ESC</kbd>
             </div>
-            <div className="max-h-[50vh] overflow-y-auto p-1.5">
-              <div className={GROUP}>Actions</div>
-              <button onClick={onQuickAdd} className="group w-full flex items-center gap-3 rounded-control px-3 py-2 text-sm hover:bg-hover text-left">
-                <span className="grid h-6 w-6 place-items-center rounded-control bg-accent text-on-accent"><Plus size={14} /></span>
-                <span className="flex-1">Add new transaction</span>
-                <CornerDownLeft size={14} className="text-ink-faint opacity-0 group-hover:opacity-100" />
+            <div className="max-h-[50vh] overflow-y-auto p-2">
+              <button onClick={onQuickAdd} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm hover:bg-white/10 text-left">
+                <span className="rounded-lg bg-gradient-to-br from-[#e0b15a] to-[#c88a50] p-1.5"><Plus size={15} /></span>
+                Add new transaction
               </button>
-              {results.length > 0 && <div className={GROUP}>Transactions</div>}
+              {results.length > 0 && <div className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Transactions</div>}
               {results.map((t) => {
                 const c = categories.find((x) => x.id === t.categoryId);
                 return (
                   <button key={t.id} onClick={() => setEditing(t)}
-                    className="w-full flex items-center gap-3 rounded-control px-3 py-1.5 text-sm hover:bg-hover text-left">
-                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} size={14} emoji={c?.emoji} />
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-white/10 text-left">
+                    <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={15} emoji={c?.emoji} />
                     <span className="flex-1 truncate">{t.merchant || c?.name || '—'}</span>
-                    <span className="text-ink-muted text-xs tabular-nums">{t.date}</span>
-                    <span className={t.type === 'income' ? 'text-income font-medium tabular-nums' : 'text-ink-muted tabular-nums'}>
+                    <span className="text-white/40 text-xs">{t.date}</span>
+                    <span className={t.type === 'income' ? 'text-income font-medium' : 'text-white/70'}>
                       {t.type === 'income' ? '+' : '-'}{formatMoney(t.amount, settings.currency)}
                     </span>
                   </button>
                 );
               })}
-              {pages.length > 0 && <div className={GROUP}>Pages</div>}
+              <div className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Pages</div>
               {pages.map((p) => (
                 <button key={p.to} onClick={() => { nav(p.to); onClose(); }}
-                  className="w-full flex items-center gap-3 rounded-control px-3 py-1.5 text-sm hover:bg-hover text-left">
-                  <p.icon size={16} className="text-ink-muted" /> {p.label}
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-white/10 text-left text-white/70">
+                  <p.icon size={16} /> {p.label}
                 </button>
               ))}
             </div>

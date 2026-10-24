@@ -3,8 +3,8 @@ import { RefreshCw, Plus, X } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/Card';
 import { SectionCardHeader } from '@/components/layout/PageHeader';
-import { Input, Select } from '@/components/ui/Field';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 import { fetchCryptoPrices, fetchStockQuote, cryptoId } from '@/lib/prices';
 import { formatMoney, cx } from '@/lib/format';
 
@@ -74,14 +74,14 @@ export function MarketWatch() {
   return (
     <Card className="p-5 mb-4">
       <SectionCardHeader title="Markets" hint="Live prices · USD"
-        action={<IconButton aria-label="Refresh markets" onClick={refresh} disabled={loading}><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></IconButton>} />
-      <div className="divide-y divide-line -mx-1">
+        action={<Button variant="ghost" className="!py-1.5" onClick={refresh} disabled={loading}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></Button>} />
+      <div className="divide-y divide-white/5 -mx-1">
         {list.map((w) => {
           const q = quotes[w.s];
           return (
             <div key={w.s} className="group flex items-center gap-3 px-1 py-2">
-              <div className="w-11 shrink-0 text-sm font-semibold">{w.s}</div>
-              <div className="flex-1 min-w-0 text-xs text-ink-muted truncate">{w.n}{w.k === 'crypto' ? ' · crypto' : ''}</div>
+              <div className="w-11 shrink-0 text-sm font-bold">{w.s}</div>
+              <div className="flex-1 min-w-0 text-xs text-white/45 truncate">{w.n}{w.k === 'crypto' ? ' · crypto' : ''}</div>
               {q ? (
                 <>
                   <div className="tabular-nums font-semibold text-sm w-24 text-right">{formatMoney(q.price, 'USD')}</div>
@@ -90,21 +90,21 @@ export function MarketWatch() {
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-ink-muted w-40 text-right">{w.k === 'stock' && !finnhubKey ? 'needs Finnhub key' : loading ? 'loading…' : '—'}</div>
+                <div className="text-xs text-white/30 w-40 text-right">{w.k === 'stock' && !finnhubKey ? 'needs Finnhub key' : loading ? 'loading…' : '—'}</div>
               )}
-              <IconButton size="sm" onClick={() => remove(w.s)} className="can-hover:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:!text-expense" aria-label={`Remove ${w.s}`}><X size={14} /></IconButton>
+              <button onClick={() => remove(w.s)} className="text-white/20 hover:text-expense opacity-0 group-hover:opacity-100 transition-opacity shrink-0" aria-label={`Remove ${w.s}`}><X size={14} /></button>
             </div>
           );
         })}
       </div>
       <div className="flex gap-2 mt-3">
-        <Select aria-label="Market type" value={kindAdd} onChange={(e) => setKindAdd(e.target.value as 'stock' | 'crypto')} className="!w-auto">
+        <select value={kindAdd} onChange={(e) => setKindAdd(e.target.value as 'stock' | 'crypto')} className="rounded-xl bg-white/5 border border-white/10 px-2 text-sm outline-none">
           <option value="stock">Stock</option><option value="crypto">Crypto</option>
-        </Select>
+        </select>
         <Input value={adding} onChange={(e) => setAdding(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={kindAdd === 'crypto' ? 'Add ticker e.g. SOL' : 'Add ticker e.g. META'} className="flex-1" />
-        <Button variant="ghost" onClick={add} disabled={!adding.trim()} aria-label="Add ticker"><Plus size={16} /></Button>
+        <Button variant="ghost" onClick={add} disabled={!adding.trim()}><Plus size={16} /></Button>
       </div>
-      {needKey && <p className="text-2xs text-ink-muted mt-2">Add a free Finnhub key (below in Holdings) to see live stock prices. Crypto is already live.</p>}
+      {needKey && <p className="text-[11px] text-white/40 mt-2">Add a free Finnhub key (below in Holdings) to see live stock prices. Crypto is already live.</p>}
     </Card>
   );
 }

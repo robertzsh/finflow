@@ -9,3 +9,10 @@ export const SWATCHES = [
 // Household member colours (avatars, payer chips, per-member bars) — theme tokens.
 const MEMBER_COLORS = [1, 2, 3, 4].map((n) => `rgb(var(--member-${n}))`);
 export const memberColor = (idx: number) => MEMBER_COLORS[((idx % MEMBER_COLORS.length) + MEMBER_COLORS.length) % MEMBER_COLORS.length];
+
+/** Semantic accent colour as a CSS colour from the theme tokens. `alpha` gives a
+ *  translucent tint for icon tiles and chips. */
+export function accentColor(accent: string, alpha?: number): string {
+  const token = ['income', 'expense', 'savings', 'invest', 'goal'].includes(accent) ? accent : 'ink-muted';
+  return alpha === undefined ? `rgb(var(--${token}))` : `rgb(var(--${token}) / ${alpha})`;
+}

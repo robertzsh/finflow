@@ -4,12 +4,9 @@ import { Plus, Trash2, Users, User, History, Pencil, Check, X } from 'lucide-rea
 import { isSameMonth, parseISO, format, differenceInCalendarMonths } from 'date-fns';
 import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
-import { PageHeader, SectionHeading } from '@/components/layout/PageHeader';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Segmented } from '@/components/ui/Segmented';
-import { Chip, IconPicker, ColorSwatchPicker } from '@/components/ui/Pickers';
-import { staggered } from '@/lib/motion';
+import { Button } from '@/components/ui/Button';
 import { Input, Label, Select } from '@/components/ui/Field';
 import { ProgressRing } from '@/components/ui/Progress';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
@@ -20,6 +17,11 @@ import { toBase } from '@/lib/finance';
 import type { Goal, CurrencyCode } from '@/types';
 
 const ICONS = ['ShieldCheck', 'Car', 'Plane', 'Home', 'Monitor', 'Gift', 'GraduationCap', 'Heart', 'PiggyBank', 'Gem', 'Baby', 'Briefcase', 'Bike', 'Sofa', 'Dog'];
+const COLORS = [
+  '#a855f7', '#c084fc', '#8b5cf6', '#7c3aed', '#6366f1', '#3b82f6',
+  '#06b6d4', '#10b981', '#22c55e', '#eab308', '#f59e0b', '#f97316',
+  '#ef4444', '#ec4899', '#f472b6', '#14b8a6',
+];
 const GOAL_PRESETS: { name: string; icon: string; color: string }[] = [
   { name: 'Fond de urgență', icon: 'ShieldCheck', color: '#a855f7' },
   { name: 'Cumpărare casă', icon: 'Home', color: '#7c3aed' },
@@ -87,31 +89,31 @@ export default function Goals() {
         const thisMonth = contribs.filter((c) => isSameMonth(parseISO(c.date), NOW)).reduce((s, c) => s + c.amount, 0);
         const lastContrib = contribs.length ? [...contribs].sort((a, b) => (a.date < b.date ? 1 : -1))[0] : null;
         return (
-          <motion.div key={g.id} {...staggered(i, 0.04)}>
+          <motion.div key={g.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
             <Card hover className="p-4 sm:p-5">
               <div className="flex items-start justify-between">
                 <CategoryIcon icon={g.icon} color={g.color} size={22} />
                 <div className="flex items-center gap-0.5">
-                  <IconButton size="sm" onClick={() => setHistoryFor(g)} title="Contribution history" aria-label="Contribution history"><History size={15} /></IconButton>
-                  <IconButton size="sm" onClick={() => setEditFor(g)} title="Edit goal" aria-label="Edit goal"><Pencil size={15} /></IconButton>
-                  <IconButton size="sm" onClick={() => deleteGoal(g.id)} title="Delete goal" aria-label="Delete goal" className="hover:!text-expense"><Trash2 size={15} /></IconButton>
+                  <button onClick={() => setHistoryFor(g)} title="Contribution history" className="text-white/25 hover:text-white p-1"><History size={15} /></button>
+                  <button onClick={() => setEditFor(g)} title="Edit goal" className="text-white/25 hover:text-white p-1"><Pencil size={15} /></button>
+                  <button onClick={() => deleteGoal(g.id)} title="Delete goal" className="text-white/25 hover:text-expense p-1"><Trash2 size={15} /></button>
                 </div>
               </div>
-              <h3 className="text-lg font-semibold leading-snug mt-3 truncate">{g.name}</h3>
-              <p className="text-xs text-ink-muted">Target {formatMoney(g.target, gc)}</p>
+              <h3 className="font-semibold mt-3 truncate">{g.name}</h3>
+              <p className="text-xs text-white/40">Target {formatMoney(g.target, gc)}</p>
               <div className="flex items-center justify-center my-4">
                 <ProgressRing value={pct} color={g.color} label={pct >= 100 ? 'Done!' : 'saved'} />
               </div>
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="rounded-control bg-surface-2 border border-line py-2 min-w-0"><div className="metric-value font-semibold text-goal truncate">{formatMoney(g.saved, gc)}</div><div className="text-ink-muted">saved</div></div>
-                <div className="rounded-control bg-surface-2 border border-line py-2 min-w-0"><div className="metric-value font-semibold truncate">{formatMoney(remaining, gc)}</div><div className="text-ink-muted">to go</div></div>
+                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="metric-value font-semibold text-goal truncate">{formatMoney(g.saved, gc)}</div><div className="text-white/40">saved</div></div>
+                <div className="rounded-lg bg-white/5 py-2 min-w-0"><div className="metric-value font-semibold truncate">{formatMoney(remaining, gc)}</div><div className="text-white/40">to go</div></div>
               </div>
-              <p className="text-xs text-ink-muted text-center mt-3">
+              <p className="text-xs text-white/40 text-center mt-3">
                 {monthly > 0 && <>at {formatMoney(monthly, gc, { compact: monthly > 9999 })}/mo · </>}
-                <span className="text-ink-muted">{goalEta(g, rate)}</span>
+                <span className="text-white/70">{goalEta(g, rate)}</span>
               </p>
-              {thisMonth > 0 && <p className="text-2xs text-goal text-center mt-1">+{formatMoney(thisMonth, cur)} added this month</p>}
-              {lastContrib && <p className="text-3xs text-ink-muted text-center">last added {format(parseISO(lastContrib.date), 'd MMM yyyy')}</p>}
+              {thisMonth > 0 && <p className="text-[11px] text-goal text-center mt-1">+{formatMoney(thisMonth, cur)} added this month</p>}
+              {lastContrib && <p className="text-[10px] text-white/35 text-center">last added {format(parseISO(lastContrib.date), 'd MMM yyyy')}</p>}
               <Button variant="ghost" className="w-full mt-3" onClick={() => setContribFor(g)}>Add money</Button>
             </Card>
           </motion.div>
@@ -134,19 +136,19 @@ export default function Goals() {
         <div className="space-y-6">
           {family.length > 0 && (
             <div>
-              <SectionHeading icon={<Users size={17} />} className="mb-3">Family goals</SectionHeading>
+              <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-white/70"><Users size={15} /> Family goals</div>
               {renderGrid(family)}
             </div>
           )}
           {mine.length > 0 && (
             <div>
-              <SectionHeading icon={<User size={17} />} className="mb-3">Your goals</SectionHeading>
+              <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-white/70"><User size={15} /> Your goals</div>
               {renderGrid(mine)}
             </div>
           )}
           {partners.map(({ member, list }) => list.length > 0 && (
             <div key={member.id}>
-              <SectionHeading icon={<User size={17} />} className="mb-3">{member.name}'s goals</SectionHeading>
+              <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-white/70"><User size={15} /> {member.name}'s goals</div>
               {renderGrid(list)}
             </div>
           ))}
@@ -179,7 +181,7 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
   const [currency, setCurrency] = useState<CurrencyCode>((existing?.currency as CurrencyCode) ?? base);
   const [scope, setScope] = useState<'family' | 'personal'>(existing?.owner ? 'personal' : 'family');
   const [icon, setIcon] = useState(existing?.icon ?? 'Target');
-  const [color, setColor] = useState(existing?.color ?? '#a855f7');
+  const [color, setColor] = useState(existing?.color ?? COLORS[0]);
   const editing = !!existing;
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit goal' : 'New savings goal'}>
@@ -187,11 +189,13 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
         {!editing && (
           <div>
             <Label>Quick start</Label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {GOAL_PRESETS.map((p) => (
-                <Chip key={p.name} selected={name === p.name} onClick={() => { setName(p.name); setIcon(p.icon); setColor(p.color); }}>
+                <button key={p.name} type="button"
+                  onClick={() => { setName(p.name); setIcon(p.icon); setColor(p.color); }}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${name === p.name ? 'border-goal bg-goal/20' : 'border-white/10 bg-white/5'}`}>
                   <CategoryIcon icon={p.icon} color={p.color} size={13} bg={false} /> {p.name}
-                </Chip>
+                </button>
               ))}
             </div>
           </div>
@@ -199,13 +203,15 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
         {isHousehold && (
           <div>
             <Label>Who's this for?</Label>
-            <Segmented fill ariaLabel="Who's this for?" value={scope} onChange={setScope}
-              options={[{ value: 'family', label: 'Family', icon: <Users size={15} /> }, { value: 'personal', label: 'Just me', icon: <User size={15} /> }]} />
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setScope('family')} className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm border ${scope === 'family' ? 'border-goal bg-goal/20 text-white' : 'border-white/10 bg-white/5 text-white/60'}`}><Users size={15} /> Family</button>
+              <button type="button" onClick={() => setScope('personal')} className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm border ${scope === 'personal' ? 'border-goal bg-goal/20 text-white' : 'border-white/10 bg-white/5 text-white/60'}`}><User size={15} /> Just me</button>
+            </div>
           </div>
         )}
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2"><Label>Goal name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Emergency Fund" /></div>
-          <div><Label>Currency</Label><Select aria-label="Goal currency" value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{GOAL_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
+          <div><Label>Currency</Label><Select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>{GOAL_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Target amount</Label><Input type="text" inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="0,00" /></div>
@@ -213,12 +219,20 @@ function GoalModal({ open, onClose, onSubmit, isHousehold, existing }: { open: b
         </div>
         <div><Label>Planned monthly amount (for the ETA)</Label><Input type="text" inputMode="decimal" value={contrib} onChange={(e) => setContrib(e.target.value)} placeholder="0,00" /></div>
         <div><Label>Icon</Label>
-          <IconPicker icons={ICONS} value={icon} onChange={setIcon} color={color} />
+          <div className="flex flex-wrap gap-2">
+            {ICONS.map((ic) => (
+              <button key={ic} onClick={() => setIcon(ic)} className={`rounded-lg p-2 border ${icon === ic ? 'border-goal bg-goal/20' : 'border-white/10 bg-white/5'}`}>
+                <CategoryIcon icon={ic} color={color} size={16} bg={false} />
+              </button>
+            ))}
+          </div>
         </div>
         <div><Label>Colour</Label>
-          <ColorSwatchPicker value={color} onChange={setColor} />
+          <div className="flex flex-wrap gap-2">
+            {COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}
+          </div>
         </div>
-        {editing && <p className="text-2xs text-ink-muted">Editing the target or saved amount here adjusts the goal directly — it isn't logged in the contribution history. Use “Add money” to record a dated contribution.</p>}
+        {editing && <p className="text-[11px] text-white/40">Editing the target or saved amount here adjusts the goal directly — it isn't logged in the contribution history. Use “Add money” to record a dated contribution.</p>}
         <Button className="w-full" disabled={!name.trim() || !(parseAmount(target) > 0)} onClick={() => onSubmit({ name: name.trim(), target: parseAmount(target) || 0, saved: parseAmount(saved) || 0, monthlyContribution: parseAmount(contrib) || 0, icon, color, currency, owner: isHousehold && scope === 'personal' ? (userId ?? undefined) : undefined })}>
           {editing ? 'Save changes' : 'Create goal'}
         </Button>
@@ -252,7 +266,7 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
   return (
     <Modal open={!!goal} onClose={onClose} title={`${g.name} — contribution history`}>
       <div className="space-y-4" onMouseLeave={() => setHovIdx(null)}>
-        <p className="text-sm text-ink-muted">
+        <p className="text-sm text-white/50">
           Saved so far: <span className="text-goal font-semibold">{formatMoney(g.saved, gc)}</span>
           {all.length > 0 && <> · {all.length} logged contribution{all.length > 1 ? 's' : ''}</>}
         </p>
@@ -273,23 +287,23 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
                   const showActions = hovIdx === idx || editing;
                   return (
                     <div key={idx} onMouseEnter={() => setHovIdx(idx)} onMouseMove={() => { if (hovIdx !== idx) setHovIdx(idx); }}
-                      className="flex items-center gap-2 text-xs rounded-control bg-surface-2 border border-line px-3 py-2">
-                      <span className="text-ink-muted flex-1 truncate">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
+                      className="flex items-center gap-2 text-xs rounded-lg bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/60 flex-1 truncate">{format(parseISO(c.date), hasTime ? 'EEE d MMM yyyy · HH:mm' : 'EEE d MMM yyyy')}{nameOf(c.by) ? ` · ${nameOf(c.by)}` : ''}</span>
                       {editing ? (
                         <>
                           <Input type="text" inputMode="decimal" value={editVal} onChange={(e) => setEditVal(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(idx); if (e.key === 'Escape') setEditIdx(null); }}
                             aria-label="Contribution amount" className="!w-28 !py-1 text-right" autoFocus />
-                          <span className="text-ink-muted">{gc}</span>
-                          <IconButton size="sm" onClick={() => saveEdit(idx)} aria-label="Save" className="!text-income"><Check size={14} /></IconButton>
-                          <IconButton size="sm" onClick={() => setEditIdx(null)} aria-label="Cancel"><X size={14} /></IconButton>
+                          <span className="text-white/40">{gc}</span>
+                          <button onClick={() => saveEdit(idx)} className="text-income hover:opacity-80 p-1" aria-label="Save"><Check size={14} /></button>
+                          <button onClick={() => setEditIdx(null)} className="text-white/40 hover:text-white p-1" aria-label="Cancel"><X size={14} /></button>
                         </>
                       ) : (
                         <>
-                          <span className="font-medium text-ink tabular-nums">+{formatMoney(toGoal(c.amount), gc)}</span>
-                          <div className={cx('flex items-center transition-opacity focus-within:opacity-100 focus-within:pointer-events-auto', showActions ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
-                            <IconButton size="sm" onClick={() => { setEditIdx(idx); setEditVal(String(Math.round(toGoal(c.amount) * 100) / 100)); }} aria-label="Edit contribution"><Pencil size={13} /></IconButton>
-                            <IconButton size="sm" onClick={() => removeContribution(g.id, idx)} aria-label="Delete contribution" className="hover:!text-expense"><Trash2 size={13} /></IconButton>
+                          <span className="font-medium text-white/80 tabular-nums">+{formatMoney(toGoal(c.amount), gc)}</span>
+                          <div className={cx('flex items-center transition-opacity', showActions ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
+                            <button onClick={() => { setEditIdx(idx); setEditVal(String(Math.round(toGoal(c.amount) * 100) / 100)); }} className="text-white/30 hover:text-white p-1" aria-label="Edit contribution"><Pencil size={13} /></button>
+                            <button onClick={() => removeContribution(g.id, idx)} className="text-white/30 hover:text-expense p-1" aria-label="Delete contribution"><Trash2 size={13} /></button>
                           </div>
                         </>
                       )}
@@ -301,13 +315,13 @@ function GoalHistoryModal({ goal, onClose, cur, fx }: { goal: Goal | null; onClo
           );
         })}
         {opening > 0.01 && (
-          <div className="flex items-center justify-between text-xs rounded-control bg-surface-2 px-3 py-2 border border-line">
-            <span className="text-ink-muted">Starting amount (set when the goal was created)</span>
-            <span className="font-medium text-ink-muted">{formatMoney(opening, gc)}</span>
+          <div className="flex items-center justify-between text-xs rounded-lg bg-white/[0.03] px-3 py-2 border border-white/5">
+            <span className="text-white/50">Starting amount (set when the goal was created)</span>
+            <span className="font-medium text-white/70">{formatMoney(opening, gc)}</span>
           </div>
         )}
         {all.length === 0 && opening <= 0.01 && (
-          <p className="text-sm text-ink-muted">No money added yet. Use “Add money” to record your first dated contribution.</p>
+          <p className="text-sm text-white/50">No money added yet. Use “Add money” to record your first dated contribution.</p>
         )}
       </div>
     </Modal>
@@ -329,7 +343,7 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
   return (
     <Modal open={!!goal} onClose={onClose} title={`Add money to ${goal.name}`}>
       <div className="space-y-4">
-        <p className="text-sm text-ink-muted">Move money into this goal. Currently {formatMoney(goal.saved, gc)} of {formatMoney(goal.target, gc)}.</p>
+        <p className="text-sm text-white/50">Move money into this goal. Currently {formatMoney(goal.saved, gc)} of {formatMoney(goal.target, gc)}.</p>
         <div>
           <Label>Amount you're adding</Label>
           <div className="flex gap-2">
@@ -339,12 +353,12 @@ function ContributeModal({ goal, onClose, onContribute, cur, fx }: { goal: Goal 
             </Select>
           </div>
           {inCur !== gc && raw > 0 && (
-            <p className="text-xs text-ink-muted mt-1.5">≈ <span className="text-goal font-medium">{formatMoney(inGoal, gc)}</span> toward the goal (at {fx[inCur]} {cur}/{inCur})</p>
+            <p className="text-xs text-white/50 mt-1.5">≈ <span className="text-goal font-medium">{formatMoney(inGoal, gc)}</span> toward the goal (at {fx[inCur]} {cur}/{inCur})</p>
           )}
         </div>
-        <div className="flex gap-2">{presets.map((v) => <button key={v} type="button" onClick={() => setAmt(String(v))} className="flex-1 rounded-control border border-line bg-surface hover:bg-hover py-1.5 text-sm tabular-nums transition-colors">{currencySymbol(inCur)}{v}</button>)}</div>
+        <div className="flex gap-2">{presets.map((v) => <button key={v} type="button" onClick={() => setAmt(String(v))} className="flex-1 rounded-lg bg-white/5 hover:bg-white/10 py-2 text-sm">{currencySymbol(inCur)}{v}</button>)}</div>
         <Button className="w-full" disabled={baseAmount <= 0} onClick={() => onContribute(baseAmount)}>Add {raw > 0 ? formatMoney(raw, inCur) : 'money'}</Button>
-        <p className="text-2xs text-ink-muted">Recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact. Foreign amounts convert at today's rate.</p>
+        <p className="text-[11px] text-white/40">Recorded as money set aside — it doesn't count as spending, so your monthly savings figure stays intact. Foreign amounts convert at today's rate.</p>
       </div>
     </Modal>
   );

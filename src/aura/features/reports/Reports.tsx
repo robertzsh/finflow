@@ -1,0 +1,179 @@
+import { useMemo, useState } from 'react';
+import { FileText, FileSpreadsheet, FileDown } from 'lucide-react';
+import { startOfMonth, subMonths, format, parseISO, isSameMonth, getYear } from 'date-fns';
+import { useStore } from '@/store/useStore';
+import { Page } from '@/aura/components/PageTransition';
+import { PageHeader, SectionCardHeader } from '@/aura/components/layout/PageHeader';
+import { Card } from '@/aura/components/ui/Card';
+import { ProgressBar } from '@/aura/components/ui/Progress';
+import { Button } from '@/aura/components/ui/Button';
+import { Select } from '@/aura/components/ui/Field';
+import { ComparisonBars, DonutChart } from '@/aura/components/charts/ChartKit';
+import { monthStats, spendingByCategory, cashFlowSeries, lifetimeTotals, accountBalance } from '@/lib/finance';
+import { formatMoney } from '@/lib/format';
+import { exportCSV, exportXLSX, exportPDF, exportMonthlyReportPDF } from '@/lib/export';
+import { buildMonthlyReport } from '@/lib/report';
+import { transferredOut } from '@/lib/savings';
+import { useToday } from '@/hooks/useToday';
+import { FileBarChart } from 'lucide-react';
+
+type ReportType = 'monthly' | 'yearly' | 'category' | 'merchant' | 'cashflow' | 'savings' | 'balance';
+
+export default function Reports() {
+  const { transactions, categories, settings, cloud, authed, members, savingsPots } = useStore();
+  const REF = useToday();
+  const cur = settings.currency;
+  const opening = cloud && authed ? members.reduce((a, m) => a + m.openingBalance, 0) : settings.openingBalance;
+  const [report, setReport] = useState<ReportType>('monthly');
+  const [monthSel, setMonthSel] = useState(format(REF, 'yyyy-MM'));
+
+  const monthOptions = useMemo(() =>
+    Array.from({ length: 8 }, (_, i) => format(startOfMonth(subMonths(REF, i)), 'yyyy-MM')), [REF]);
+
+  const refDate = parseISO(`${monthSel}-01`);
+
+  const scoped = useMemo(() => {
+    if (report === 'yearly') return transactions.filter((t) => getYear(parseISO(t.date)) === getYear(refDate));
+    if (report === 'monthly' || report === 'category' || report === 'merchant') return transactions.filter((t) => isSameMonth(parseISO(t.date), refDate));
+    return transactions;
+  }, [transactions, report, refDate]);
+
+  const stats = useMemo(() => monthStats(transactions, refDate), [transactions, refDate]);
+  const byCat = useMemo(() => spendingByCategory(transactions, categories, refDate), [transactions, categories, refDate]);
+  const cf = useMemo(() => cashFlowSeries(transactions, 8), [transactions]);
+
+  const byMerchant = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of scoped.filter((x) => x.type === 'expense')) map.set(t.merchant, (map.get(t.merchant) ?? 0) + t.amount);
+    return [...map.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 12);
+  }, [scoped]);
+
+  const life = useMemo(() => lifetimeTotals(transactions), [transactions]);
+  const transferred = useMemo(() => transferredOut(savingsPots), [savingsPots]);
+  const currentBalance = accountBalance(transactions, opening, transferred);
+
+  const title = {
+    monthly: 'Monthly report', yearly: 'Yearly report', category: 'Category report',
+    merchant: 'Merchant report', cashflow: 'Cash flow report', savings: 'Savings report', balance: 'Balance breakdown',
+  }[report];
+
+  return (
+    <Page>
+      <PageHeader title="Reports" subtitle="Analyse and export your financial data"
+        action={
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="ghost" onClick={() => exportCSV(scoped, categories, report)}><FileDown size={16} /> CSV</Button>
+            <Button variant="ghost" onClick={() => exportXLSX(scoped, categories, report)}><FileSpreadsheet size={16} /> Excel</Button>
+            <Button variant="ghost" onClick={() => exportPDF(scoped, categories, title, `${monthSel} · FinFlow`)}><FileText size={16} /> PDF</Button>
+            <Button onClick={() => exportMonthlyReportPDF(buildMonthlyReport(refDate, { transactions, categories, currency: cur, opening, members, transferred }))}>
+              <FileBarChart size={16} /> Full month report
+            </Button>
+          </div>
+        } />
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Select aria-label="Report type" value={report} onChange={(e) => setReport(e.target.value as ReportType)} className="!w-auto">
+          <option value="monthly">Monthly report</option>
+          <option value="yearly">Yearly report</option>
+          <option value="category">Category report</option>
+          <option value="merchant">Merchant report</option>
+          <option value="cashflow">Cash flow report</option>
+          <option value="savings">Savings report</option>
+          <option value="balance">Balance breakdown</option>
+        </Select>
+        {(report === 'monthly' || report === 'category' || report === 'merchant') && (
+          <Select aria-label="Report month" value={monthSel} onChange={(e) => setMonthSel(e.target.value)} className="!w-auto">
+            {monthOptions.map((m) => <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>)}
+          </Select>
+        )}
+      </div>
+
+      {report !== 'balance' && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          {[
+            { label: 'Income', value: formatMoney(stats.income, cur), cls: 'text-income' },
+            { label: 'Expenses', value: formatMoney(stats.expense, cur), cls: 'text-expense' },
+            { label: 'Net', value: formatMoney(stats.net, cur, { sign: true }), cls: stats.net >= 0 ? 'text-income' : 'text-expense' },
+            { label: 'Savings rate', value: `${stats.savingsRate.toFixed(0)}%`, cls: 'text-savings' },
+          ].map((x) => (
+            <Card key={x.label} className="p-4">
+              <p className="metric-label">{x.label}</p>
+              <p className={`metric-value font-display text-xl sm:text-2xl font-semibold mt-2 truncate ${x.cls}`}>{x.value}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {report === 'balance' && (
+        <Card className="p-5 mb-4">
+          <SectionCardHeader title="How your balance is calculated" hint="Starting balances, plus every income, minus every expense, all-time" />
+          <div className="space-y-2 text-sm max-w-xl">
+            {(cloud && authed ? members : [{ id: 'me', name: settings.name || 'You', openingBalance: settings.openingBalance }]).map((m) => (
+              <div key={m.id} className="flex items-center justify-between text-ink-muted">
+                <span>Starting balance · {m.name}</span>
+                <span className="tabular-nums">{formatMoney(m.openingBalance, cur)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between font-medium border-t border-line pt-2">
+              <span>Total starting balance</span><span className="tabular-nums">{formatMoney(opening, cur)}</span>
+            </div>
+            <div className="flex items-center justify-between text-income">
+              <span>+ All income logged</span><span className="tabular-nums">{formatMoney(life.income, cur)}</span>
+            </div>
+            <div className="flex items-center justify-between text-expense">
+              <span>− All expenses logged</span><span className="tabular-nums">−{formatMoney(life.expense, cur)}</span>
+            </div>
+            {transferred !== 0 && (
+              <div className="flex items-center justify-between text-savings">
+                <span>{transferred > 0 ? '−' : '+'} Net moved to Economii</span><span className="tabular-nums">{transferred > 0 ? '−' : ''}{formatMoney(Math.abs(transferred), cur)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between font-display text-lg font-semibold border-t border-line pt-2 mt-1">
+              <span>Current balance</span><span className="tabular-nums">{formatMoney(currentBalance, cur)}</span>
+            </div>
+          </div>
+          <p className="text-2xs text-ink-muted mt-3">
+            If this looks off, check each person's <span className="text-ink-muted">starting balance</span> in Settings, or delete any duplicate income/expense in Transactions. Every transaction ever logged affects this figure — not just this month.
+          </p>
+        </Card>
+      )}
+
+      {(report === 'monthly' || report === 'cashflow' || report === 'savings' || report === 'yearly') && (
+        <Card className="p-5 mb-4"><SectionCardHeader title="Income vs expenses" hint="Last 8 months" /><ComparisonBars data={cf} /></Card>
+      )}
+
+      {(report === 'monthly' || report === 'category') && (
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Card className="p-5"><SectionCardHeader title="Spending by category" /><DonutChart data={byCat.slice(0, 8)} centerLabel="Spent" centerValue={formatMoney(byCat.reduce((a, c) => a + c.value, 0), cur, { compact: true })} /></Card>
+          <Card className="p-5">
+            <SectionCardHeader title="Category breakdown" />
+            <div className="space-y-2 max-h-[280px] overflow-y-auto no-scrollbar">
+              {byCat.map((c) => (
+                <div key={c.id} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: c.color }} />{c.name}</span>
+                  <span className="tabular-nums font-medium">{formatMoney(c.value, cur)}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {report === 'merchant' && (
+        <Card className="p-5">
+          <SectionCardHeader title="Top merchants" />
+          <div className="space-y-2">
+            {byMerchant.map((m, i) => (
+              <div key={m.name} className="flex items-center gap-3 text-sm">
+                <span className="text-ink-muted tabular-nums w-5">{i + 1}</span>
+                <span className="flex-1 truncate">{m.name}</span>
+                <div className="w-32 hidden sm:block"><ProgressBar value={(m.value / byMerchant[0].value) * 100} /></div>
+                <span className="tabular-nums font-medium w-20 text-right">{formatMoney(m.value, cur)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </Page>
+  );
+}
