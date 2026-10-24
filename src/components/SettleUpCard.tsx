@@ -30,16 +30,16 @@ export function SettleUpCard() {
   return (
     <Card className="p-5 mt-4" delay={0.1}>
       <div className="flex items-center gap-2 mb-1">
-        <ArrowLeftRight size={18} className="text-blue-300" />
-        <h3 className="font-bold">Settle up · {format(new Date(), 'MMMM')}</h3>
+        <ArrowLeftRight size={18} className="text-accent" />
+        <h3 className="section-title">Settle up · {format(new Date(), 'MMMM')}</h3>
       </div>
 
       {!s.owe ? (
-        <p className="text-sm text-white/60 mt-1">You're even this month — each of you covered your half ({formatMoney(s.fairShare, cur)}).</p>
+        <p className="text-sm text-ink-muted mt-1">You're even this month — each of you covered your half ({formatMoney(s.fairShare, cur)}).</p>
       ) : settled ? (
         <div className="flex items-center justify-between mt-2">
           <p className="text-sm text-income flex items-center gap-1.5"><Check size={15} /> Settled — {name(s.owe.fromId)} paid {name(s.owe.toId)} {formatMoney(s.owe.amount, cur)}.</p>
-          <button onClick={undo} className="text-xs text-white/40 hover:text-white/70">Undo</button>
+          <Button variant="subtle" size="sm" onClick={undo}>Undo</Button>
         </div>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
@@ -47,11 +47,11 @@ export function SettleUpCard() {
             <span className="font-semibold">{name(s.owe.fromId)}</span> owes <span className="font-semibold">{name(s.owe.toId)}</span>{' '}
             <span className="font-semibold text-expense">{formatMoney(s.owe.amount, cur)}</span>
           </p>
-          <Button className="!py-2" onClick={mark}><Check size={15} /> Mark settled</Button>
+          <Button size="sm" onClick={mark}><Check size={15} /> Mark settled</Button>
         </div>
       )}
 
-      <p className="text-[11px] text-white/40 mt-3">
+      <p className="text-2xs text-ink-muted mt-3">
         Shared costs are split 50/50. This month you each logged: {name(memberIds[0])} {formatMoney(s.paid[memberIds[0]], cur)} · {name(memberIds[1])} {formatMoney(s.paid[memberIds[1]], cur)} (fair share {formatMoney(s.fairShare, cur)} each).
       </p>
     </Card>

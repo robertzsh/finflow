@@ -1,9 +1,13 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Sidebar, MobileNav } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { PageCover } from '@/components/layout/PageHeader';
+import { Aura } from '@/components/ui/Aura';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { CommandPalette } from '@/components/CommandPalette';
 import { TransactionModal } from '@/components/TransactionModal';
 import { LockScreen } from '@/components/LockScreen';
@@ -29,7 +33,22 @@ const Reports = lazy(() => import('@/features/reports/Reports'));
 const SettingsPage = lazy(() => import('@/features/settings/Settings'));
 
 function PageLoader() {
-  return <div className="flex items-center justify-center py-24 text-white/40 text-sm">Loading…</div>;
+  return <PageSkeleton />;
+}
+
+/** Boot splash: the aura orb with the FinFlow mark while data loads. */
+function Splash() {
+  return (
+    <div className="app-bg min-h-[100dvh] flex items-center justify-center" role="status">
+      <div className="relative grid h-40 w-40 place-items-center">
+        <Aura variant="orb" drift className="absolute inset-0" />
+        <span className="relative grid h-12 w-12 place-items-center rounded-[12px] bg-accent text-on-accent shadow-card animate-pulse">
+          <Sparkles size={22} />
+        </span>
+      </div>
+      <span className="sr-only">Loading FinFlow…</span>
+    </div>
+  );
 }
 
 export default function App() {
@@ -78,19 +97,11 @@ export default function App() {
 
   // Cloud mode: show a login screen until signed in.
   if (cloud) {
-    if (!authReady) {
-      return <div className="app-bg min-h-[100dvh] flex items-center justify-center"><div className="animate-pulse text-white/40">Loading FinFlow…</div></div>;
-    }
+    if (!authReady) return <Splash />;
     if (!authed) return <div className="app-bg min-h-[100dvh]"><Auth /></div>;
   }
 
-  if (!ready) {
-    return (
-      <div className="app-bg min-h-[100dvh] flex items-center justify-center">
-        <div className="animate-pulse text-white/40">Loading FinFlow…</div>
-      </div>
-    );
-  }
+  if (!ready) return <Splash />;
 
   // Onboarding only applies to local mode; PIN lock applies in both modes.
   if (!cloud && !settings.onboarded) return <div className="app-bg min-h-[100dvh]"><Onboarding /></div>;
@@ -98,9 +109,10 @@ export default function App() {
 
   return (
     <div className="app-bg min-h-[100dvh] flex">
-      <Sidebar />
-      <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-8">
+      <Sidebar onQuickAdd={() => setQuickAdd(true)} />
+      <main className="flex-1 min-w-0 px-4 sm:px-6 pb-24 lg:pb-12">
         <Topbar onQuickAdd={() => setQuickAdd(true)} onSearch={() => setPaletteOpen(true)} />
+        <PageCover />
         <AnimatePresence mode="wait">
           <Suspense fallback={<PageLoader />}>
           <Routes key={privacy ? 'priv' : 'norm'}>

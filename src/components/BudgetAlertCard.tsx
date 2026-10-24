@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PiggyBank, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/Card';
+import { Callout } from '@/components/ui/Callout';
+import { ProgressBar } from '@/components/ui/Progress';
 import { budgetProgress } from '@/lib/finance';
 import { formatMoney } from '@/lib/format';
 import { format } from 'date-fns';
@@ -44,16 +46,16 @@ export function BudgetAlertCard() {
     <Card className="p-5 mt-4" delay={0.1}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <PiggyBank size={18} className="text-emerald-300" />
-          <h3 className="font-bold">Budgets</h3>
+          <PiggyBank size={18} className="text-accent" />
+          <h3 className="section-title">Budgets</h3>
         </div>
-        <button onClick={() => nav('/budgets')} className="text-xs text-brand hover:underline">Manage</button>
+        <button onClick={() => nav('/budgets')} className="text-xs font-medium text-accent-ink hover:underline underline-offset-2">Manage</button>
       </div>
 
       {over.length > 0 && (
-        <div className="flex items-center gap-2 rounded-xl bg-expense/15 border border-expense/30 text-expense px-3 py-2 text-sm mb-3">
-          <AlertTriangle size={15} /> {over.length} {over.length === 1 ? 'budget is' : 'budgets are'} over the limit this month.
-        </div>
+        <Callout tone="red" icon={<AlertTriangle size={15} />} className="mb-3">
+          <span className="text-expense">{over.length} {over.length === 1 ? 'budget is' : 'budgets are'} over the limit this month.</span>
+        </Callout>
       )}
 
       <div className="space-y-2.5">
@@ -61,18 +63,16 @@ export function BudgetAlertCard() {
           const pct = Math.min(100, p.pct);
           const isOver = p.spent > p.budget.amount;
           const near = !isOver && p.pct >= 80;
-          const bar = isOver ? '#f43f5e' : near ? '#eab308' : '#10b981';
+          const bar = isOver ? 'rgb(var(--expense))' : near ? 'rgb(var(--warn))' : 'rgb(var(--income))';
           return (
             <div key={p.budget.id}>
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="truncate">{p.category?.emoji ? `${p.category.emoji} ` : ''}{p.category?.name ?? 'Category'}</span>
-                <span className={`tabular-nums text-xs ${isOver ? 'text-expense font-medium' : 'text-white/50'}`}>
+                <span className={`tabular-nums text-xs ${isOver ? 'text-expense font-medium' : 'text-ink-muted'}`}>
                   {formatMoney(p.spent, cur)} / {formatMoney(p.budget.amount, cur)}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: bar }} />
-              </div>
+              <ProgressBar value={pct} color={bar} />
             </div>
           );
         })}

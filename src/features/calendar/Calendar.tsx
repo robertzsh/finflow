@@ -9,13 +9,15 @@ import { useStore } from '@/store/useStore';
 import { Page } from '@/components/PageTransition';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
+import { Badge, tagStyle } from '@/components/ui/Badge';
+import { staggered } from '@/lib/motion';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
 import { TransactionModal } from '@/components/TransactionModal';
 import { Plus } from 'lucide-react';
 import { upcomingOccurrences } from '@/lib/recurring';
 import { liveAmount } from '@/lib/finance';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, cx } from '@/lib/format';
 import type { Transaction } from '@/types';
 import { useToday } from '@/hooks/useToday';
 
@@ -78,19 +80,20 @@ export default function Calendar() {
       <PageHeader title="Calendar" subtitle="Tap a day to see its transactions · bills & subscriptions projected ahead" />
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <Card className="p-4 lg:col-span-2">
+        <Card className="p-4 sm:p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">{format(month, 'MMMM yyyy')}</h3>
-            <div className="flex gap-1">
-              <button onClick={() => setMonth((m) => addMonths(m, -1))} className="rounded-lg bg-white/5 hover:bg-white/10 p-1.5"><ChevronLeft size={16} /></button>
-              <button onClick={() => setMonth(startOfMonth(TODAY))} className="rounded-lg bg-white/5 hover:bg-white/10 px-3 text-xs">Today</button>
-              <button onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded-lg bg-white/5 hover:bg-white/10 p-1.5"><ChevronRight size={16} /></button>
+            <h2 className="font-display text-xl font-semibold">{format(month, 'MMMM yyyy')}</h2>
+            <div className="flex items-center gap-0.5">
+              <IconButton size="sm" aria-label="Previous month" onClick={() => setMonth((m) => addMonths(m, -1))}><ChevronLeft size={16} /></IconButton>
+              <Button variant="subtle" size="sm" onClick={() => setMonth(startOfMonth(TODAY))}>Today</Button>
+              <IconButton size="sm" aria-label="Next month" onClick={() => setMonth((m) => addMonths(m, 1))}><ChevronRight size={16} /></IconButton>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-white/40 mb-1">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <div key={d}>{d}</div>)}
+          {/* Notion calendar view: hairline grid, day number top-right, today in an accent circle */}
+          <div className="grid grid-cols-7 text-right text-2xs text-ink-muted pb-1.5">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <div key={d} className="px-1.5">{d}</div>)}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 border-l border-t border-line rounded-control overflow-hidden">
             {days.map((d) => {
               const key = format(d, 'yyyy-MM-dd');
               const items = itemsByDate.get(key) ?? [];
@@ -99,30 +102,34 @@ export default function Calendar() {
               const isSel = selected === key;
               const dayNet = items.reduce((a, i) => a + (i.type === 'income' ? i.amount : -i.amount), 0);
               return (
-                <button key={key} onClick={() => setSelected(key)}
-                  className={`min-h-[52px] sm:min-h-[74px] rounded-lg p-1 sm:p-1.5 border text-left transition ${isSel ? 'border-blue-400 bg-blue-500/15' : today ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/5'} ${inMonth ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'opacity-30'}`}>
-                  <div className={`text-[11px] sm:text-xs mb-1 ${today ? 'text-brand font-bold' : 'text-white/50'}`}>{format(d, 'd')}</div>
-                  {/* Mobile: compact dots. sm+: labelled chips */}
+                <button key={key} onClick={() => setSelected(key)} aria-pressed={isSel} aria-label={format(d, 'EEEE d MMMM')}
+                  className={cx('flex flex-col justify-start min-h-[56px] sm:min-h-[84px] border-r border-b border-line p-1 sm:p-1.5 text-left transition-colors focus-visible:relative focus-visible:z-10',
+                    isSel ? 'bg-accent-soft' : inMonth ? 'bg-surface hover:bg-hover' : 'bg-surface-2 hover:bg-hover')}>
+                  <div className="flex justify-end mb-0.5">
+                    <span className={cx('grid h-5 min-w-5 place-items-center rounded-full px-1 text-2xs sm:text-xs tabular-nums',
+                      today ? 'bg-accent-strong text-on-accent font-semibold' : inMonth ? 'text-ink' : 'text-ink-faint')}>{format(d, 'd')}</span>
+                  </div>
+                  {/* Mobile: compact dots. sm+: labelled tags */}
                   <div className="flex flex-wrap gap-0.5 sm:hidden">
                     {items.slice(0, 4).map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);
-                      return <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: c?.color ?? '#888', opacity: e.projected ? 0.6 : 1 }} />;
+                      return <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: c?.color ?? '#94a3b8', opacity: e.projected ? 0.6 : 1 }} />;
                     })}
                   </div>
                   <div className="space-y-0.5 hidden sm:block">
                     {items.slice(0, 2).map((e, i) => {
                       const c = categories.find((x) => x.id === e.categoryId);
                       return (
-                        <div key={i} className="flex items-center gap-1 rounded px-1 py-0.5 text-[9px] truncate"
-                          style={{ background: `${c?.color ?? '#888'}22`, color: c?.color ?? '#aaa', opacity: e.projected ? 0.7 : 1 }}>
-                          <span className="truncate">{c?.emoji ? c.emoji + ' ' : ''}{e.merchant}</span>
+                        <div key={i} className={cx('rounded-tag px-1 py-px text-3xs leading-4 truncate', e.projected && 'opacity-70')}
+                          style={tagStyle(c?.color ?? '#94a3b8')}>
+                          {c?.emoji ? c.emoji + ' ' : ''}{e.merchant}
                         </div>
                       );
                     })}
-                    {items.length > 2 && <div className="text-[9px] text-white/40 px-1">+{items.length - 2} more</div>}
+                    {items.length > 2 && <div className="text-3xs text-ink-muted px-1">+{items.length - 2} more</div>}
                   </div>
                   {items.length > 0 && (
-                    <div className={`mt-0.5 text-[9px] font-semibold truncate hidden sm:block ${dayNet >= 0 ? 'text-income' : 'text-white/50'}`}>
+                    <div className={cx('mt-0.5 text-3xs font-semibold tabular-nums truncate hidden sm:block', dayNet >= 0 ? 'text-income' : 'text-ink-muted')}>
                       {dayNet >= 0 ? '+' : '−'}{formatMoney(Math.abs(dayNet), cur, { compact: true })}
                     </div>
                   )}
@@ -137,35 +144,35 @@ export default function Calendar() {
           {selected ? (
             <>
               <div className="flex items-center justify-between mb-3">
-                <button onClick={() => setSelected(null)} className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white">
+                <button onClick={() => setSelected(null)} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink">
                   <ArrowLeft size={15} /> {format(parseISO(selected), 'EEE d MMM yyyy')}
                 </button>
-                <Button onClick={() => setAdding(true)} className="!px-2.5 !py-1.5"><Plus size={14} /> Add</Button>
+                <Button size="sm" onClick={() => setAdding(true)}><Plus size={14} /> Add</Button>
               </div>
               {selectedItems.length === 0 ? (
-                <p className="text-sm text-white/40">No transactions this day.</p>
+                <p className="text-sm text-ink-muted">No transactions this day.</p>
               ) : (
                 <>
                   {dayIncome > 0 && dayExpense > 0 ? (
                     // Both directions on this day → show In / Out / Net.
                     <div className="flex gap-2 mb-3">
-                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                        <div className="text-[10px] text-white/40 uppercase">In</div>
+                      <div className="flex-1 rounded-control bg-surface-2 border border-line p-2.5 text-center">
+                        <div className="text-3xs text-ink-muted uppercase">In</div>
                         <div className="text-income font-semibold text-sm">{formatMoney(dayIncome, cur)}</div>
                       </div>
-                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                        <div className="text-[10px] text-white/40 uppercase">Out</div>
+                      <div className="flex-1 rounded-control bg-surface-2 border border-line p-2.5 text-center">
+                        <div className="text-3xs text-ink-muted uppercase">Out</div>
                         <div className="text-expense font-semibold text-sm">{formatMoney(dayExpense, cur)}</div>
                       </div>
-                      <div className="flex-1 rounded-xl bg-white/[0.03] p-2.5 text-center">
-                        <div className="text-[10px] text-white/40 uppercase">Net</div>
+                      <div className="flex-1 rounded-control bg-surface-2 border border-line p-2.5 text-center">
+                        <div className="text-3xs text-ink-muted uppercase">Net</div>
                         <div className="font-semibold text-sm">{formatMoney(dayIncome - dayExpense, cur, { sign: true })}</div>
                       </div>
                     </div>
                   ) : (
                     // One-directional day → a single clear total (no redundant 0.00 / net).
-                    <div className="rounded-xl bg-white/[0.03] px-4 py-3 mb-3 flex items-center justify-between">
-                      <span className="text-[11px] text-white/40 uppercase tracking-wider">{dayExpense > 0 ? 'Spent' : 'Received'}</span>
+                    <div className="rounded-control bg-surface-2 border border-line px-4 py-3 mb-3 flex items-center justify-between">
+                      <span className="text-2xs text-ink-muted uppercase tracking-wider">{dayExpense > 0 ? 'Spent' : 'Received'}</span>
                       <span className={`font-bold ${dayExpense > 0 ? 'text-expense' : 'text-income'}`}>
                         {dayExpense > 0 ? '−' : '+'}{formatMoney(dayExpense > 0 ? dayExpense : dayIncome, cur)}
                       </span>
@@ -180,15 +187,15 @@ export default function Calendar() {
                         <div key={i} onClick={openEdit}
                           role={editable ? 'button' : undefined} tabIndex={editable ? 0 : undefined}
                           onKeyDown={(ev) => { if (editable && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openEdit(); } }}
-                          className={`flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5 ${editable ? 'cursor-pointer hover:bg-white/[0.06] transition' : ''}`}>
-                          <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
+                          className={`flex items-center gap-3 rounded-control border border-line px-3 py-2.5 ${editable ? 'cursor-pointer hover:bg-hover transition' : ''}`}>
+                          <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} size={16} emoji={c?.emoji} />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate flex items-center gap-1.5">
                               {e.merchant || c?.name}
-                              {e.projected && <span className="text-[9px] text-invest border border-invest/30 rounded px-1">projected</span>}
-                              {e.recurring && !e.projected && <span className="text-[9px] text-goal">↻</span>}
+                              {e.projected && <Badge tone="yellow" className="!text-3xs !leading-4">projected</Badge>}
+                              {e.recurring && !e.projected && <span className="text-3xs text-goal">↻</span>}
                             </div>
-                            <div className="text-xs text-white/40">
+                            <div className="text-xs text-ink-muted">
                               {c?.name}{showPayer && payerLabel(e.createdBy) ? ` · ${payerLabel(e.createdBy)}` : ''}
                             </div>
                           </div>
@@ -204,19 +211,19 @@ export default function Calendar() {
             </>
           ) : (
             <>
-              <h3 className="font-semibold mb-4">Upcoming (next 90 days)</h3>
+              <h3 className="section-title mb-4">Upcoming <span className="text-ink-muted font-normal text-base">· next 90 days</span></h3>
               <div className="space-y-2 max-h-[520px] overflow-y-auto no-scrollbar">
-                {upcoming.length === 0 && <p className="text-sm text-white/40">No recurring transactions scheduled. Add a bill or subscription and tick "Recurring" to see it here.</p>}
+                {upcoming.length === 0 && <p className="text-sm text-ink-muted">No recurring transactions scheduled. Add a bill or subscription and tick "Recurring" to see it here.</p>}
                 {upcoming.map((u, i) => {
                   const c = categories.find((x) => x.id === u.base.categoryId);
                   return (
                     <motion.button key={i} onClick={() => { setMonth(startOfMonth(parseISO(u.date))); setSelected(u.date); }}
-                      initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
-                      className="w-full flex items-center gap-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] px-3 py-2.5 text-left">
-                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#888'} size={16} emoji={c?.emoji} />
+                      {...staggered(i, 0.02)}
+                      className="w-full flex items-center gap-3 rounded-control border border-line hover:bg-hover px-3 py-2.5 text-left transition-colors">
+                      <CategoryIcon icon={c?.icon ?? 'Circle'} color={c?.color ?? '#94a3b8'} size={16} emoji={c?.emoji} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{u.base.merchant}</div>
-                        <div className="text-xs text-white/40">{format(parseISO(u.date), 'EEE d MMM')} · {u.base.frequency}</div>
+                        <div className="text-xs text-ink-muted">{format(parseISO(u.date), 'EEE d MMM')} · {u.base.frequency}</div>
                       </div>
                       <div className={`text-sm font-semibold ${u.base.type === 'income' ? 'text-income' : ''}`}>
                         {u.base.type === 'income' ? '+' : '−'}{formatMoney(u.amount, cur)}

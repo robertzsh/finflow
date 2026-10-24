@@ -33,7 +33,7 @@ React 18 + TS + Vite SPA, Tailwind, Zustand, Recharts, Framer Motion. Path alias
 
 **Recurring bills & standing income**: `runRecurringPosting` (triggered from `App.tsx`) auto-posts fixed due bills and queues variable-amount ones for confirmation. Monthly salary/"Bonuri" income transactions are created by `ensureStandingIncome` with deterministic ids (`si-<kind>-<owner>-<yyyy-mm>`) and are deliberately excluded from the recurring engine.
 
-**UI layout**: `src/features/<page>/` are lazy-loaded route pages (see routes in `src/App.tsx`); `src/components/ui/` are shared primitives; `src/components/charts/ChartKit.tsx` wraps Recharts. Tailwind tokens in `tailwind.config.js` (income/expense/savings/invest/goal/brand colors; Fraunces + IBM Plex fonts). App chrome is non-selectable; add `.selectable` for text that should be.
+**UI layout**: `src/features/<page>/` are lazy-loaded route pages (see routes in `src/App.tsx`); `src/components/ui/` are shared primitives; `src/components/charts/ChartKit.tsx` wraps Recharts. Colours, shadows and radii are theme tokens: CSS variables per theme (Dark default, Light, Pink Aura) in `src/styles/tokens.css`, mapped to semantic Tailwind names in `tailwind.config.js` (`bg-surface`, `text-ink-muted`, `border-line`, `bg-accent-soft`, `text-income`, `bg-tag-pink-bg`, `rounded-card`…) — use those, never `white/NN` or hex classes. Fonts: Source Serif 4 (headings, big figures) + Inter (UI). App chrome is non-selectable; add `.selectable` for text that should be.
 
 **PWA**: `public/sw.js` + `src/lib/pwa.ts` handle offline caching and updates (auto-apply waiting worker on load, toast for mid-session updates, loop-guarded). `ErrorBoundary` + `vite:preloadError` recover once from stale-chunk errors after a deploy.
 
